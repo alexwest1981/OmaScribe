@@ -10,6 +10,7 @@ from PyQt6.QtCore import Qt
 
 from core.config import ConfigManager
 from core.i18n import i18n
+from core.font_manager import FontManager
 from core.ai_client import AIClient
 from core.dictation_engine import DictationEngine
 from core.doc_manager import DocumentManager
@@ -20,6 +21,9 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("OmaScribe")
     app.setOrganizationName("OmaScribe")
+
+    # Load custom TTF/OTF fonts from resources & user dir
+    FontManager.load_custom_fonts()
 
     config_mgr = ConfigManager()
     theme_mgr = ThemeManager(config_mgr)

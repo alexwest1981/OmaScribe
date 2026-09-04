@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (
-    QToolBar, QComboBox, QFontComboBox, QColorDialog, QWidget,
+    QToolBar, QComboBox, QColorDialog, QWidget,
     QHBoxLayout, QLabel, QMenu, QToolButton, QSizePolicy
 )
 from PyQt6.QtCore import Qt, pyqtSignal
@@ -8,6 +8,7 @@ from PyQt6.QtGui import (
     QTextListFormat, QTextCursor, QColor
 )
 from core.i18n import _, i18n
+from core.font_manager import FontSelectorComboBox
 
 class FormattingToolBar(QToolBar):
     magic_ai_clicked = pyqtSignal()
@@ -38,9 +39,9 @@ class FormattingToolBar(QToolBar):
 
         self.addSeparator()
 
-        # 2. Font Family
-        self.combo_font = QFontComboBox()
-        self.combo_font.currentFontChanged.connect(self._on_font_changed)
+        # 2. Font Family with Curated Popular Fonts & Typography Previews
+        self.combo_font = FontSelectorComboBox()
+        self.combo_font.font_selected.connect(self._on_font_changed)
         self.addWidget(self.combo_font)
 
         # 3. Font Size
@@ -165,9 +166,7 @@ class FormattingToolBar(QToolBar):
         self.act_underline.setChecked(fmt.fontUnderline())
         self.act_strike.setChecked(fmt.fontStrikeOut())
 
-        self.combo_font.blockSignals(True)
-        self.combo_font.setCurrentFont(fmt.font())
-        self.combo_font.blockSignals(False)
+        self.combo_font.select_font_family(fmt.fontFamily())
 
         if fmt.fontPointSize() > 0:
             self.combo_size.blockSignals(True)

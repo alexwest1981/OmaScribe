@@ -172,7 +172,10 @@ class FormattingToolBar(QToolBar):
         self.act_underline.setChecked(fmt.fontUnderline())
         self.act_strike.setChecked(fmt.fontStrikeOut())
 
-        self.combo_font.select_font_family(fmt.fontFamily())
+        # Use fmt.font().family() instead of deprecated fmt.fontFamily() to avoid null-pointer segfault
+        font_name = fmt.font().family()
+        if font_name:
+            self.combo_font.select_font_family(font_name)
 
         if fmt.fontPointSize() > 0:
             self.combo_size.blockSignals(True)

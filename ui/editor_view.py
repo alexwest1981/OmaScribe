@@ -46,6 +46,59 @@ class DocumentCanvas(QTextEdit):
         
         cursor = self.textCursor()
         selected = cursor.selectedText()
+        table = cursor.currentTable()
+
+        if table:
+            tbl_menu = menu.addMenu("📊 " + _("tb_table"))
+            cell = table.cellAt(cursor)
+            
+            def add_row_above():
+                c = self.textCursor()
+                t = c.currentTable()
+                if t: t.insertRows(t.cellAt(c).row(), 1)
+
+            def add_row_below():
+                c = self.textCursor()
+                t = c.currentTable()
+                if t: t.insertRows(t.cellAt(c).row() + 1, 1)
+
+            def add_col_left():
+                c = self.textCursor()
+                t = c.currentTable()
+                if t: t.insertColumns(t.cellAt(c).column(), 1)
+
+            def add_col_right():
+                c = self.textCursor()
+                t = c.currentTable()
+                if t: t.insertColumns(t.cellAt(c).column() + 1, 1)
+
+            def del_row():
+                c = self.textCursor()
+                t = c.currentTable()
+                if t: t.removeRows(t.cellAt(c).row(), 1)
+
+            def del_col():
+                c = self.textCursor()
+                t = c.currentTable()
+                if t: t.removeColumns(t.cellAt(c).column(), 1)
+
+            def del_table():
+                c = self.textCursor()
+                t = c.currentTable()
+                if t:
+                    c.setPosition(t.firstPosition())
+                    c.setPosition(t.lastPosition(), QTextCursor.MoveMode.KeepAnchor)
+                    c.removeSelectedText()
+
+            tbl_menu.addAction("⬆️ " + _("tb_table_insert_rows_above"), add_row_above)
+            tbl_menu.addAction("⬇️ " + _("tb_table_insert_rows_below"), add_row_below)
+            tbl_menu.addAction("⬅️ " + _("tb_table_insert_cols_left"), add_col_left)
+            tbl_menu.addAction("➡️ " + _("tb_table_insert_cols_right"), add_col_right)
+            tbl_menu.addSeparator()
+            tbl_menu.addAction("🗑️ " + _("tb_table_delete_row"), del_row)
+            tbl_menu.addAction("🗑️ " + _("tb_table_delete_col"), del_col)
+            tbl_menu.addAction("⚠️ " + _("tb_table_delete_table"), del_table)
+            menu.addSeparator()
 
         ai_act = menu.addAction("✨ " + _("inline_ai_title") + " (Ctrl+K)")
         ai_act.triggered.connect(lambda: self.magic_ai_requested.emit(selected, event.globalPos()))

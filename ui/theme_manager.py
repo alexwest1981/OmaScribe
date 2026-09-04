@@ -101,21 +101,63 @@ class ThemeManager(QObject):
         QMainWindow, QDialog {{
             background-color: {c["window_bg"]};
             color: {c["text_color"]};
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", Helvetica, Arial, sans-serif;
+        }}
+        QMenuBar {{
+            background-color: {c["toolbar_bg"]};
+            color: {c["text_color"]};
+            border-bottom: 1px solid {c["toolbar_border"]};
+            padding: 3px 6px;
+            font-size: 12px;
+        }}
+        QMenuBar::item {{
+            background: transparent;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }}
+        QMenuBar::item:selected {{
+            background-color: {c["btn_hover"]};
+            color: {c["accent"]};
+        }}
+        QMenu {{
+            background-color: {c["toolbar_bg"]};
+            color: {c["text_color"]};
+            border: 1px solid {c["canvas_border"]};
+            border-radius: 8px;
+            padding: 6px;
+        }}
+        QMenu::item {{
+            padding: 6px 24px 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+        }}
+        QMenu::item:selected {{
+            background-color: {c["accent"]};
+            color: #ffffff;
+        }}
+        QMenu::separator {{
+            height: 1px;
+            background-color: {c["canvas_border"]};
+            margin: 4px 6px;
         }}
         QToolBar {{
             background-color: {c["toolbar_bg"]};
             border-bottom: 1px solid {c["toolbar_border"]};
-            padding: 4px;
-            spacing: 4px;
+            padding: 5px 8px;
+            spacing: 3px;
+        }}
+        QToolBar::separator {{
+            width: 1px;
+            background-color: {c["canvas_border"]};
+            margin: 4px 6px;
         }}
         QToolButton {{
             background-color: transparent;
             color: {c["text_color"]};
             border: 1px solid transparent;
-            border-radius: 4px;
-            padding: 4px 6px;
-            font-size: 11px;
+            border-radius: 6px;
+            padding: 4px 7px;
+            font-size: 12px;
             font-weight: 500;
         }}
         QToolButton:hover {{
@@ -125,34 +167,106 @@ class ThemeManager(QObject):
         QToolButton:checked, QToolButton:pressed {{
             background-color: {c["btn_active"]};
             border-color: {c["accent"]};
+            color: {c["accent"]};
+            font-weight: bold;
         }}
+        /* Quick Style Pill Button specific styling */
+        QToolButton[stylePill="true"] {{
+            background-color: {c["window_bg"]};
+            border: 1px solid {c["canvas_border"]};
+            border-radius: 5px;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 600;
+        }}
+        QToolButton[stylePill="true"]:hover {{
+            background-color: {c["btn_hover"]};
+            border-color: {c["accent"]};
+        }}
+        QToolButton[stylePill="true"]:checked {{
+            background-color: {c["accent"]};
+            color: #ffffff;
+            border-color: {c["accent"]};
+        }}
+        /* Dropdowns */
         QComboBox, QFontComboBox {{
             background-color: {c["canvas_bg"]};
             color: {c["text_color"]};
             border: 1px solid {c["canvas_border"]};
-            border-radius: 4px;
-            padding: 2px 6px;
-            font-size: 11px;
-            min-height: 20px;
+            border-radius: 6px;
+            padding: 3px 26px 3px 8px;
+            font-size: 12px;
+            font-weight: 500;
+            min-height: 22px;
+        }}
+        QComboBox:hover, QFontComboBox:hover {{
+            border-color: {c["accent"]};
+            background-color: {c["btn_hover"]};
+        }}
+        QComboBox:focus, QFontComboBox:focus {{
+            border: 1.5px solid {c["accent"]};
         }}
         QComboBox::drop-down, QFontComboBox::drop-down {{
-            border: none;
+            subcontrol-origin: padding;
+            subcontrol-position: top right;
+            width: 22px;
+            border-left: 1px solid {c["canvas_border"]};
+            border-top-right-radius: 5px;
+            border-bottom-right-radius: 5px;
+            background-color: transparent;
+        }}
+        QComboBox::down-arrow, QFontComboBox::down-arrow {{
+            image: none;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 5px solid {c["text_color"]};
+            width: 0px;
+            height: 0px;
+            margin-right: 2px;
+        }}
+        QComboBox::down-arrow:hover {{
+            border-top-color: {c["accent"]};
+        }}
+        QComboBox QAbstractItemView {{
+            background-color: {c["toolbar_bg"]};
+            color: {c["text_color"]};
+            border: 1px solid {c["canvas_border"]};
+            border-radius: 6px;
+            selection-background-color: {c["accent"]};
+            selection-color: #ffffff;
+            padding: 4px;
+            outline: none;
+            max-height: 380px;
+        }}
+        QComboBox QAbstractItemView::item {{
+            min-height: 26px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }}
+        QComboBox QAbstractItemView::item:hover {{
+            background-color: {c["btn_hover"]};
+        }}
+        QComboBox QAbstractItemView::item:selected {{
+            background-color: {c["accent"]};
+            color: #ffffff;
         }}
         QStatusBar {{
             background-color: {c["status_bg"]};
             color: {c["status_text"]};
             border-top: 1px solid {c["toolbar_border"]};
             font-size: 11px;
+            padding: 2px 8px;
         }}
         QScrollBar:vertical {{
             background: {c["window_bg"]};
-            width: 10px;
+            width: 8px;
             margin: 0px;
+            border-radius: 4px;
         }}
         QScrollBar::handle:vertical {{
             background: {c["canvas_border"]};
-            min-height: 20px;
-            border-radius: 5px;
+            min-height: 24px;
+            border-radius: 4px;
         }}
         QScrollBar::handle:vertical:hover {{
             background: {c["accent"]};
@@ -160,21 +274,44 @@ class ThemeManager(QObject):
         QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
             height: 0px;
         }}
+        QScrollBar:horizontal {{
+            background: {c["window_bg"]};
+            height: 8px;
+            margin: 0px;
+            border-radius: 4px;
+        }}
+        QScrollBar::handle:horizontal {{
+            background: {c["canvas_border"]};
+            min-width: 24px;
+            border-radius: 4px;
+        }}
         QTabWidget::pane {{
             border: 1px solid {c["canvas_border"]};
             background: {c["sidebar_bg"]};
+            border-radius: 6px;
         }}
         QTabBar::tab {{
             background: {c["window_bg"]};
             color: {c["status_text"]};
             border: 1px solid {c["canvas_border"]};
-            padding: 6px 12px;
+            padding: 6px 14px;
             font-size: 11px;
             font-weight: 600;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+            margin-right: 2px;
         }}
         QTabBar::tab:selected {{
             background: {c["sidebar_bg"]};
             color: {c["accent"]};
             border-bottom-color: {c["sidebar_bg"]};
+        }}
+        QToolTip {{
+            background-color: {c["canvas_bg"]};
+            color: {c["text_color"]};
+            border: 1px solid {c["canvas_border"]};
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-size: 11px;
         }}
         """

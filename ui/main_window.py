@@ -84,7 +84,7 @@ class MainWindow(QMainWindow):
         self.editor = EditorView(self.theme_mgr, self)
 
         # 2. Formatting Toolbar
-        self.toolbar = FormattingToolBar(self.editor, self)
+        self.toolbar = FormattingToolBar(self.editor, self.theme_mgr, self)
         self.toolbar.magic_ai_clicked.connect(lambda: self._open_inline_ai(self.editor.textCursor().selectedText(), None))
         self.toolbar.dictation_clicked.connect(self._toggle_dictation)
         self.toolbar.sidebar_toggled.connect(self._toggle_sidebar)
@@ -154,12 +154,26 @@ class MainWindow(QMainWindow):
         self.act_paste = self._add_action(self.menu_edit, _("menu_edit_paste"), self.editor.canvas.paste, "Ctrl+V")
         self.act_select_all = self._add_action(self.menu_edit, _("menu_edit_select_all"), self.editor.canvas.selectAll, "Ctrl+A")
 
+        # Insert Menu
+        self.menu_insert = mb.addMenu(_("menu_insert"))
+        self.act_ins_table = self._add_action(self.menu_insert, "📊 " + _("menu_insert_table"), self.toolbar._open_insert_table_dialog)
+        self.act_ins_divider = self._add_action(self.menu_insert, "─ " + _("menu_insert_horizontal_rule"), self.toolbar._insert_divider)
+        
+        self.menu_ins_callout = self.menu_insert.addMenu("💡 " + _("tb_callout"))
+        self.act_callout_info = self.menu_ins_callout.addAction(_("tb_callout_info"), lambda: self.toolbar._insert_callout("info"))
+        self.act_callout_tip = self.menu_ins_callout.addAction(_("tb_callout_tip"), lambda: self.toolbar._insert_callout("tip"))
+        self.act_callout_warning = self.menu_ins_callout.addAction(_("tb_callout_warning"), lambda: self.toolbar._insert_callout("warning"))
+        self.act_callout_quote = self.menu_ins_callout.addAction(_("tb_callout_quote"), lambda: self.toolbar._insert_callout("quote"))
+
         # Format Menu
         self.menu_format = mb.addMenu(_("menu_format"))
         self.act_fmt_bold = self._add_action(self.menu_format, _("menu_format_bold"), self.toolbar._toggle_bold, "Ctrl+B")
         self.act_fmt_italic = self._add_action(self.menu_format, _("menu_format_italic"), self.toolbar._toggle_italic, "Ctrl+I")
         self.act_fmt_underline = self._add_action(self.menu_format, _("menu_format_underline"), self.toolbar._toggle_underline, "Ctrl+U")
         self.act_fmt_strike = self._add_action(self.menu_format, _("menu_format_strikethrough"), self.toolbar._toggle_strike)
+        self.act_fmt_sub = self._add_action(self.menu_format, _("tb_subscript"), self.toolbar._toggle_subscript)
+        self.act_fmt_super = self._add_action(self.menu_format, _("tb_superscript"), self.toolbar._toggle_superscript)
+        self.act_fmt_clear = self._add_action(self.menu_format, _("menu_format_clear"), self.toolbar._clear_formatting, "Ctrl+\\")
         self.menu_format.addSeparator()
         self.act_gfonts = self._add_action(self.menu_format, "🌐 " + _("menu_format_google_fonts"), self._open_google_fonts_dialog)
 
@@ -470,11 +484,23 @@ class MainWindow(QMainWindow):
         self.act_paste.setText(_("menu_edit_paste"))
         self.act_select_all.setText(_("menu_edit_select_all"))
 
+        self.menu_insert.setTitle(_("menu_insert"))
+        self.act_ins_table.setText("📊 " + _("menu_insert_table"))
+        self.act_ins_divider.setText("─ " + _("menu_insert_horizontal_rule"))
+        self.menu_ins_callout.setTitle("💡 " + _("tb_callout"))
+        self.act_callout_info.setText(_("tb_callout_info"))
+        self.act_callout_tip.setText(_("tb_callout_tip"))
+        self.act_callout_warning.setText(_("tb_callout_warning"))
+        self.act_callout_quote.setText(_("tb_callout_quote"))
+
         self.menu_format.setTitle(_("menu_format"))
         self.act_fmt_bold.setText(_("menu_format_bold"))
         self.act_fmt_italic.setText(_("menu_format_italic"))
         self.act_fmt_underline.setText(_("menu_format_underline"))
         self.act_fmt_strike.setText(_("menu_format_strikethrough"))
+        self.act_fmt_sub.setText(_("tb_subscript"))
+        self.act_fmt_super.setText(_("tb_superscript"))
+        self.act_fmt_clear.setText(_("menu_format_clear"))
         self.act_gfonts.setText("🌐 " + _("menu_format_google_fonts"))
 
         self.menu_ai.setTitle(_("menu_ai"))

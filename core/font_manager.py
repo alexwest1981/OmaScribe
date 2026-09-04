@@ -98,7 +98,10 @@ class FontSelectorComboBox(QComboBox):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setItemDelegate(FontItemDelegate(self))
-        self.setFixedWidth(160)
+        self.setFixedWidth(175)
+        self.setMaxVisibleItems(14)
+        if self.view():
+            self.view().setMaximumHeight(380)
         self.populate_fonts()
         self.currentIndexChanged.connect(self._on_index_changed)
 

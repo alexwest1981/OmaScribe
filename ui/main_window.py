@@ -13,6 +13,7 @@ from ui.toolbar import FormattingToolBar
 from ui.sidebar_inspector import SidebarInspector
 from ui.inline_ai_popup import InlineAIPopup
 from ui.settings_dialog import SettingsDialog
+from ui.google_fonts_dialog import GoogleFontsDialog
 
 class MainWindow(QMainWindow):
     def __init__(self, ai_client, dictation_engine, theme_mgr, config_mgr):
@@ -87,6 +88,7 @@ class MainWindow(QMainWindow):
         self.toolbar.magic_ai_clicked.connect(lambda: self._open_inline_ai(self.editor.textCursor().selectedText(), None))
         self.toolbar.dictation_clicked.connect(self._toggle_dictation)
         self.toolbar.sidebar_toggled.connect(self._toggle_sidebar)
+        self.toolbar.google_fonts_clicked.connect(self._open_google_fonts_dialog)
         self.addToolBar(self.toolbar)
 
         # 3. Main Splitter (Editor Canvas on Left + Sidebar Inspector on Right)
@@ -152,10 +154,14 @@ class MainWindow(QMainWindow):
         self.act_paste = self._add_action(self.menu_edit, _("menu_edit_paste"), self.editor.canvas.paste, "Ctrl+V")
         self.act_select_all = self._add_action(self.menu_edit, _("menu_edit_select_all"), self.editor.canvas.selectAll, "Ctrl+A")
 
-        # View Menu
-        self.menu_view = mb.addMenu(_("menu_view"))
-        self.act_toggle_sidebar = self._add_action(self.menu_view, _("menu_view_ai_sidebar"), self._toggle_sidebar)
-        self.act_focus_mode = self._add_action(self.menu_view, _("menu_view_focus_mode"), self._toggle_focus_mode, "F11")
+        # Format Menu
+        self.menu_format = mb.addMenu(_("menu_format"))
+        self.act_fmt_bold = self._add_action(self.menu_format, _("menu_format_bold"), self.toolbar._toggle_bold, "Ctrl+B")
+        self.act_fmt_italic = self._add_action(self.menu_format, _("menu_format_italic"), self.toolbar._toggle_italic, "Ctrl+I")
+        self.act_fmt_underline = self._add_action(self.menu_format, _("menu_format_underline"), self.toolbar._toggle_underline, "Ctrl+U")
+        self.act_fmt_strike = self._add_action(self.menu_format, _("menu_format_strikethrough"), self.toolbar._toggle_strike)
+        self.menu_format.addSeparator()
+        self.act_gfonts = self._add_action(self.menu_format, "🌐 " + _("menu_format_google_fonts"), self._open_google_fonts_dialog)
 
         # AI Assistant Menu
         self.menu_ai = mb.addMenu(_("menu_ai"))
@@ -300,6 +306,11 @@ class MainWindow(QMainWindow):
             self.lbl_ai_status.setText("✨ " + _("status_ai_analyzing"))
         else:
             self.lbl_ai_status.setText("✨ " + _("status_ai_ready"))
+
+    def _open_google_fonts_dialog(self):
+        dlg = GoogleFontsDialog(self.theme_mgr, self)
+        dlg.font_list_changed.connect(self.toolbar.combo_font.populate_fonts)
+        dlg.exec()
 
     def _open_settings(self):
         dlg = SettingsDialog(self.config, self.theme_mgr, self)
@@ -459,9 +470,12 @@ class MainWindow(QMainWindow):
         self.act_paste.setText(_("menu_edit_paste"))
         self.act_select_all.setText(_("menu_edit_select_all"))
 
-        self.menu_view.setTitle(_("menu_view"))
-        self.act_toggle_sidebar.setText(_("menu_view_ai_sidebar"))
-        self.act_focus_mode.setText(_("menu_view_focus_mode"))
+        self.menu_format.setTitle(_("menu_format"))
+        self.act_fmt_bold.setText(_("menu_format_bold"))
+        self.act_fmt_italic.setText(_("menu_format_italic"))
+        self.act_fmt_underline.setText(_("menu_format_underline"))
+        self.act_fmt_strike.setText(_("menu_format_strikethrough"))
+        self.act_gfonts.setText("🌐 " + _("menu_format_google_fonts"))
 
         self.menu_ai.setTitle(_("menu_ai"))
         self.act_inline_ai.setText(_("menu_ai_inline"))

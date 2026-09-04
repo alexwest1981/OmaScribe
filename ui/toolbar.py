@@ -14,6 +14,7 @@ class FormattingToolBar(QToolBar):
     magic_ai_clicked = pyqtSignal()
     dictation_clicked = pyqtSignal()
     sidebar_toggled = pyqtSignal()
+    google_fonts_clicked = pyqtSignal()
 
     def __init__(self, editor_view, parent=None):
         super().__init__(parent)
@@ -43,6 +44,11 @@ class FormattingToolBar(QToolBar):
         self.combo_font = FontSelectorComboBox()
         self.combo_font.font_selected.connect(self._on_font_changed)
         self.addWidget(self.combo_font)
+
+        self.act_gfonts = QAction("🌐", self)
+        self.act_gfonts.setToolTip("Google Fonts Library...")
+        self.act_gfonts.triggered.connect(self.google_fonts_clicked.emit)
+        self.addAction(self.act_gfonts)
 
         # 3. Font Size
         self.combo_size = QComboBox()

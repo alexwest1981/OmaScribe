@@ -1,10 +1,12 @@
 import os
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFileDialog,
-    QMessageBox, QLabel, QSplitter, QStatusBar, QApplication
+    QMessageBox, QLabel, QSplitter, QStatusBar, QApplication,
+    QStackedWidget, QMenu, QDialog
 )
-from PyQt6.QtCore import Qt, QTimer, QPoint
-from PyQt6.QtGui import QAction, QKeySequence, QTextCursor
+from PyQt6.QtCore import Qt, QTimer, QPoint, QMarginsF
+from PyQt6.QtGui import QAction, QKeySequence, QTextCursor, QPageLayout, QPageSize
+from PyQt6.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
 
 from core.i18n import _, i18n
 from core.doc_manager import DocumentManager
@@ -14,6 +16,7 @@ from ui.sidebar_inspector import SidebarInspector
 from ui.inline_ai_popup import InlineAIPopup
 from ui.settings_dialog import SettingsDialog
 from ui.google_fonts_dialog import GoogleFontsDialog
+from ui.start_screen import StartScreen
 
 class MainWindow(QMainWindow):
     def __init__(self, ai_client, dictation_engine, theme_mgr, config_mgr):
@@ -26,7 +29,7 @@ class MainWindow(QMainWindow):
         self.current_filepath = None
         self.is_modified = False
 
-        self.setWindowTitle(_("app_title"))
+        self.setWindowTitle(_("app_name"))
         self.resize(1200, 850)
 
         self.init_ui()
@@ -70,28 +73,27 @@ class MainWindow(QMainWindow):
         self.inline_ai.replace_requested.connect(self._on_inline_ai_replace)
         self.inline_ai.insert_below_requested.connect(self._on_inline_ai_insert_below)
 
-        # Initial welcome sample text
-        self._insert_welcome_sample()
-        self._update_stats()
+        # Initial screen state: first run gets welcome sample; subsequent runs show start page
+        has_run_before = self.config.get("has_run_before", False)
+        if not has_run_before:
+            self.config.set("has_run_before", True)
+            self._insert_welcome_sample()
+            self.show_editor_screen()
+        else:
+            self.show_start_screen()
 
     def init_ui(self):
-        central_widget = QWidget(self)
-        root_layout = QVBoxLayout(central_widget)
-        root_layout.setContentsMargins(0, 0, 0, 0)
-        root_layout.setSpacing(0)
+        self.stack = QStackedWidget(self)
 
-        # 1. Editor View
+        # 1. Start Screen (Index 0)
+        self.start_screen = StartScreen(self.config, self.theme_mgr, self)
+        self.start_screen.new_document_requested.connect(self.file_new)
+        self.start_screen.open_document_requested.connect(self.file_open)
+        self.start_screen.open_recent_requested.connect(self.open_recent_file)
+        self.stack.addWidget(self.start_screen)
+
+        # 2. Editor & Sidebar Container (Index 1)
         self.editor = EditorView(self.theme_mgr, self)
-
-        # 2. Formatting Toolbar
-        self.toolbar = FormattingToolBar(self.editor, self.theme_mgr, self)
-        self.toolbar.magic_ai_clicked.connect(lambda: self._open_inline_ai(self.editor.textCursor().selectedText(), None))
-        self.toolbar.dictation_clicked.connect(self._toggle_dictation)
-        self.toolbar.sidebar_toggled.connect(self._toggle_sidebar)
-        self.toolbar.google_fonts_clicked.connect(self._open_google_fonts_dialog)
-        self.addToolBar(self.toolbar)
-
-        # 3. Main Splitter (Editor Canvas on Left + Sidebar Inspector on Right)
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
         self.splitter.addWidget(self.editor)
 
@@ -101,9 +103,17 @@ class MainWindow(QMainWindow):
 
         self.splitter.setStretchFactor(0, 1)
         self.splitter.setStretchFactor(1, 0)
+        self.stack.addWidget(self.splitter)
 
-        root_layout.addWidget(self.splitter)
-        self.setCentralWidget(central_widget)
+        self.setCentralWidget(self.stack)
+
+        # 3. Formatting Toolbar
+        self.toolbar = FormattingToolBar(self.editor, self.theme_mgr, self)
+        self.toolbar.magic_ai_clicked.connect(lambda: self._open_inline_ai(self.editor.textCursor().selectedText(), None))
+        self.toolbar.dictation_clicked.connect(self._toggle_dictation)
+        self.toolbar.sidebar_toggled.connect(self._toggle_sidebar)
+        self.toolbar.google_fonts_clicked.connect(self._open_google_fonts_dialog)
+        self.addToolBar(self.toolbar)
 
         # 4. Status Bar
         self.status_bar = QStatusBar(self)
@@ -133,14 +143,25 @@ class MainWindow(QMainWindow):
 
         # File Menu
         self.menu_file = mb.addMenu(_("menu_file"))
+        self.act_start_page = self._add_action(self.menu_file, _("menu_file_start_page"), self.show_start_screen, "Ctrl+H")
         self.act_new = self._add_action(self.menu_file, _("menu_file_new"), self.file_new, "Ctrl+N")
         self.act_open = self._add_action(self.menu_file, _("menu_file_open"), self.file_open, "Ctrl+O")
+        
+        # Recent Files submenu
+        self.menu_recent = self.menu_file.addMenu(_("menu_file_recent"))
+        self._update_recent_menu()
+
+        self.menu_file.addSeparator()
         self.act_save = self._add_action(self.menu_file, _("menu_file_save"), self.file_save, "Ctrl+S")
         self.act_save_as = self._add_action(self.menu_file, _("menu_file_save_as"), self.file_save_as, "Ctrl+Shift+S")
         self.menu_file.addSeparator()
-        self.act_exp_pdf = self._add_action(self.menu_file, _("menu_file_export_pdf"), self.export_pdf, "Ctrl+P")
+        self.act_print = self._add_action(self.menu_file, _("menu_file_print"), self.file_print, "Ctrl+P")
+        self.act_print_prev = self._add_action(self.menu_file, _("menu_file_print_preview"), self.file_print_preview, "Ctrl+Shift+P")
+        self.menu_file.addSeparator()
+        self.act_exp_pdf = self._add_action(self.menu_file, _("menu_file_export_pdf"), self.export_pdf, "Ctrl+Shift+E")
         self.act_exp_docx = self._add_action(self.menu_file, _("menu_file_export_docx"), self.export_docx)
         self.act_exp_md = self._add_action(self.menu_file, _("menu_file_export_md"), self.export_markdown)
+        self.act_exp_html = self._add_action(self.menu_file, _("menu_file_export_html"), self.export_html)
         self.menu_file.addSeparator()
         self.act_exit = self._add_action(self.menu_file, _("menu_file_exit"), self.close, "Ctrl+Q")
 
@@ -189,6 +210,46 @@ class MainWindow(QMainWindow):
         self.menu_help = mb.addMenu(_("menu_help"))
         self.act_about = self._add_action(self.menu_help, _("menu_help_about"), self._show_about)
 
+    def _update_recent_menu(self):
+        self.menu_recent.clear()
+        recents = self.config.get("recent_files", [])
+        if not recents:
+            act = self.menu_recent.addAction(_("menu_file_no_recents"))
+            act.setEnabled(False)
+            return
+
+        for fpath in recents[:10]:
+            fname = os.path.basename(fpath)
+            act = self.menu_recent.addAction(f"{fname} ({fpath})")
+            act.triggered.connect(lambda checked, fp=fpath: self.open_recent_file(fp))
+
+        self.menu_recent.addSeparator()
+        act_clear = self.menu_recent.addAction(_("menu_file_clear_recents"))
+        act_clear.triggered.connect(self._clear_recent_files)
+
+    def _clear_recent_files(self):
+        self.config.clear_recent_files()
+        self._update_recent_menu()
+        self.start_screen.refresh_recents()
+
+    def show_start_screen(self):
+        if self.stack.currentIndex() == 1 and not self._maybe_save_changes():
+            return
+        self.start_screen.refresh_recents()
+        self.stack.setCurrentIndex(0)
+        self.toolbar.setVisible(False)
+        self.status_bar.setVisible(False)
+        self.setWindowTitle(_("app_name"))
+
+    def show_editor_screen(self):
+        self.stack.setCurrentIndex(1)
+        self.toolbar.setVisible(True)
+        self.sidebar.setVisible(self.config.get("show_ai_sidebar", True))
+        self.status_bar.setVisible(True)
+        self._update_window_title()
+        self._update_stats()
+        self.editor.canvas.setFocus()
+
     def _insert_welcome_sample(self):
         html = f"""
         <h1>{_("app_title")}</h1>
@@ -212,10 +273,11 @@ class MainWindow(QMainWindow):
         self._update_window_title()
 
     def _on_text_changed(self):
-        self.is_modified = True
-        self._update_window_title()
-        self._update_stats()
-        self.review_timer.start()
+        if self.stack.currentIndex() == 1:
+            self.is_modified = True
+            self._update_window_title()
+            self._update_stats()
+            self.review_timer.start()
 
     def _update_cursor_pos(self):
         cursor = self.editor.textCursor()
@@ -230,17 +292,21 @@ class MainWindow(QMainWindow):
         self.lbl_stats.setText(f"{stats} | {chars}")
 
     def _update_window_title(self):
+        if self.stack.currentIndex() == 0:
+            self.setWindowTitle(_("app_name"))
+            return
         doc_name = os.path.basename(self.current_filepath) if self.current_filepath else _("untitled_document")
         mod_flag = " •" if self.is_modified else ""
         self.setWindowTitle(f"{doc_name}{mod_flag} — {_('app_name')}")
 
     def _on_review_timer_fired(self):
-        text = self.editor.document.toPlainText()
-        lang = i18n.get_language()
-        self.ai.review_document(text, lang=lang)
+        if self.stack.currentIndex() == 1:
+            text = self.editor.document.toPlainText()
+            lang = i18n.get_language()
+            self.ai.review_document(text, lang=lang)
 
     def _on_autosave_timer_fired(self):
-        if self.is_modified and self.current_filepath and self.config.get("autosave", True):
+        if self.stack.currentIndex() == 1 and self.is_modified and self.current_filepath and self.config.get("autosave", True):
             try:
                 DocumentManager.save_file(self.current_filepath, self.editor.document)
                 self.is_modified = False
@@ -249,6 +315,8 @@ class MainWindow(QMainWindow):
                 print(f"[Autosave] Error: {e}")
 
     def _open_inline_ai(self, selected_text, global_pos):
+        if self.stack.currentIndex() != 1:
+            return
         if global_pos is None:
             rect = self.editor.canvas.cursorRect()
             global_pos = self.editor.canvas.mapToGlobal(rect.bottomLeft())
@@ -280,6 +348,12 @@ class MainWindow(QMainWindow):
 
     def _trigger_ai_review(self):
         text = self.editor.document.toPlainText()
+        self.sidebar.update_metrics_and_outline(self.editor.document)
+        self._update_stats()
+        if not text or len(text.strip()) < 10:
+            self.sidebar.show_short_message()
+            return
+        self.sidebar.set_loading(True)
         self.ai.review_document(text, lang=i18n.get_language())
 
     def _toggle_sidebar(self):
@@ -290,9 +364,10 @@ class MainWindow(QMainWindow):
     def _toggle_focus_mode(self):
         if self.isFullScreen():
             self.showNormal()
-            self.toolbar.setVisible(True)
+            if self.stack.currentIndex() == 1:
+                self.toolbar.setVisible(True)
+                self.status_bar.setVisible(True)
             self.menuBar().setVisible(True)
-            self.status_bar.setVisible(True)
         else:
             self.showFullScreen()
             self.toolbar.setVisible(False)
@@ -311,9 +386,10 @@ class MainWindow(QMainWindow):
             self.lbl_dict_status.setText("🎙️ " + _("status_dictation_idle"))
 
     def _on_transcription_ready(self, text):
-        cursor = self.editor.textCursor()
-        cursor.insertText(text + " ")
-        self.editor.setTextCursor(cursor)
+        if self.stack.currentIndex() == 1:
+            cursor = self.editor.textCursor()
+            cursor.insertText(text + " ")
+            self.editor.setTextCursor(cursor)
 
     def _on_ai_status_changed(self, status):
         if status == "analyzing":
@@ -340,34 +416,72 @@ class MainWindow(QMainWindow):
         )
 
     # -------------------------------------------------------------------------
-    # File Operations
+    # Extension enforcement helper
+    # -------------------------------------------------------------------------
+    def _ensure_extension(self, filepath: str, selected_filter: str, default_ext: str = ".docx") -> str:
+        if not filepath:
+            return filepath
+        root, ext = os.path.splitext(filepath)
+        valid_extensions = {".docx", ".md", ".markdown", ".html", ".htm", ".txt", ".pdf"}
+        if ext.lower() in valid_extensions:
+            return filepath
+        
+        filter_lower = (selected_filter or "").lower()
+        if "*.docx" in filter_lower:
+            target_ext = ".docx"
+        elif "*.md" in filter_lower or "*.markdown" in filter_lower:
+            target_ext = ".md"
+        elif "*.html" in filter_lower or "*.htm" in filter_lower:
+            target_ext = ".html"
+        elif "*.txt" in filter_lower:
+            target_ext = ".txt"
+        elif "*.pdf" in filter_lower:
+            target_ext = ".pdf"
+        else:
+            target_ext = default_ext
+        return f"{filepath}{target_ext}"
+
+    # -------------------------------------------------------------------------
+    # File Operations & Printing
     # -------------------------------------------------------------------------
     def file_new(self):
-        if not self._maybe_save_changes():
+        if self.stack.currentIndex() == 1 and not self._maybe_save_changes():
             return
         self.editor.document.clear()
         self.current_filepath = None
         self.is_modified = False
-        self._update_window_title()
+        self.show_editor_screen()
 
     def file_open(self):
-        if not self._maybe_save_changes():
+        if self.stack.currentIndex() == 1 and not self._maybe_save_changes():
             return
         fpath, _filter = QFileDialog.getOpenFileName(
             self,
             _("menu_file_open"),
             "",
-            "Documents (*.docx *.md *.markdown *.html *.htm *.txt);;Word Documents (*.docx);;Markdown (*.md);;All Files (*.*)"
+            "Documents (*.docx *.md *.markdown *.html *.htm *.txt);;Word Documents (*.docx);;Markdown (*.md);;HTML Files (*.html *.htm);;Plain Text (*.txt);;All Files (*.*)"
         )
         if fpath:
-            try:
-                DocumentManager.load_file(fpath, self.editor.document)
-                self.current_filepath = fpath
-                self.is_modified = False
-                self._update_window_title()
-                self.config.add_recent_file(fpath)
-            except Exception as e:
-                QMessageBox.critical(self, "Error Opening File", str(e))
+            self.open_recent_file(fpath)
+
+    def open_recent_file(self, filepath):
+        if self.stack.currentIndex() == 1 and not self._maybe_save_changes():
+            return
+        if not os.path.exists(filepath):
+            QMessageBox.warning(self, _("menu_file_open"), f"{_('start_file_not_found')}:\n{filepath}")
+            self.config.remove_recent_file(filepath)
+            self._update_recent_menu()
+            self.start_screen.refresh_recents()
+            return
+        try:
+            DocumentManager.load_file(filepath, self.editor.document)
+            self.current_filepath = filepath
+            self.is_modified = False
+            self.config.add_recent_file(filepath)
+            self._update_recent_menu()
+            self.show_editor_screen()
+        except Exception as e:
+            QMessageBox.critical(self, "Error Opening File", str(e))
 
     def file_save(self):
         if self.current_filepath:
@@ -383,32 +497,69 @@ class MainWindow(QMainWindow):
             return self.file_save_as()
 
     def file_save_as(self):
-        fpath, _filter = QFileDialog.getSaveFileName(
+        fpath, selected_filter = QFileDialog.getSaveFileName(
             self,
             _("menu_file_save_as"),
             "",
             "Word Document (*.docx);;Markdown (*.md);;HTML Document (*.html);;Plain Text (*.txt)"
         )
         if fpath:
+            fpath = self._ensure_extension(fpath, selected_filter, ".docx")
             try:
                 DocumentManager.save_file(fpath, self.editor.document)
                 self.current_filepath = fpath
                 self.is_modified = False
                 self._update_window_title()
                 self.config.add_recent_file(fpath)
+                self._update_recent_menu()
                 return True
             except Exception as e:
                 QMessageBox.critical(self, "Error Saving File", str(e))
         return False
 
+    def file_print(self):
+        if self.stack.currentIndex() == 0:
+            return
+        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+        page_layout = QPageLayout(
+            QPageSize(QPageSize.PageSizeId.A4),
+            QPageLayout.Orientation.Portrait,
+            QMarginsF(20, 20, 20, 20),
+            QPageLayout.Unit.Millimeter
+        )
+        printer.setPageLayout(page_layout)
+        dialog = QPrintDialog(printer, self)
+        dialog.setWindowTitle(_("menu_file_print"))
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.editor.document.print(printer)
+
+    def file_print_preview(self):
+        if self.stack.currentIndex() == 0:
+            return
+        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+        page_layout = QPageLayout(
+            QPageSize(QPageSize.PageSizeId.A4),
+            QPageLayout.Orientation.Portrait,
+            QMarginsF(20, 20, 20, 20),
+            QPageLayout.Unit.Millimeter
+        )
+        printer.setPageLayout(page_layout)
+        preview = QPrintPreviewDialog(printer, self)
+        preview.setWindowTitle(_("menu_file_print_preview"))
+        preview.setMinimumSize(800, 600)
+        preview.resize(1050, 850)
+        preview.paintRequested.connect(lambda p: self.editor.document.print(p))
+        preview.exec()
+
     def export_pdf(self):
-        fpath, _filter = QFileDialog.getSaveFileName(
+        fpath, selected_filter = QFileDialog.getSaveFileName(
             self,
             _("menu_file_export_pdf"),
             "",
             "PDF Document (*.pdf)"
         )
         if fpath:
+            fpath = self._ensure_extension(fpath, "*.pdf", ".pdf")
             try:
                 DocumentManager.save_file(fpath, self.editor.document)
                 QMessageBox.information(self, "Export Successful", f"Document exported to:\n{fpath}")
@@ -416,13 +567,14 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Export Error", str(e))
 
     def export_docx(self):
-        fpath, _filter = QFileDialog.getSaveFileName(
+        fpath, selected_filter = QFileDialog.getSaveFileName(
             self,
             _("menu_file_export_docx"),
             "",
             "Word Document (*.docx)"
         )
         if fpath:
+            fpath = self._ensure_extension(fpath, "*.docx", ".docx")
             try:
                 DocumentManager.save_file(fpath, self.editor.document)
                 QMessageBox.information(self, "Export Successful", f"Document exported to:\n{fpath}")
@@ -430,13 +582,29 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Export Error", str(e))
 
     def export_markdown(self):
-        fpath, _filter = QFileDialog.getSaveFileName(
+        fpath, selected_filter = QFileDialog.getSaveFileName(
             self,
             _("menu_file_export_md"),
             "",
             "Markdown Document (*.md)"
         )
         if fpath:
+            fpath = self._ensure_extension(fpath, "*.md", ".md")
+            try:
+                DocumentManager.save_file(fpath, self.editor.document)
+                QMessageBox.information(self, "Export Successful", f"Document exported to:\n{fpath}")
+            except Exception as e:
+                QMessageBox.critical(self, "Export Error", str(e))
+
+    def export_html(self):
+        fpath, selected_filter = QFileDialog.getSaveFileName(
+            self,
+            _("menu_file_export_html"),
+            "",
+            "HTML Document (*.html)"
+        )
+        if fpath:
+            fpath = self._ensure_extension(fpath, "*.html", ".html")
             try:
                 DocumentManager.save_file(fpath, self.editor.document)
                 QMessageBox.information(self, "Export Successful", f"Document exported to:\n{fpath}")
@@ -460,6 +628,9 @@ class MainWindow(QMainWindow):
         return False
 
     def closeEvent(self, event):
+        if self.stack.currentIndex() == 0:
+            event.accept()
+            return
         if self._maybe_save_changes():
             event.accept()
         else:
@@ -467,13 +638,18 @@ class MainWindow(QMainWindow):
 
     def retranslate_ui(self):
         self.menu_file.setTitle(_("menu_file"))
+        self.act_start_page.setText(_("menu_file_start_page"))
         self.act_new.setText(_("menu_file_new"))
         self.act_open.setText(_("menu_file_open"))
+        self.menu_recent.setTitle(_("menu_file_recent"))
         self.act_save.setText(_("menu_file_save"))
         self.act_save_as.setText(_("menu_file_save_as"))
+        self.act_print.setText(_("menu_file_print"))
+        self.act_print_prev.setText(_("menu_file_print_preview"))
         self.act_exp_pdf.setText(_("menu_file_export_pdf"))
         self.act_exp_docx.setText(_("menu_file_export_docx"))
         self.act_exp_md.setText(_("menu_file_export_md"))
+        self.act_exp_html.setText(_("menu_file_export_html"))
         self.act_exit.setText(_("menu_file_exit"))
 
         self.menu_edit.setTitle(_("menu_edit"))
@@ -512,6 +688,7 @@ class MainWindow(QMainWindow):
         self.menu_help.setTitle(_("menu_help"))
         self.act_about.setText(_("menu_help_about"))
 
+        self._update_recent_menu()
         self._update_window_title()
 
     def apply_theme(self):

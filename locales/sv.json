@@ -6,10 +6,16 @@
   "unsaved": "Osparade ändringar",
 
   "menu_file": "Arkiv",
+  "menu_file_start_page": "Startsida",
   "menu_file_new": "Nytt dokument",
   "menu_file_open": "Öppna...",
+  "menu_file_recent": "Öppna senaste",
+  "menu_file_clear_recents": "Rensa senaste filer",
+  "menu_file_no_recents": "Inga tidigare filer",
   "menu_file_save": "Spara",
   "menu_file_save_as": "Spara som...",
+  "menu_file_print": "Skriv ut...",
+  "menu_file_print_preview": "Förhandsgranska utskrift...",
   "menu_file_export_pdf": "Exportera som PDF...",
   "menu_file_export_docx": "Exportera som Word (.docx)...",
   "menu_file_export_md": "Exportera som Markdown (.md)...",
@@ -150,6 +156,10 @@
   "sidebar_tab_chat": "Chattassistent",
 
   "ai_review_btn_refresh": "Uppdatera granskning",
+  "ai_review_refreshing": "Granskar...",
+  "ai_review_done": "Uppdaterat!",
+  "ai_review_loading_text": "Analyserar tonläge, stil och grammatik...",
+  "ai_review_short_text": "Dokumentet är för kort. Skriv minst en mening för att granska.",
   "ai_review_score_readability": "Läsbarhetsbetyg",
   "ai_review_score_tone": "Identifierat tonläge",
   "ai_review_section_suggestions": "Förbättringsförslag",
@@ -207,5 +217,16 @@
   "dlg_save_changes_text": "Dokumentet '{name}' har osparade ändringar. Vill du spara innan du stänger?",
   "dlg_save": "Spara",
   "dlg_discard": "Spara inte",
-  "dlg_cancel": "Avbryt"
+  "dlg_cancel": "Avbryt",
+
+  "start_welcome": "Välkommen till OmaScribe",
+  "start_tagline": "Modern, AI-driven textredigering & skrivmiljö",
+  "start_new_doc": "Nytt dokument",
+  "start_new_doc_sub": "Börja skriva på ett tomt papper",
+  "start_open_doc": "Bläddra efter filer...",
+  "start_open_doc_sub": "Öppna ett befintligt dokument från datorn",
+  "start_recent_files": "Senaste dokument",
+  "start_no_recents": "Inga tidigare dokument hittades",
+  "start_clear_recents": "Rensa historik",
+  "start_file_not_found": "Filen hittades inte på disken"
 }

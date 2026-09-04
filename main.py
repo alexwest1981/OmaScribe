@@ -41,10 +41,7 @@ def main():
     # Open file if passed via CLI argument
     if len(sys.argv) > 1 and os.path.isfile(sys.argv[1]):
         try:
-            DocumentManager.load_file(sys.argv[1], window.editor.document)
-            window.current_filepath = sys.argv[1]
-            window.is_modified = False
-            window._update_window_title()
+            window.open_recent_file(os.path.abspath(sys.argv[1]))
         except Exception as e:
             print(f"Error loading {sys.argv[1]}: {e}")
 

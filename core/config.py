@@ -20,7 +20,8 @@ DEFAULT_CONFIG = {
     "dictation_model": "base",
     "dictation_lang": "auto",
     "dictation_auto_punctuate": True,
-    "recent_files": []
+    "recent_files": [],
+    "has_run_before": False
 }
 
 class ConfigManager:
@@ -34,6 +35,8 @@ class ConfigManager:
                 with open(CONFIG_PATH, "r", encoding="utf-8") as f:
                     saved = json.load(f)
                     self.data.update(saved)
+                    if "has_run_before" not in saved:
+                        self.data["has_run_before"] = True
                     if "language" in saved:
                         i18n.set_language(saved["language"])
             except Exception as e:
@@ -62,4 +65,15 @@ class ConfigManager:
             recents.remove(filepath)
         recents.insert(0, filepath)
         self.data["recent_files"] = recents[:10]
+        self.save()
+
+    def remove_recent_file(self, filepath):
+        recents = self.data.get("recent_files", [])
+        if filepath in recents:
+            recents.remove(filepath)
+            self.data["recent_files"] = recents
+            self.save()
+
+    def clear_recent_files(self):
+        self.data["recent_files"] = []
         self.save()

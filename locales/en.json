@@ -6,10 +6,16 @@
   "unsaved": "Unsaved changes",
 
   "menu_file": "File",
+  "menu_file_start_page": "Start Page",
   "menu_file_new": "New Document",
   "menu_file_open": "Open...",
+  "menu_file_recent": "Open Recent",
+  "menu_file_clear_recents": "Clear Recent Files",
+  "menu_file_no_recents": "No Recent Files",
   "menu_file_save": "Save",
   "menu_file_save_as": "Save As...",
+  "menu_file_print": "Print...",
+  "menu_file_print_preview": "Print Preview...",
   "menu_file_export_pdf": "Export as PDF...",
   "menu_file_export_docx": "Export as Word (.docx)...",
   "menu_file_export_md": "Export as Markdown (.md)...",
@@ -150,6 +156,10 @@
   "sidebar_tab_chat": "Chat Assistant",
 
   "ai_review_btn_refresh": "Refresh Analysis",
+  "ai_review_refreshing": "Analyzing...",
+  "ai_review_done": "Updated!",
+  "ai_review_loading_text": "Analyzing tone, style, and grammar...",
+  "ai_review_short_text": "Document is too short. Write at least a sentence to analyze.",
   "ai_review_score_readability": "Readability Score",
   "ai_review_score_tone": "Detected Tone",
   "ai_review_section_suggestions": "Suggestions & Improvements",
@@ -207,5 +217,16 @@
   "dlg_save_changes_text": "The document '{name}' has unsaved changes. Do you want to save before closing?",
   "dlg_save": "Save",
   "dlg_discard": "Don't Save",
-  "dlg_cancel": "Cancel"
+  "dlg_cancel": "Cancel",
+
+  "start_welcome": "Welcome to OmaScribe",
+  "start_tagline": "Modern, AI-powered writing & rich text editor",
+  "start_new_doc": "New Document",
+  "start_new_doc_sub": "Start writing on a blank page",
+  "start_open_doc": "Browse Files...",
+  "start_open_doc_sub": "Open an existing document from disk",
+  "start_recent_files": "Recent Documents",
+  "start_no_recents": "No recent documents found",
+  "start_clear_recents": "Clear history",
+  "start_file_not_found": "File not found on disk"
 }

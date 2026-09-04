@@ -1,9 +1,9 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QTabWidget, QScrollArea, QFrame, QListWidget, QListWidgetItem,
-    QLineEdit, QTextEdit, QProgressBar
+    QProgressBar, QApplication
 )
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont, QColor
 from core.i18n import _, i18n
 from core.document_stats import DocumentStats
@@ -22,7 +22,10 @@ class SidebarInspector(QWidget):
         self.apply_theme()
         self.theme_mgr.theme_changed.connect(self.apply_theme)
         i18n.language_changed.connect(self.retranslate_ui)
+
         self.ai.review_completed.connect(self._on_review_received)
+        if hasattr(self.ai, "review_error"):
+            self.ai.review_error.connect(self._on_review_error)
 
     def init_ui(self):
         layout = QVBoxLayout(self)
@@ -57,9 +60,17 @@ class SidebarInspector(QWidget):
         top.addStretch()
 
         self.btn_refresh = QPushButton("⟳ " + _("ai_review_btn_refresh"))
-        self.btn_refresh.setFixedHeight(22)
+        self.btn_refresh.setFixedHeight(24)
         top.addWidget(self.btn_refresh)
         layout.addLayout(top)
+
+        # Indeterminate progress bar for loading state
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setFixedHeight(3)
+        self.progress_bar.setTextVisible(False)
+        self.progress_bar.setRange(0, 0)
+        self.progress_bar.setVisible(False)
+        layout.addWidget(self.progress_bar)
 
         # Suggestions Scroll Area
         self.scroll = QScrollArea()
@@ -99,6 +110,68 @@ class SidebarInspector(QWidget):
 
         layout.addStretch()
 
+    def set_loading(self, is_loading=True):
+        if is_loading:
+            self.btn_refresh.setEnabled(False)
+            self.btn_refresh.setText("⏳ " + _("ai_review_refreshing"))
+            self.progress_bar.setVisible(True)
+
+            # Clear cards and show a loading placeholder
+            self._clear_cards()
+            c = self.theme_mgr.current
+            loading_card = QFrame()
+            loading_card.setStyleSheet(f"""
+                QFrame {{
+                    background-color: {c["sidebar_card"]};
+                    border: 1px dashed {c["accent"]};
+                    border-radius: 6px;
+                    padding: 12px;
+                }}
+            """)
+            card_layout = QVBoxLayout(loading_card)
+            card_layout.setContentsMargins(8, 8, 8, 8)
+            card_layout.setSpacing(6)
+
+            lbl_spinner = QLabel("✨ " + _("ai_review_loading_text"))
+            lbl_spinner.setWordWrap(True)
+            lbl_spinner.setStyleSheet(f"color: {c['accent']}; font-size: 11px; font-weight: bold;")
+            card_layout.addWidget(lbl_spinner)
+            self.cards_layout.insertWidget(0, loading_card)
+        else:
+            self.progress_bar.setVisible(False)
+            self._reset_refresh_button()
+
+    def _reset_refresh_button(self):
+        self.btn_refresh.setEnabled(True)
+        self.btn_refresh.setText("⟳ " + _("ai_review_btn_refresh"))
+
+    def show_short_message(self):
+        self.progress_bar.setVisible(False)
+        self._reset_refresh_button()
+        self._clear_cards()
+        c = self.theme_mgr.current
+        card = QFrame()
+        card.setStyleSheet(f"""
+            QFrame {{
+                background-color: {c["sidebar_card"]};
+                border: 1px solid {c["canvas_border"]};
+                border-radius: 6px;
+                padding: 10px;
+            }}
+        """)
+        l = QVBoxLayout(card)
+        lbl = QLabel("ℹ️ " + _("ai_review_short_text"))
+        lbl.setWordWrap(True)
+        lbl.setStyleSheet(f"color: {c['text_muted']}; font-size: 11px;")
+        l.addWidget(lbl)
+        self.cards_layout.insertWidget(0, card)
+
+    def _clear_cards(self):
+        while self.cards_layout.count() > 1:
+            child = self.cards_layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+
     def update_metrics_and_outline(self, text_document):
         stats = DocumentStats.analyze(text_document)
 
@@ -122,20 +195,34 @@ class SidebarInspector(QWidget):
             self.outline_item_clicked.emit(pos)
 
     def _on_review_received(self, data):
-        # Clear existing cards
-        while self.cards_layout.count() > 1:
-            child = self.cards_layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+        self.progress_bar.setVisible(False)
+        self.btn_refresh.setEnabled(True)
+        self.btn_refresh.setText("✓ " + _("ai_review_done"))
+        QTimer.singleShot(2000, self._reset_refresh_button)
+
+        self._clear_cards()
 
         tone = data.get("tone", "Professional")
         self.lbl_tone.setText(f"Tone: {tone}")
 
         suggestions = data.get("suggestions", [])
         if not suggestions:
-            lbl_empty = QLabel(_("ai_review_no_issues"))
+            c = self.theme_mgr.current
+            card = QFrame()
+            card.setStyleSheet(f"""
+                QFrame {{
+                    background-color: {c["sidebar_card"]};
+                    border: 1px solid {c["canvas_border"]};
+                    border-radius: 6px;
+                    padding: 10px;
+                }}
+            """)
+            l = QVBoxLayout(card)
+            lbl_empty = QLabel("✓ " + _("ai_review_no_issues"))
             lbl_empty.setWordWrap(True)
-            self.cards_layout.insertWidget(0, lbl_empty)
+            lbl_empty.setStyleSheet(f"color: {c['accent']}; font-size: 11px;")
+            l.addWidget(lbl_empty)
+            self.cards_layout.insertWidget(0, card)
             return
 
         c = self.theme_mgr.current
@@ -190,11 +277,37 @@ class SidebarInspector(QWidget):
 
             self.cards_layout.insertWidget(self.cards_layout.count() - 1, card)
 
+    def _on_review_error(self, err_msg):
+        self.progress_bar.setVisible(False)
+        self._reset_refresh_button()
+        self._clear_cards()
+
+        c = self.theme_mgr.current
+        card = QFrame()
+        card.setStyleSheet(f"""
+            QFrame {{
+                background-color: {c["sidebar_card"]};
+                border: 1px solid #ef4444;
+                border-radius: 6px;
+                padding: 10px;
+            }}
+        """)
+        l = QVBoxLayout(card)
+        lbl_err_title = QLabel("⚠️ " + _("ai_review_btn_refresh"))
+        lbl_err_title.setStyleSheet("color: #ef4444; font-weight: bold; font-size: 11px;")
+        lbl_err_msg = QLabel(str(err_msg))
+        lbl_err_msg.setWordWrap(True)
+        lbl_err_msg.setStyleSheet(f"color: {c['text_muted']}; font-size: 10px;")
+
+        l.addWidget(lbl_err_title)
+        l.addWidget(lbl_err_msg)
+        self.cards_layout.insertWidget(0, card)
+
     def retranslate_ui(self):
         self.tabs.setTabText(0, _("sidebar_tab_review"))
         self.tabs.setTabText(1, _("sidebar_tab_outline"))
         self.tabs.setTabText(2, _("sidebar_tab_metrics"))
-        self.btn_refresh.setText("⟳ " + _("ai_review_btn_refresh"))
+        self._reset_refresh_button()
 
     def apply_theme(self):
         c = self.theme_mgr.current
@@ -213,12 +326,28 @@ class SidebarInspector(QWidget):
                 background-color: {c["sidebar_card"]};
                 color: {c["text_color"]};
                 border: 1px solid {c["canvas_border"]};
-                border-radius: 3px;
-                padding: 2px 6px;
-                font-size: 10px;
+                border-radius: 4px;
+                padding: 3px 8px;
+                font-size: 11px;
             }}
             QPushButton:hover {{
                 background-color: {c["btn_hover"]};
                 border-color: {c["accent"]};
+            }}
+            QPushButton:pressed {{
+                background-color: {c["btn_active"]};
+            }}
+            QPushButton:disabled {{
+                color: {c["text_muted"]};
+                background-color: {c["btn_hover"]};
+            }}
+            QProgressBar {{
+                border: none;
+                background-color: {c["canvas_border"]};
+                border-radius: 1px;
+            }}
+            QProgressBar::chunk {{
+                background-color: {c["accent"]};
+                border-radius: 1px;
             }}
         """)

@@ -46,6 +46,7 @@ class AIWorker(QThread):
 
 class AIClient(QObject):
     review_completed = pyqtSignal(dict)
+    review_error = pyqtSignal(str)
     transform_completed = pyqtSignal(str)
     ai_status_changed = pyqtSignal(str)
 
@@ -114,6 +115,7 @@ Do NOT wrap with markdown fences. Return raw JSON.
             self.review_completed.emit(data)
         except Exception as e:
             print(f"[AIClient] JSON parse error: {e}, raw was: {raw[:100]}")
+            self.review_error.emit(f"AI response format error: {e}")
 
     def _on_review_error(self, err_msg, worker):
         self._active_workers.discard(worker)
@@ -122,6 +124,7 @@ Do NOT wrap with markdown fences. Return raw JSON.
 
         self.ai_status_changed.emit("ready")
         print(f"[AIClient] {err_msg}")
+        self.review_error.emit(err_msg)
 
     def transform_text(self, selected_text, instruction, context_before="", context_after=""):
         self.ai_status_changed.emit("analyzing")

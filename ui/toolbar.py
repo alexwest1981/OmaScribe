@@ -424,7 +424,7 @@ class FormattingToolBar(QToolBar):
             char_fmt.setFontItalic(False)
 
         cursor.mergeBlockFormat(block_fmt)
-        cursor.mergeCharFormat(char_fmt)
+        cursor.mergeBlockCharFormat(char_fmt)
         self.editor.setTextCursor(cursor)
 
     def _toggle_bold(self):

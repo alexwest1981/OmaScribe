@@ -27,6 +27,7 @@ def main():
 
     config_mgr = ConfigManager()
     theme_mgr = ThemeManager(config_mgr)
+    theme_mgr.apply_theme_to_app(app)
     
     # Initialize language from config
     saved_lang = config_mgr.get("language", "en")

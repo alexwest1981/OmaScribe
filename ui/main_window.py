@@ -515,4 +515,4 @@ class MainWindow(QMainWindow):
         self._update_window_title()
 
     def apply_theme(self):
-        self.setStyleSheet(self.theme_mgr.get_stylesheet())
+        self.theme_mgr.apply_theme_to_app()

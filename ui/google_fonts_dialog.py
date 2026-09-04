@@ -159,7 +159,7 @@ class GoogleFontsDialog(QDialog):
                 lbl_prev.setFont(prev_font)
             else:
                 lbl_prev.setFont(QFont("Segoe UI", 12))
-            lbl_prev.setStyleSheet("margin-top: 4px; padding: 4px 0;")
+            lbl_prev.setStyleSheet(f"margin-top: 4px; padding: 4px 0; color: {c['text_color']};")
             card_layout.addWidget(lbl_prev)
 
             self.cards_layout.insertWidget(self.cards_layout.count() - 1, card)
@@ -186,34 +186,13 @@ class GoogleFontsDialog(QDialog):
 
     def apply_theme(self):
         c = self.theme_mgr.current
-        self.setStyleSheet(f"""
-            QDialog {{
-                background-color: {c["window_bg"]};
-                color: {c["text_color"]};
-            }}
-            QLineEdit {{
-                background-color: {c["canvas_bg"]};
-                color: {c["text_color"]};
-                border: 1px solid {c["canvas_border"]};
-                border-radius: 4px;
-                padding: 6px 10px;
-                font-size: 12px;
-            }}
-            QPushButton {{
+        self.setStyleSheet(self.theme_mgr.get_stylesheet() + f"""
+            #FontCard {{
                 background-color: {c["sidebar_card"]};
-                color: {c["text_color"]};
                 border: 1px solid {c["canvas_border"]};
-                border-radius: 4px;
-                padding: 4px 10px;
-                font-size: 11px;
+                border-radius: 8px;
             }}
-            QPushButton:checked {{
-                background-color: {c["accent"]};
-                color: #ffffff;
-                font-weight: bold;
-            }}
-            QPushButton:hover {{
-                background-color: {c["btn_hover"]};
+            #FontCard:hover {{
                 border-color: {c["accent"]};
             }}
         """)

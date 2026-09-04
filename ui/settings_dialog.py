@@ -202,24 +202,4 @@ class SettingsDialog(QDialog):
         self.accept()
 
     def apply_theme(self):
-        c = self.theme_mgr.current
-        self.setStyleSheet(f"""
-            QDialog {{
-                background-color: {c["window_bg"]};
-                color: {c["text_color"]};
-            }}
-            QLineEdit, QComboBox {{
-                background-color: {c["canvas_bg"]};
-                color: {c["text_color"]};
-                border: 1px solid {c["canvas_border"]};
-                border-radius: 4px;
-                padding: 4px 8px;
-            }}
-            QPushButton {{
-                background-color: {c["sidebar_card"]};
-                color: {c["text_color"]};
-                border: 1px solid {c["canvas_border"]};
-                border-radius: 4px;
-                padding: 6px 12px;
-            }}
-        """)
+        self.setStyleSheet(self.theme_mgr.get_stylesheet())

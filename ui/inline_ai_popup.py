@@ -30,9 +30,9 @@ class InlineAIPopup(QDialog):
 
         # Header Title
         top = QHBoxLayout()
-        lbl = QLabel(_("inline_ai_title"))
-        lbl.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
-        top.addWidget(lbl)
+        self.lbl_title = QLabel(_("inline_ai_title"))
+        self.lbl_title.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        top.addWidget(self.lbl_title)
         top.addStretch()
         layout.addLayout(top)
 
@@ -48,32 +48,12 @@ class InlineAIPopup(QDialog):
         input_row.addWidget(self.btn_gen)
         layout.addLayout(input_row)
 
-        # Quick action chips
-        chip_row1 = QHBoxLayout()
-        for key, text in [
-            ("rephrase", _("inline_ai_opt_rephrase")),
-            ("shorten", _("inline_ai_opt_shorten")),
-            ("expand", _("inline_ai_opt_expand")),
-            ("grammar", _("inline_ai_opt_fix_grammar"))
-        ]:
-            b = QPushButton(text.replace("&", "&&"))
-            b.setFixedHeight(26)
-            b.clicked.connect(lambda ch, t=text: self._on_quick_action(t))
-            chip_row1.addWidget(b)
-        layout.addLayout(chip_row1)
-
-        chip_row2 = QHBoxLayout()
-        for key, text in [
-            ("formal", _("inline_ai_opt_tone_formal")),
-            ("casual", _("inline_ai_opt_tone_casual")),
-            ("translate_sv", _("inline_ai_opt_translate_sv")),
-            ("translate_en", _("inline_ai_opt_translate_en"))
-        ]:
-            b = QPushButton(text.replace("&", "&&"))
-            b.setFixedHeight(26)
-            b.clicked.connect(lambda ch, t=text: self._on_quick_action(t))
-            chip_row2.addWidget(b)
-        layout.addLayout(chip_row2)
+        # Quick action chips containers
+        self.chip_layout_1 = QHBoxLayout()
+        self.chip_layout_2 = QHBoxLayout()
+        layout.addLayout(self.chip_layout_1)
+        layout.addLayout(self.chip_layout_2)
+        self._build_action_chips()
 
         # Result preview box (initially hidden)
         self.preview_box = QTextEdit()
@@ -83,11 +63,11 @@ class InlineAIPopup(QDialog):
 
         # Action Buttons (Accept / Insert / Discard)
         self.action_row = QHBoxLayout()
-        self.btn_accept = QPushButton(("✓ " + _("inline_ai_btn_accept")).replace("&", "&&"))
+        self.btn_accept = QPushButton()
         self.btn_accept.clicked.connect(self._on_accept)
-        self.btn_insert = QPushButton(("↓ " + _("inline_ai_btn_insert_below")).replace("&", "&&"))
+        self.btn_insert = QPushButton()
         self.btn_insert.clicked.connect(self._on_insert)
-        self.btn_discard = QPushButton(("✕ " + _("inline_ai_btn_discard")).replace("&", "&&"))
+        self.btn_discard = QPushButton()
         self.btn_discard.clicked.connect(self.close)
 
         self.action_row.addWidget(self.btn_accept)
@@ -99,6 +79,51 @@ class InlineAIPopup(QDialog):
         self.action_frame.setLayout(self.action_row)
         self.action_frame.setVisible(False)
         layout.addWidget(self.action_frame)
+
+        self.retranslate_ui()
+        i18n.language_changed.connect(self.retranslate_ui)
+
+    def _build_action_chips(self):
+        # Clear existing
+        while self.chip_layout_1.count():
+            w = self.chip_layout_1.takeAt(0).widget()
+            if w:
+                w.deleteLater()
+        while self.chip_layout_2.count():
+            w = self.chip_layout_2.takeAt(0).widget()
+            if w:
+                w.deleteLater()
+
+        for key, text in [
+            ("rephrase", _("inline_ai_opt_rephrase")),
+            ("shorten", _("inline_ai_opt_shorten")),
+            ("expand", _("inline_ai_opt_expand")),
+            ("grammar", _("inline_ai_opt_fix_grammar"))
+        ]:
+            b = QPushButton(text.replace("&", "&&"))
+            b.setFixedHeight(26)
+            b.clicked.connect(lambda ch, t=text: self._on_quick_action(t))
+            self.chip_layout_1.addWidget(b)
+
+        for key, text in [
+            ("formal", _("inline_ai_opt_tone_formal")),
+            ("casual", _("inline_ai_opt_tone_casual")),
+            ("translate_sv", _("inline_ai_opt_translate_sv")),
+            ("translate_en", _("inline_ai_opt_translate_en"))
+        ]:
+            b = QPushButton(text.replace("&", "&&"))
+            b.setFixedHeight(26)
+            b.clicked.connect(lambda ch, t=text: self._on_quick_action(t))
+            self.chip_layout_2.addWidget(b)
+
+    def retranslate_ui(self):
+        self.lbl_title.setText(_("inline_ai_title"))
+        self.input_prompt.setPlaceholderText(_("inline_ai_placeholder"))
+        self.btn_gen.setText(_("inline_ai_btn_generate"))
+        self.btn_accept.setText(("✓ " + _("inline_ai_btn_accept")).replace("&", "&&"))
+        self.btn_insert.setText(("↓ " + _("inline_ai_btn_insert_below")).replace("&", "&&"))
+        self.btn_discard.setText(("✕ " + _("inline_ai_btn_discard")).replace("&", "&&"))
+        self._build_action_chips()
 
     def show_at(self, selected_text, pos: QPoint):
         self.selected_text = selected_text
@@ -114,13 +139,13 @@ class InlineAIPopup(QDialog):
         if not prompt:
             return
         self.preview_box.setVisible(True)
-        self.preview_box.setPlainText("✨ Thinking and crafting proposal...")
+        self.preview_box.setPlainText("✨ " + _("status_ai_analyzing"))
         self.ai.transform_text(self.selected_text, prompt)
 
     def _on_quick_action(self, instruction):
         self.input_prompt.setText(instruction)
         self.preview_box.setVisible(True)
-        self.preview_box.setPlainText("✨ Thinking and crafting proposal...")
+        self.preview_box.setPlainText("✨ " + _("status_ai_analyzing"))
         self.ai.transform_text(self.selected_text, instruction)
 
     def _on_transform_received(self, text):

@@ -228,5 +228,14 @@
   "start_recent_files": "Recent Documents",
   "start_no_recents": "No recent documents found",
   "start_clear_recents": "Clear history",
-  "start_file_not_found": "File not found on disk"
+  "start_file_not_found": "File not found on disk",
+  "menu_view_language": "Language",
+  "lang_en": "🇬🇧 English",
+  "lang_sv": "🇸🇪 Svenska",
+  "status_lang_switch_tooltip": "Click to switch language (English / Svenska)",
+  "export_success_title": "Export Successful",
+  "export_success_text": "Document exported to:\n{path}",
+  "export_error_title": "Export Error",
+  "about_desc": "AI-Powered Rich Text Word-like Editor built for Linux & Omarchy with Python & Qt.",
+  "tb_style_code_tooltip": "Code Block (Ctrl+Alt+5)"
 }

@@ -2,10 +2,10 @@ import os
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFileDialog,
     QMessageBox, QLabel, QSplitter, QStatusBar, QApplication,
-    QStackedWidget, QMenu, QDialog
+    QStackedWidget, QMenu, QDialog, QPushButton
 )
 from PyQt6.QtCore import Qt, QTimer, QPoint, QMarginsF
-from PyQt6.QtGui import QAction, QKeySequence, QTextCursor, QPageLayout, QPageSize
+from PyQt6.QtGui import QAction, QKeySequence, QTextCursor, QPageLayout, QPageSize, QCursor
 from PyQt6.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
 
 from core.i18n import _, i18n
@@ -124,10 +124,30 @@ class MainWindow(QMainWindow):
         self.lbl_ai_status = QLabel("✨ " + _("status_ai_ready"))
         self.lbl_dict_status = QLabel("🎙️ " + _("status_dictation_idle"))
 
+        self.btn_lang_toggle = QPushButton()
+        self.btn_lang_toggle.setObjectName("StatusBarLangBtn")
+        self.btn_lang_toggle.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_lang_toggle.clicked.connect(self._toggle_language)
+        self.btn_lang_toggle.setStyleSheet("""
+            QPushButton#StatusBarLangBtn {
+                background-color: transparent;
+                border: 1px solid rgba(128, 128, 128, 0.3);
+                border-radius: 4px;
+                padding: 2px 6px;
+                font-weight: 600;
+                font-size: 11px;
+            }
+            QPushButton#StatusBarLangBtn:hover {
+                background-color: rgba(128, 128, 128, 0.15);
+            }
+        """)
+        self._update_lang_toggle_btn()
+
         self.status_bar.addWidget(self.lbl_stats)
         self.status_bar.addPermanentWidget(self.lbl_ai_status)
         self.status_bar.addPermanentWidget(self.lbl_dict_status)
         self.status_bar.addPermanentWidget(self.lbl_cursor)
+        self.status_bar.addPermanentWidget(self.btn_lang_toggle)
 
     def _add_action(self, menu, text, slot, shortcut=None):
         act = QAction(text, self)
@@ -174,6 +194,29 @@ class MainWindow(QMainWindow):
         self.act_copy = self._add_action(self.menu_edit, _("menu_edit_copy"), self.editor.canvas.copy, "Ctrl+C")
         self.act_paste = self._add_action(self.menu_edit, _("menu_edit_paste"), self.editor.canvas.paste, "Ctrl+V")
         self.act_select_all = self._add_action(self.menu_edit, _("menu_edit_select_all"), self.editor.canvas.selectAll, "Ctrl+A")
+
+        # View Menu
+        self.menu_view = mb.addMenu(_("menu_view"))
+        self.act_view_sidebar = self._add_action(self.menu_view, _("menu_view_ai_sidebar"), self._toggle_sidebar, "Ctrl+Shift+I")
+        self.act_view_focus = self._add_action(self.menu_view, _("menu_view_focus_mode"), self._toggle_focus_mode, "F11")
+        self.menu_view.addSeparator()
+        self.act_zoom_in = self._add_action(self.menu_view, _("menu_view_zoom_in"), self._zoom_in, "Ctrl++")
+        self.act_zoom_out = self._add_action(self.menu_view, _("menu_view_zoom_out"), self._zoom_out, "Ctrl+-")
+        self.act_zoom_reset = self._add_action(self.menu_view, _("menu_view_zoom_reset"), self._zoom_reset, "Ctrl+0")
+        self.menu_view.addSeparator()
+        
+        # Language submenu
+        self.menu_language = self.menu_view.addMenu("🌐 " + _("menu_view_language"))
+        self.act_lang_sv = QAction(_("lang_sv"), self)
+        self.act_lang_sv.setCheckable(True)
+        self.act_lang_sv.triggered.connect(lambda: self._set_language("sv"))
+        self.menu_language.addAction(self.act_lang_sv)
+
+        self.act_lang_en = QAction(_("lang_en"), self)
+        self.act_lang_en.setCheckable(True)
+        self.act_lang_en.triggered.connect(lambda: self._set_language("en"))
+        self.menu_language.addAction(self.act_lang_en)
+        self._update_lang_menu_actions()
 
         # Insert Menu
         self.menu_insert = mb.addMenu(_("menu_insert"))
@@ -250,24 +293,90 @@ class MainWindow(QMainWindow):
         self._update_stats()
         self.editor.canvas.setFocus()
 
+    def _toggle_language(self):
+        curr = i18n.get_language()
+        new_lang = "sv" if curr == "en" else "en"
+        self._set_language(new_lang)
+
+    def _set_language(self, lang_code):
+        if lang_code != i18n.get_language():
+            i18n.set_language(lang_code)
+            self.config.set("language", lang_code)
+
+    def _update_lang_toggle_btn(self):
+        curr = i18n.get_language()
+        if curr == "sv":
+            self.btn_lang_toggle.setText("🇸🇪 SV")
+        else:
+            self.btn_lang_toggle.setText("🇬🇧 EN")
+        self.btn_lang_toggle.setToolTip(_("status_lang_switch_tooltip"))
+
+    def _update_lang_menu_actions(self):
+        curr = i18n.get_language()
+        if hasattr(self, "act_lang_sv"):
+            self.act_lang_sv.setChecked(curr == "sv")
+        if hasattr(self, "act_lang_en"):
+            self.act_lang_en.setChecked(curr == "en")
+
+    def _toggle_focus_mode(self):
+        if self.isFullScreen():
+            self.showNormal()
+            self.toolbar.setVisible(True)
+            self.sidebar.setVisible(self.config.get("show_ai_sidebar", True))
+        else:
+            self.showFullScreen()
+            self.toolbar.setVisible(False)
+            self.sidebar.setVisible(False)
+
+    def _zoom_in(self):
+        self.editor.canvas.zoomIn(1)
+
+    def _zoom_out(self):
+        self.editor.canvas.zoomOut(1)
+
+    def _zoom_reset(self):
+        font = self.editor.canvas.font()
+        font.setPointSize(self.config.get("default_font_size", 12))
+        self.editor.canvas.setFont(font)
+
     def _insert_welcome_sample(self):
-        html = f"""
-        <h1>{_("app_title")}</h1>
-        <p>Welcome to <b>OmaScribe</b>, your next-generation intelligent writing environment designed for Linux and Omarchy.</p>
-        
-        <h2>🚀 What makes OmaScribe unique?</h2>
-        <p>OmaScribe combines standard WYSIWYG document editing with built-in AI review, intelligent rephrasing, and local voice dictation:</p>
-        
-        <ul>
-          <li><b>✨ Magic Co-Writer:</b> Highlight any phrase or sentence and press <code>Ctrl + K</code> to rewrite, polish, translate, or expand.</li>
-          <li><b>📑 AI Inspector Sidebar:</b> Get live suggestions, readability grading (LIX), tone analysis, and automatic heading outline.</li>
-          <li><b>🎙️ Voice Dictation:</b> Press <code>F8</code> to speak and dictate your thoughts naturally.</li>
-          <li><b>📄 Native Export:</b> Export your documents directly to Word <code>.docx</code>, print-ready <code>.pdf</code>, and <code>.md</code>.</li>
-        </ul>
-        
-        <blockquote>"The scariest moment is always just before you start. After that, things can only get better." — Stephen King</blockquote>
-        <p>Start typing or deleting this text to draft your masterwork!</p>
-        """
+        lang = i18n.get_language()
+        if lang == "sv":
+            html = f"""
+            <h1>{_("app_title")}</h1>
+            <p>Välkommen till <b>OmaScribe</b>, din moderna och intelligenta skrivmiljö för Linux & Omarchy.</p>
+            
+            <h2>🚀 Vad gör OmaScribe unikt?</h2>
+            <p>OmaScribe kombinerar en ren och fokuserad ordbehandlare med inbyggd AI-granskning, interaktiv omskrivning och lokal röst-diktering:</p>
+            
+            <ul>
+              <li><b>✨ Magisk Co-Writer:</b> Markera valfri text och tryck <code>Ctrl + K</code> för att skriva om, förbättra tonläge, översätta eller utveckla.</li>
+              <li><b>📑 AI-Granskare & Statistik:</b> Få förslag i realtid, LIX-läsbarhet, tonanalys och automatisk disposition.</li>
+              <li><b>🎙️ Röst-diktering:</b> Tryck <code>F8</code> för att tala in din text med automatisk transkribering.</li>
+              <li><b>📄 Full kompatibilitet:</b> Öppna och spara direkt i Word <code>.docx</code>, <code>.md</code> (Markdown) och skriv ut till <code>.pdf</code>.</li>
+            </ul>
+            
+            <blockquote>"Det mest skrämmande ögonblicket är alltid precis innan du börjar. Därefter kan det bara bli bättre." — Stephen King</blockquote>
+            <p>Börja skriva eller radera denna text för att påbörja ditt mästerverk!</p>
+            """
+        else:
+            html = f"""
+            <h1>{_("app_title")}</h1>
+            <p>Welcome to <b>OmaScribe</b>, your next-generation intelligent writing environment designed for Linux and Omarchy.</p>
+            
+            <h2>🚀 What makes OmaScribe unique?</h2>
+            <p>OmaScribe combines standard WYSIWYG document editing with built-in AI review, intelligent rephrasing, and local voice dictation:</p>
+            
+            <ul>
+              <li><b>✨ Magic Co-Writer:</b> Highlight any phrase or sentence and press <code>Ctrl + K</code> to rewrite, polish, translate, or expand.</li>
+              <li><b>📑 AI Inspector Sidebar:</b> Get live suggestions, readability grading (LIX), tone analysis, and automatic heading outline.</li>
+              <li><b>🎙️ Voice Dictation:</b> Press <code>F8</code> to speak and dictate your thoughts naturally.</li>
+              <li><b>📄 Native Export:</b> Export your documents directly to Word <code>.docx</code>, print-ready <code>.pdf</code>, and <code>.md</code>.</li>
+            </ul>
+            
+            <blockquote>"The scariest moment is always just before you start. After that, things can only get better." — Stephen King</blockquote>
+            <p>Start typing or deleting this text to draft your masterwork!</p>
+            """
         self.editor.document.setHtml(html)
         self.is_modified = False
         self._update_window_title()
@@ -412,7 +521,7 @@ class MainWindow(QMainWindow):
             _("app_name"),
             f"<h3>{_('app_title')}</h3>"
             f"<p>Version 0.1.0</p>"
-            f"<p>AI-Powered Rich Text Word-like Editor built for Linux & Omarchy with Python & Qt.</p>"
+            f"<p>{_('about_desc')}</p>"
         )
 
     # -------------------------------------------------------------------------
@@ -562,9 +671,9 @@ class MainWindow(QMainWindow):
             fpath = self._ensure_extension(fpath, "*.pdf", ".pdf")
             try:
                 DocumentManager.save_file(fpath, self.editor.document)
-                QMessageBox.information(self, "Export Successful", f"Document exported to:\n{fpath}")
+                QMessageBox.information(self, _("export_success_title"), _("export_success_text", path=fpath))
             except Exception as e:
-                QMessageBox.critical(self, "Export Error", str(e))
+                QMessageBox.critical(self, _("export_error_title"), str(e))
 
     def export_docx(self):
         fpath, selected_filter = QFileDialog.getSaveFileName(
@@ -577,9 +686,9 @@ class MainWindow(QMainWindow):
             fpath = self._ensure_extension(fpath, "*.docx", ".docx")
             try:
                 DocumentManager.save_file(fpath, self.editor.document)
-                QMessageBox.information(self, "Export Successful", f"Document exported to:\n{fpath}")
+                QMessageBox.information(self, _("export_success_title"), _("export_success_text", path=fpath))
             except Exception as e:
-                QMessageBox.critical(self, "Export Error", str(e))
+                QMessageBox.critical(self, _("export_error_title"), str(e))
 
     def export_markdown(self):
         fpath, selected_filter = QFileDialog.getSaveFileName(
@@ -592,9 +701,9 @@ class MainWindow(QMainWindow):
             fpath = self._ensure_extension(fpath, "*.md", ".md")
             try:
                 DocumentManager.save_file(fpath, self.editor.document)
-                QMessageBox.information(self, "Export Successful", f"Document exported to:\n{fpath}")
+                QMessageBox.information(self, _("export_success_title"), _("export_success_text", path=fpath))
             except Exception as e:
-                QMessageBox.critical(self, "Export Error", str(e))
+                QMessageBox.critical(self, _("export_error_title"), str(e))
 
     def export_html(self):
         fpath, selected_filter = QFileDialog.getSaveFileName(
@@ -607,9 +716,9 @@ class MainWindow(QMainWindow):
             fpath = self._ensure_extension(fpath, "*.html", ".html")
             try:
                 DocumentManager.save_file(fpath, self.editor.document)
-                QMessageBox.information(self, "Export Successful", f"Document exported to:\n{fpath}")
+                QMessageBox.information(self, _("export_success_title"), _("export_success_text", path=fpath))
             except Exception as e:
-                QMessageBox.critical(self, "Export Error", str(e))
+                QMessageBox.critical(self, _("export_error_title"), str(e))
 
     def _maybe_save_changes(self):
         if not self.is_modified:
@@ -637,6 +746,11 @@ class MainWindow(QMainWindow):
             event.ignore()
 
     def retranslate_ui(self):
+        self.lbl_ai_status.setText("✨ " + _("status_ai_ready"))
+        self.lbl_dict_status.setText("🎙️ " + _("status_dictation_idle"))
+        self._update_lang_toggle_btn()
+        self._update_lang_menu_actions()
+
         self.menu_file.setTitle(_("menu_file"))
         self.act_start_page.setText(_("menu_file_start_page"))
         self.act_new.setText(_("menu_file_new"))
@@ -659,6 +773,16 @@ class MainWindow(QMainWindow):
         self.act_copy.setText(_("menu_edit_copy"))
         self.act_paste.setText(_("menu_edit_paste"))
         self.act_select_all.setText(_("menu_edit_select_all"))
+
+        self.menu_view.setTitle(_("menu_view"))
+        self.act_view_sidebar.setText(_("menu_view_ai_sidebar"))
+        self.act_view_focus.setText(_("menu_view_focus_mode"))
+        self.act_zoom_in.setText(_("menu_view_zoom_in"))
+        self.act_zoom_out.setText(_("menu_view_zoom_out"))
+        self.act_zoom_reset.setText(_("menu_view_zoom_reset"))
+        self.menu_language.setTitle("🌐 " + _("menu_view_language"))
+        self.act_lang_sv.setText(_("lang_sv"))
+        self.act_lang_en.setText(_("lang_en"))
 
         self.menu_insert.setTitle(_("menu_insert"))
         self.act_ins_table.setText("📊 " + _("menu_insert_table"))

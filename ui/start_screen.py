@@ -43,8 +43,19 @@ class StartScreen(QWidget):
         self.container.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.MinimumExpanding)
 
         self.content_layout = QVBoxLayout(self.container)
-        self.content_layout.setContentsMargins(32, 40, 32, 40)
-        self.content_layout.setSpacing(24)
+        self.content_layout.setContentsMargins(32, 28, 32, 40)
+        self.content_layout.setSpacing(20)
+
+        # 0. Top Bar (Language toggle)
+        top_bar = QHBoxLayout()
+        top_bar.addStretch()
+        self.btn_lang = QPushButton()
+        self.btn_lang.setObjectName("StartLangButton")
+        self.btn_lang.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_lang.clicked.connect(self._toggle_language)
+        self._update_lang_btn()
+        top_bar.addWidget(self.btn_lang)
+        self.content_layout.addLayout(top_bar)
 
         # 1. Hero / Header Section
         hero_layout = QVBoxLayout()
@@ -260,6 +271,19 @@ class StartScreen(QWidget):
 
         return btn
 
+    def _toggle_language(self):
+        curr = i18n.get_language()
+        new_lang = "sv" if curr == "en" else "en"
+        i18n.set_language(new_lang)
+        self.config.set("language", new_lang)
+
+    def _update_lang_btn(self):
+        curr = i18n.get_language()
+        if curr == "sv":
+            self.btn_lang.setText("🌐 🇸🇪 Svenska (Byt till EN)")
+        else:
+            self.btn_lang.setText("🌐 🇬🇧 English (Switch to SV)")
+
     def _clear_recents(self):
         self.config.clear_recent_files()
         self.refresh_recents()
@@ -271,6 +295,20 @@ class StartScreen(QWidget):
         self.container.setStyleSheet(f"background-color: {c['window_bg']};")
 
         self.setStyleSheet(f"""
+            #StartLangButton {{
+                background: transparent;
+                border: 1px solid {c['canvas_border']};
+                border-radius: 12px;
+                color: {c['text_muted']};
+                font-size: 11px;
+                font-weight: 600;
+                padding: 4px 10px;
+            }}
+            #StartLangButton:hover {{
+                border-color: {c['accent']};
+                color: {c['text_color']};
+                background-color: {c['btn_hover']};
+            }}
             #StartTitle {{
                 font-size: 28px;
                 font-weight: 800;
@@ -361,6 +399,7 @@ class StartScreen(QWidget):
         """)
 
     def retranslate_ui(self):
+        self._update_lang_btn()
         self.lbl_subtitle.setText(_("start_tagline"))
         self.lbl_new_title.setText(_("start_new_doc"))
         self.lbl_new_sub.setText(_("start_new_doc_sub"))

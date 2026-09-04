@@ -67,8 +67,11 @@ class AIClient(QObject):
 
         self.ai_status_changed.emit("analyzing")
 
+        lang_desc = "Swedish (Svenska)" if lang in ("sv", "svenska", "swedish") else "English"
+        lang_note = "Respond in Swedish for the summary, tone, and suggestions' explanations." if lang in ("sv", "svenska", "swedish") else "Respond in English for the summary, tone, and suggestions' explanations."
+
         sys_prompt = f"""You are an elite, professional editor and writing coach.
-Analyze the following document written in {lang}.
+Analyze the following document written in {lang_desc}. {lang_note}
 Respond ONLY with a valid JSON object matching this schema:
 {{
   "readability_score": 88,

@@ -228,5 +228,14 @@
   "start_recent_files": "Senaste dokument",
   "start_no_recents": "Inga tidigare dokument hittades",
   "start_clear_recents": "Rensa historik",
-  "start_file_not_found": "Filen hittades inte på disken"
+  "start_file_not_found": "Filen hittades inte på disken",
+  "menu_view_language": "Språk",
+  "lang_en": "🇬🇧 English",
+  "lang_sv": "🇸🇪 Svenska",
+  "status_lang_switch_tooltip": "Klicka för att byta språk (Svenska / Engelska)",
+  "export_success_title": "Exporten lyckades",
+  "export_success_text": "Dokumentet har exporterats till:\n{path}",
+  "export_error_title": "Exportfel",
+  "about_desc": "AI-driven textredigerare för Linux & Omarchy med stöd för Word, Markdown och röst-diktering.",
+  "tb_style_code_tooltip": "Kodblock (Ctrl+Alt+5)"
 }

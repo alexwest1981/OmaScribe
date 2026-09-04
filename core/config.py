@@ -1,11 +1,24 @@
 import os
 import json
+import locale
 from core.i18n import i18n
 
 CONFIG_PATH = os.path.expanduser("~/.config/omascribe/config.json")
 
+def get_system_default_language():
+    try:
+        lang_env = (os.environ.get("LANG", "") or os.environ.get("LC_ALL", "") or "").lower()
+        if lang_env.startswith("sv"):
+            return "sv"
+        loc = locale.getdefaultlocale()[0]
+        if loc and loc.lower().startswith("sv"):
+            return "sv"
+    except Exception:
+        pass
+    return "en"
+
 DEFAULT_CONFIG = {
-    "language": "en",
+    "language": get_system_default_language(),
     "theme": "paper",  # "paper", "dark", "nord", "amber"
     "autosave": True,
     "autosave_interval_sec": 30,

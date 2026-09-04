@@ -304,7 +304,7 @@ class FormattingToolBar(QToolBar):
         self.btn_style_quote.setToolTip(_("tb_heading_quote"))
         
         self.btn_style_code.setText(_("tb_style_code"))
-        self.btn_style_code.setToolTip("Code Block")
+        self.btn_style_code.setToolTip(_("tb_style_code_tooltip"))
 
         self.act_gfonts.setToolTip(_("menu_format_google_fonts"))
         self.act_bold.setToolTip(_("tb_bold"))

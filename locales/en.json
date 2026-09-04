@@ -143,9 +143,13 @@
   "settings_theme_nord": "Nord Arctic",
   "settings_theme_amber": "Retro Amber CRT",
   "settings_autosave": "Enable Autosave (every 30 seconds)",
+  "settings_ai_provider": "AI Provider Preset:",
   "settings_ai_endpoint": "API Base URL:",
   "settings_ai_key": "API Key / Auth Token:",
   "settings_ai_model": "AI Model:",
+  "settings_btn_test_ai": "⚡ Test Connection",
+  "settings_test_success": "Connection successful! Model '{model}' responded.",
+  "settings_test_failed": "Connection failed: {error}",
   "settings_btn_save": "Save & Apply",
   "settings_btn_cancel": "Cancel",
 

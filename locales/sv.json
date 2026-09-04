@@ -143,9 +143,13 @@
   "settings_theme_nord": "Nord Arctic",
   "settings_theme_amber": "Retro Bärnsten CRT",
   "settings_autosave": "Aktivera autosparning (var 30:e sekund)",
+  "settings_ai_provider": "AI-leverantör:",
   "settings_ai_endpoint": "API Base URL:",
   "settings_ai_key": "API-nyckel / Token:",
   "settings_ai_model": "AI-modell:",
+  "settings_btn_test_ai": "⚡ Testa anslutning",
+  "settings_test_success": "Anslutningen lyckades! Modellen '{model}' svarade.",
+  "settings_test_failed": "Anslutningen misslyckades: {error}",
   "settings_btn_save": "Spara & Tillämpa",
   "settings_btn_cancel": "Avbryt",
 

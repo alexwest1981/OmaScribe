@@ -54,15 +54,49 @@ class SettingsDialog(QDialog):
         tab_ai = QWidget()
         form_ai = QFormLayout(tab_ai)
 
-        self.input_ai_url = QLineEdit(self.config.get("ai_endpoint", "http://localhost:8000/v1"))
+        self.combo_provider = QComboBox()
+        self.providers = [
+            ("omniroute", "OmniRoute (Local Proxy)", "http://127.0.0.1:20128/v1", "OmniRoute"),
+            ("ollama", "Ollama (100% Free & Offline Local AI)", "http://localhost:11434/v1", "llama3.2"),
+            ("openai", "OpenAI (GPT-4o / GPT-4o-mini)", "https://api.openai.com/v1", "gpt-4o-mini"),
+            ("openrouter", "OpenRouter (Claude 3.5 Sonnet / Llama)", "https://openrouter.ai/api/v1", "anthropic/claude-3.5-sonnet"),
+            ("gemini", "Google Gemini (Direct OpenAI-API)", "https://generativelanguage.googleapis.com/v1beta/openai/", "gemini-1.5-flash"),
+            ("lmstudio", "LM Studio / LocalAI (Local server)", "http://localhost:1234/v1", "local-model"),
+            ("custom", "Custom / Self-Hosted Endpoint", "", "")
+        ]
+
+        curr_url = self.config.get("ai_endpoint", "http://127.0.0.1:20128/v1")
+        matched_idx = len(self.providers) - 1 # default custom
+        for i, (pid, pname, purl, pmodel) in enumerate(self.providers):
+            self.combo_provider.addItem(pname, pid)
+            if purl and purl.rstrip("/") == curr_url.rstrip("/"):
+                matched_idx = i
+
+        self.combo_provider.setCurrentIndex(matched_idx)
+        self.combo_provider.currentIndexChanged.connect(self._on_provider_preset_changed)
+        form_ai.addRow(_("settings_ai_provider"), self.combo_provider)
+
+        self.input_ai_url = QLineEdit(curr_url)
         form_ai.addRow(_("settings_ai_endpoint"), self.input_ai_url)
 
         self.input_ai_key = QLineEdit(self.config.get("ai_key", ""))
         self.input_ai_key.setEchoMode(QLineEdit.EchoMode.Password)
+        self.input_ai_key.setPlaceholderText("sk-... (leave empty if not required, e.g. Ollama)")
         form_ai.addRow(_("settings_ai_key"), self.input_ai_key)
 
-        self.input_ai_model = QLineEdit(self.config.get("ai_model", "claude-3-5-sonnet"))
+        self.input_ai_model = QLineEdit(self.config.get("ai_model", "OmniRoute"))
         form_ai.addRow(_("settings_ai_model"), self.input_ai_model)
+
+        # Test connection button & status label
+        test_row = QHBoxLayout()
+        self.btn_test = QPushButton(_("settings_btn_test_ai"))
+        self.btn_test.clicked.connect(self._test_ai_connection)
+        self.lbl_test_status = QLabel("")
+        self.lbl_test_status.setWordWrap(True)
+        test_row.addWidget(self.btn_test)
+        test_row.addWidget(self.lbl_test_status)
+        test_row.addStretch()
+        form_ai.addRow("", test_row)
 
         self.tabs.addTab(tab_ai, _("settings_tab_ai"))
 
@@ -98,6 +132,52 @@ class SettingsDialog(QDialog):
         btn_row.addWidget(btn_save)
         btn_row.addWidget(btn_cancel)
         layout.addLayout(btn_row)
+
+    def _on_provider_preset_changed(self, idx):
+        if 0 <= idx < len(self.providers):
+            pid, pname, purl, pmodel = self.providers[idx]
+            if purl:
+                self.input_ai_url.setText(purl)
+            if pmodel:
+                self.input_ai_model.setText(pmodel)
+
+    def _test_ai_connection(self):
+        url = self.input_ai_url.text().strip().rstrip("/") + "/chat/completions"
+        key = self.input_ai_key.text().strip()
+        model = self.input_ai_model.text().strip()
+
+        self.lbl_test_status.setText("⏳ Testing connection...")
+        self.lbl_test_status.setStyleSheet("color: #3b82f6; font-size: 11px;")
+        self.btn_test.setEnabled(False)
+
+        import threading, httpx
+        def worker():
+            headers = {"Content-Type": "application/json"}
+            if key:
+                headers["Authorization"] = f"Bearer {key}"
+            payload = {
+                "model": model,
+                "messages": [{"role": "user", "content": "Respond with the word OK."}],
+                "max_tokens": 10
+            }
+            try:
+                with httpx.Client(timeout=8.0) as client:
+                    resp = client.post(url, headers=headers, json=payload)
+                    if resp.status_code == 200:
+                        msg = _("settings_test_success", model=model)
+                        self.lbl_test_status.setText(f"✓ {msg}")
+                        self.lbl_test_status.setStyleSheet("color: #16a34a; font-size: 11px;")
+                    else:
+                        err_txt = resp.text[:80]
+                        self.lbl_test_status.setText(f"✕ HTTP {resp.status_code}: {err_txt}")
+                        self.lbl_test_status.setStyleSheet("color: #dc2626; font-size: 11px;")
+            except Exception as e:
+                self.lbl_test_status.setText(f"✕ {_('settings_test_failed', error=str(e)[:60])}")
+                self.lbl_test_status.setStyleSheet("color: #dc2626; font-size: 11px;")
+            finally:
+                self.btn_test.setEnabled(True)
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def _save_and_close(self):
         # Apply language

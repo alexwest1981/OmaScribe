@@ -17,7 +17,7 @@ class InlineAIPopup(QDialog):
         self.selected_text = ""
         self.generated_text = ""
 
-        self.setFixedWidth(540)
+        self.setFixedWidth(640)
         self.init_ui()
         self.apply_theme()
         self.theme_mgr.theme_changed.connect(self.apply_theme)
@@ -25,7 +25,7 @@ class InlineAIPopup(QDialog):
 
     def init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
 
         # Header Title
@@ -56,8 +56,8 @@ class InlineAIPopup(QDialog):
             ("expand", _("inline_ai_opt_expand")),
             ("grammar", _("inline_ai_opt_fix_grammar"))
         ]:
-            b = QPushButton(text)
-            b.setFixedHeight(24)
+            b = QPushButton(text.replace("&", "&&"))
+            b.setFixedHeight(26)
             b.clicked.connect(lambda ch, t=text: self._on_quick_action(t))
             chip_row1.addWidget(b)
         layout.addLayout(chip_row1)
@@ -69,8 +69,8 @@ class InlineAIPopup(QDialog):
             ("translate_sv", _("inline_ai_opt_translate_sv")),
             ("translate_en", _("inline_ai_opt_translate_en"))
         ]:
-            b = QPushButton(text)
-            b.setFixedHeight(24)
+            b = QPushButton(text.replace("&", "&&"))
+            b.setFixedHeight(26)
             b.clicked.connect(lambda ch, t=text: self._on_quick_action(t))
             chip_row2.addWidget(b)
         layout.addLayout(chip_row2)
@@ -83,11 +83,11 @@ class InlineAIPopup(QDialog):
 
         # Action Buttons (Accept / Insert / Discard)
         self.action_row = QHBoxLayout()
-        self.btn_accept = QPushButton("✓ " + _("inline_ai_btn_accept"))
+        self.btn_accept = QPushButton(("✓ " + _("inline_ai_btn_accept")).replace("&", "&&"))
         self.btn_accept.clicked.connect(self._on_accept)
-        self.btn_insert = QPushButton("↓ " + _("inline_ai_btn_insert_below"))
+        self.btn_insert = QPushButton(("↓ " + _("inline_ai_btn_insert_below")).replace("&", "&&"))
         self.btn_insert.clicked.connect(self._on_insert)
-        self.btn_discard = QPushButton("✕ " + _("inline_ai_btn_discard"))
+        self.btn_discard = QPushButton(("✕ " + _("inline_ai_btn_discard")).replace("&", "&&"))
         self.btn_discard.clicked.connect(self.close)
 
         self.action_row.addWidget(self.btn_accept)

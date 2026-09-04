@@ -1,6 +1,6 @@
 import os
-from PyQt6.QtGui import QFontDatabase, QFont
-from PyQt6.QtWidgets import QComboBox, QStyledItemDelegate
+from PyQt6.QtGui import QFontDatabase, QFont, QColor
+from PyQt6.QtWidgets import QComboBox, QStyledItemDelegate, QListView
 from PyQt6.QtCore import Qt, pyqtSignal
 
 USER_FONTS_DIR = os.path.expanduser("~/.config/omascribe/fonts")
@@ -10,34 +10,66 @@ APP_FONTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 POPULAR_FONTS = [
     # Clean Modern Sans
     "Inter",
+    "Poppins",
+    "Montserrat",
     "Adwaita Sans",
     "Liberation Sans",
     "Roboto",
+    "Open Sans",
+    "Lato",
     "Arial",
+    "Helvetica",
     "DejaVu Sans",
     "Carlito",
     "Cantarell",
     "Ubuntu",
     "Noto Sans",
     # Editorial Serif
+    "Playfair Display",
+    "Merriweather",
+    "Lora",
+    "Cinzel",
     "Liberation Serif",
     "DejaVu Serif",
-    "Nimbus Roman",
     "Times New Roman",
     "Georgia",
     "Noto Serif",
-    "C059",
-    "Merriweather",
-    "Lora",
     "Garamond",
-    # Monospace / Screenplay
+    "C059",
+    "Nimbus Roman",
+    # Monospace & Code
+    "JetBrains Mono",
     "JetBrainsMono Nerd Font",
+    "Fira Code",
+    "Source Code Pro",
     "Liberation Mono",
     "DejaVu Sans Mono",
     "Adwaita Mono",
     "Courier New",
-    "Fira Code"
+    # Creative & Handwriting
+    "Pacifico",
+    "Caveat",
+    "Dancing Script",
+    "Oswald"
 ]
+
+SKIP_KEYWORDS = {
+    "math", "tex", "emoji", "awesome", "brands", "compatibility",
+    "rotated", "vertical", "dingbats", "symbol", "music", "braille",
+    "phonetic", "icon", "glyph", "legacy", "dummy", "lastresort",
+    "rashi", "nastaliq", "kufi", "hieroglyphs", "cuneiform", "linear",
+    "inscriptional", "old", "imperial", "warang", "zanabazar", "mro",
+    "bhaiksuki", "chorasmian", "elymaic", "hatran", "lycian", "lydian",
+    "meroitic", "nabataean", "palmyrene", "parthian", "pau cin hau",
+    "phags-pa", "phoenician", "psalter", "samaritan", "saurashtra",
+    "sharada", "shavian", "siddham", "signwriting", "sora", "soyombo",
+    "tagalog", "tagbanwa", "tangut", "tifinagh", "tirhuta", "ugaritic"
+}
+
+ALLOWED_NOTO = {
+    "Noto Sans", "Noto Serif", "Noto Sans Mono", "Noto Sans Display",
+    "Noto Serif Display", "Noto Color Emoji"
+}
 
 class FontItemDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
@@ -79,12 +111,14 @@ class FontManager:
         # 1. Popular available fonts
         available_popular = [f for f in POPULAR_FONTS if f in system_fonts]
         
-        # 2. Filter out non-writing system / math / icon fonts
+        # 2. Filter out non-writing system, ancient scripts, and technical fonts
         filtered_all = []
-        skip_keywords = {"math", "tex", "emoji", "awesome", "brands", "compatibility", "rotated", "vertical", "dingbats", "symbol"}
         for f in sorted(system_fonts):
             f_lower = f.lower()
-            if any(k in f_lower for k in skip_keywords):
+            if any(k in f_lower for k in SKIP_KEYWORDS):
+                continue
+            # Filter out hundreds of Noto ancient/foreign script sub-fonts
+            if f.startswith("Noto ") and f not in ALLOWED_NOTO:
                 continue
             if f not in available_popular:
                 filtered_all.append(f)
@@ -97,11 +131,18 @@ class FontSelectorComboBox(QComboBox):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        
+        # Use an explicit QListView so Qt creates a solid floating popup with scrollbar
+        self.list_view = QListView(self)
+        self.list_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.list_view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.list_view.setMinimumWidth(220)
+        self.setView(self.list_view)
+        
         self.setItemDelegate(FontItemDelegate(self))
-        self.setFixedWidth(175)
+        self.setFixedWidth(180)
         self.setMaxVisibleItems(14)
-        if self.view():
-            self.view().setMaximumHeight(380)
+        
         self.populate_fonts()
         self.currentIndexChanged.connect(self._on_index_changed)
 
@@ -114,19 +155,20 @@ class FontSelectorComboBox(QComboBox):
         # Popular section
         self.addItem("── ⭐ Popular Writing Fonts ──", None)
         self.setItemData(self.count() - 1, "header", Qt.ItemDataRole.UserRole + 1)
-        self.setItemData(self.count() - 1, 0, Qt.ItemDataRole.UserRole - 1) # disabled flag
+        self.setItemData(self.count() - 1, 0, Qt.ItemDataRole.UserRole - 1)
 
         for font in popular:
             self.addItem(font, font)
             self.setItemData(self.count() - 1, font, Qt.ItemDataRole.UserRole)
 
         # All fonts section
-        self.addItem("── 🔤 All Fonts (A–Z) ──", None)
-        self.setItemData(self.count() - 1, "header", Qt.ItemDataRole.UserRole + 1)
+        if all_fonts:
+            self.addItem("── 🔤 All Fonts (A–Z) ──", None)
+            self.setItemData(self.count() - 1, "header", Qt.ItemDataRole.UserRole + 1)
 
-        for font in all_fonts:
-            self.addItem(font, font)
-            self.setItemData(self.count() - 1, font, Qt.ItemDataRole.UserRole)
+            for font in all_fonts:
+                self.addItem(font, font)
+                self.setItemData(self.count() - 1, font, Qt.ItemDataRole.UserRole)
 
         self.blockSignals(False)
 

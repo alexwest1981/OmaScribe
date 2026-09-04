@@ -2,7 +2,7 @@ import html
 from PyQt6.QtWidgets import (
     QToolBar, QComboBox, QColorDialog, QWidget,
     QHBoxLayout, QLabel, QMenu, QToolButton, QSizePolicy,
-    QButtonGroup
+    QButtonGroup, QListView
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import (
@@ -99,10 +99,9 @@ class FormattingToolBar(QToolBar):
         # 3. Font Size
         # ---------------------------------------------------------------------
         self.combo_size = QComboBox()
+        self.combo_size.setView(QListView(self.combo_size))
         self.combo_size.setFixedWidth(68)
         self.combo_size.setMaxVisibleItems(12)
-        if self.combo_size.view():
-            self.combo_size.view().setMaximumHeight(320)
         for sz in [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 72]:
             self.combo_size.addItem(str(sz), sz)
         self.combo_size.setCurrentText("12")

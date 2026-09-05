@@ -96,26 +96,28 @@ class DictationEngine(QObject):
         threading.Thread(target=self._transcribe_worker, daemon=True).start()
 
     def _transcribe_worker(self):
-        if not self._audio_buffer:
+        try:
+            if not self._audio_buffer:
+                return
+
+            audio_data = np.concatenate(self._audio_buffer, axis=0)
+            
+            # Check if model available
+            model = self._get_model()
+            if model is not None:
+                try:
+                    lang = self.config.get("dictation_lang", "auto")
+                    lang_param = None if lang == "auto" else lang
+                    segments, info = model.transcribe(audio_data, language=lang_param, beam_size=2)
+                    text = " ".join([seg.text.strip() for seg in segments])
+                    if text:
+                        self.transcription_ready.emit(text)
+                except Exception as e:
+                    self.error.emit(f"Transcription error: {str(e)}")
+            else:
+                # Fallback mock speech for development testing if faster-whisper not yet downloaded
+                self.transcription_ready.emit(" [Dictation transcription ready] ")
+        except Exception as ex:
+            self.error.emit(f"Audio processing error: {str(ex)}")
+        finally:
             self.state_changed.emit("idle")
-            return
-
-        audio_data = np.concatenate(self._audio_buffer, axis=0)
-        
-        # Check if model available
-        model = self._get_model()
-        if model is not None:
-            try:
-                lang = self.config.get("dictation_lang", "auto")
-                lang_param = None if lang == "auto" else lang
-                segments, info = model.transcribe(audio_data, language=lang_param, beam_size=2)
-                text = " ".join([seg.text.strip() for seg in segments])
-                if text:
-                    self.transcription_ready.emit(text)
-            except Exception as e:
-                self.error.emit(f"Transcription error: {str(e)}")
-        else:
-            # Fallback mock speech for development testing if faster-whisper not yet downloaded
-            self.transcription_ready.emit(" [Dictation transcription ready] ")
-
-        self.state_changed.emit("idle")

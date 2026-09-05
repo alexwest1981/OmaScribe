@@ -237,5 +237,10 @@
   "export_success_text": "Document exported to:\n{path}",
   "export_error_title": "Export Error",
   "about_desc": "AI-Powered Rich Text Word-like Editor built for Linux & Omarchy with Python & Qt.",
-  "tb_style_code_tooltip": "Code Block (Ctrl+Alt+5)"
+  "tb_style_code_tooltip": "Code Block (Ctrl+Alt+5)",
+  "lix_very_easy": "Very Easy",
+  "lix_easy": "Easy",
+  "lix_medium": "Standard / Medium",
+  "lix_difficult": "Difficult / Advanced",
+  "lix_very_difficult": "Very Difficult / Academic"
 }

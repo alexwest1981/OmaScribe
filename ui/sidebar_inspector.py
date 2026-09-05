@@ -178,7 +178,8 @@ class SidebarInspector(QWidget):
         self.lbl_words.setText(f"📝 {stats['word_count']} { _('status_words')}")
         self.lbl_chars.setText(f"🔤 {stats['char_count']} { _('status_chars')}")
         self.lbl_read_time.setText(f"⏱️ ~{stats['reading_time_min']} { _('status_reading_time')}")
-        self.lbl_lix.setText(f"📊 LIX: {stats['lix_score']} ({stats['readability_label']})")
+        read_lbl = _(stats.get("readability_key", "lix_medium"))
+        self.lbl_lix.setText(f"📊 LIX: {stats['lix_score']} ({read_lbl})")
 
         # Update Outline
         self.list_outline.clear()

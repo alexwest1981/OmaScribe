@@ -237,5 +237,10 @@
   "export_success_text": "Dokumentet har exporterats till:\n{path}",
   "export_error_title": "Exportfel",
   "about_desc": "AI-driven textredigerare för Linux & Omarchy med stöd för Word, Markdown och röst-diktering.",
-  "tb_style_code_tooltip": "Kodblock (Ctrl+Alt+5)"
+  "tb_style_code_tooltip": "Kodblock (Ctrl+Alt+5)",
+  "lix_very_easy": "Mycket lättläst",
+  "lix_easy": "Lättläst",
+  "lix_medium": "Medelsvår / Normal",
+  "lix_difficult": "Svår / Formell",
+  "lix_very_difficult": "Mycket svår / Akademisk"
 }

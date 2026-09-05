@@ -46,14 +46,19 @@ class DocumentStats:
         words_per_sentence = word_count / sentence_count
         lix = round(words_per_sentence + long_word_pct) if word_count > 10 else 30
 
+        readability_key = "lix_very_easy"
         readability_label = "Very Easy"
         if lix > 55:
+            readability_key = "lix_very_difficult"
             readability_label = "Very Difficult / Academic"
         elif lix > 45:
+            readability_key = "lix_difficult"
             readability_label = "Difficult / Advanced"
         elif lix > 35:
+            readability_key = "lix_medium"
             readability_label = "Standard / Medium"
         elif lix > 25:
+            readability_key = "lix_easy"
             readability_label = "Easy"
 
         return {
@@ -65,5 +70,6 @@ class DocumentStats:
             "reading_time_min": reading_time_min,
             "lix_score": lix,
             "readability_label": readability_label,
+            "readability_key": readability_key,
             "outline": outline
         }

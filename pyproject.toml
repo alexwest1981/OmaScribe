@@ -22,5 +22,14 @@ omascribe = "main:main"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+# Gäller samtliga byggmål (wheel OCH sdist). En sdist ärver annars sitt
+# filurval från .gitignore, vilket gör skyddet beroende av att ignore-reglerna
+# råkade stämma. Här är exkluderingen explicit i stället.
+[tool.hatch.build]
+exclude = [
+    "*.doc", "*.docx", "*.pdf", "*.odt", "*.rtf",
+    "*.key", "*.pem", ".env", ".env.*", "secrets*",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["core", "ui"]

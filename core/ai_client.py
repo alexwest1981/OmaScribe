@@ -2,6 +2,64 @@ import json
 import httpx
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
+
+def chat_completion(endpoint, api_key, model, system_prompt, user_prompt,
+                    timeout=30.0, temperature=0.3):
+    """Synkront anrop mot en OpenAI-kompatibel /chat/completions.
+
+    Kastar httpx.HTTPStatusError vid felstatus och httpx.HTTPError vid
+    nätverksfel. Används av AIWorker och av research-/ghostwriter-arbetarna
+    så att all HTTP-logik bor på ett ställe.
+    """
+    url = f"{endpoint.rstrip('/')}/chat/completions"
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "temperature": temperature
+    }
+
+    with httpx.Client(timeout=timeout) as client:
+        resp = client.post(url, headers=headers, json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+        return data["choices"][0]["message"]["content"]
+
+
+def parse_json_response(raw: str) -> dict:
+    """Tolerant tolkning av ett JSON-svar från en modell.
+
+    Hanterar ```json-staket, inledande prosa och efterföljande text genom att
+    plocka ut det första kompletta {...}-objektet.
+    """
+    text = (raw or "").strip()
+
+    if text.startswith("```"):
+        parts = text.split("```")
+        if len(parts) >= 2:
+            text = parts[1]
+            if text.startswith("json"):
+                text = text[4:]
+    text = text.strip()
+
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+
+    start = text.find("{")
+    end = text.rfind("}")
+    if start >= 0 and end > start:
+        return json.loads(text[start:end + 1])
+    raise ValueError("inget JSON-objekt hittades i svaret")
+
+
 class AIWorker(QThread):
     finished = pyqtSignal(dict)
     error = pyqtSignal(str)
@@ -15,31 +73,14 @@ class AIWorker(QThread):
         self.user_prompt = user_prompt
 
     def run(self):
-        url = f"{self.endpoint}/chat/completions"
-        headers = {
-            "Content-Type": "application/json"
-        }
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
-
-        payload = {
-            "model": self.model,
-            "messages": [
-                {"role": "system", "content": self.system_prompt},
-                {"role": "user", "content": self.user_prompt}
-            ],
-            "temperature": 0.3
-        }
-
         try:
-            with httpx.Client(timeout=30.0) as client:
-                resp = client.post(url, headers=headers, json=payload)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    content = data["choices"][0]["message"]["content"]
-                    self.finished.emit({"success": True, "content": content})
-                else:
-                    self.error.emit(f"AI API Error {resp.status_code}: {resp.text}")
+            content = chat_completion(
+                self.endpoint, self.api_key, self.model,
+                self.system_prompt, self.user_prompt
+            )
+            self.finished.emit({"success": True, "content": content})
+        except httpx.HTTPStatusError as e:
+            self.error.emit(f"AI API Error {e.response.status_code}: {e.response.text}")
         except Exception as e:
             self.error.emit(f"Connection failed: {str(e)}")
 

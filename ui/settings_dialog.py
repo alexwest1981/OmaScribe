@@ -1,10 +1,12 @@
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QLineEdit, QCheckBox, QPushButton, QTabWidget, QWidget,
-    QFormLayout
+    QFormLayout, QFileDialog
 )
+import os
 from PyQt6.QtCore import Qt
 from core.i18n import _, i18n
+from core.vault import VAULT_DEFAULT_DIR
 from ui.theme_manager import THEMES
 
 class SettingsDialog(QDialog):
@@ -58,8 +60,10 @@ class SettingsDialog(QDialog):
         self.providers = [
             ("omniroute", "OmniRoute (Local Proxy)", "http://127.0.0.1:20128/v1", "OmniRoute"),
             ("ollama", "Ollama (100% Free & Offline Local AI)", "http://localhost:11434/v1", "llama3.2"),
+            ("deepseek", "DeepSeek (deepseek-chat / v4)", "https://api.deepseek.com/v1", "deepseek-chat"),
             ("openai", "OpenAI (GPT-4o / GPT-4o-mini)", "https://api.openai.com/v1", "gpt-4o-mini"),
             ("openrouter", "OpenRouter (Claude 3.5 Sonnet / Llama)", "https://openrouter.ai/api/v1", "anthropic/claude-3.5-sonnet"),
+            ("nous", "Nous Research (Hermes 3 / 4)", "https://inference-api.nousresearch.com/v1", "hermes-3-70b"),
             ("gemini", "Google Gemini (Direct OpenAI-API)", "https://generativelanguage.googleapis.com/v1beta/openai/", "gemini-1.5-flash"),
             ("lmstudio", "LM Studio / LocalAI (Local server)", "http://localhost:1234/v1", "local-model"),
             ("custom", "Custom / Self-Hosted Endpoint", "", "")
@@ -118,6 +122,29 @@ class SettingsDialog(QDialog):
         form_dict.addRow("", self.chk_punct)
 
         self.tabs.addTab(tab_dict, _("settings_tab_dictation"))
+
+        # Tab 4: Anteckningsvalv och research
+        tab_vault = QWidget()
+        form_vault = QFormLayout(tab_vault)
+
+        vault_row = QHBoxLayout()
+        self.input_vault_root = QLineEdit(self.config.get("vault_root", VAULT_DEFAULT_DIR))
+        vault_row.addWidget(self.input_vault_root, 1)
+        self.btn_vault_browse = QPushButton("📂")
+        self.btn_vault_browse.setFixedWidth(34)
+        self.btn_vault_browse.clicked.connect(self._browse_vault)
+        vault_row.addWidget(self.btn_vault_browse)
+        form_vault.addRow(_("settings_vault_root"), vault_row)
+
+        self.input_searxng = QLineEdit(self.config.get("research_searxng_url", ""))
+        self.input_searxng.setPlaceholderText("http://localhost:8888")
+        form_vault.addRow(_("settings_searxng"), self.input_searxng)
+
+        self.lbl_vault_hint = QLabel(_("settings_vault_hint"))
+        self.lbl_vault_hint.setWordWrap(True)
+        form_vault.addRow("", self.lbl_vault_hint)
+
+        self.tabs.addTab(tab_vault, _("settings_tab_vault"))
 
         layout.addWidget(self.tabs)
 
@@ -179,6 +206,14 @@ class SettingsDialog(QDialog):
 
         threading.Thread(target=worker, daemon=True).start()
 
+    def _browse_vault(self):
+        folder = QFileDialog.getExistingDirectory(
+            self, _("settings_vault_root"),
+            self.input_vault_root.text().strip() or os.path.expanduser("~")
+        )
+        if folder:
+            self.input_vault_root.setText(folder)
+
     def _save_and_close(self):
         # Apply language
         new_lang = self.combo_lang.currentData()
@@ -197,6 +232,8 @@ class SettingsDialog(QDialog):
         self.config.set("ai_model", self.input_ai_model.text().strip())
         self.config.set("dictation_lang", self.combo_dict_lang.currentData())
         self.config.set("dictation_auto_punctuate", self.chk_punct.isChecked())
+        self.config.set("vault_root", self.input_vault_root.text().strip() or VAULT_DEFAULT_DIR)
+        self.config.set("research_searxng_url", self.input_searxng.text().strip())
         self.config.save()
 
         self.accept()

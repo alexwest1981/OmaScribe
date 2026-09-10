@@ -19,6 +19,18 @@ try:
 except ImportError:
     markdown = None
 
+from core import richtext
+
+# ```-block i Markdown, med valfritt språk
+_FENCE_RE = re.compile(r"^```([A-Za-z0-9_+#.\-]*)[ \t]*\n(.*?)^```[ \t]*$", re.M | re.S)
+# Platshållaren som tillfälligt ersätter ett kodblock under HTML-konverteringen
+_FENCE_PLACEHOLDER_RE = re.compile(r"^OmaScribeKodblock(\d+)Z$")
+
+
+# En rad som bara består av #taggar (Obsidian-stil), inte en rubrik.
+# [^\W_] = bokstav eller siffra i valfritt skriftsystem (å ä ö ingår).
+TAG_LINE_RE = re.compile(r"^(?:#[^\W_][\w\-/]*\s*)+$")
+
 class DocumentManager:
     @staticmethod
     def _is_docx_file(filepath):
@@ -29,7 +41,7 @@ class DocumentManager:
             return False
 
     @staticmethod
-    def load_file(filepath, text_document: QTextDocument):
+    def load_file(filepath, text_document: QTextDocument, colors=None):
         """Loads a file (.docx, .md, .html, .txt) into a QTextDocument preserving rich formatting."""
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"File not found: {filepath}")
@@ -117,8 +129,16 @@ class DocumentManager:
             with open(filepath, "r", encoding="utf-8") as f:
                 raw_md = f.read()
             if markdown:
-                html = markdown.markdown(raw_md, extensions=["tables", "fenced_code", "nl2br", "sane_lists"])
+                # Kodstaket plockas ut före konverteringen och sätts tillbaka
+                # som riktiga kodblock efteråt. Genom HTML-vägen tappas både
+                # språket och blockrollen, och koden blir vanlig text.
+                protected, fences = DocumentManager._extract_fences(raw_md)
+                html = markdown.markdown(
+                    DocumentManager._protect_tag_lines(protected),
+                    extensions=["tables", "fenced_code", "nl2br", "sane_lists"],
+                )
                 text_document.setHtml(html)
+                DocumentManager._restore_fences(text_document, fences, colors)
             else:
                 text_document.setPlainText(raw_md)
 
@@ -131,6 +151,71 @@ class DocumentManager:
             with open(filepath, "r", encoding="utf-8") as f:
                 text = f.read()
             text_document.setPlainText(text)
+
+    @staticmethod
+    def _extract_fences(raw_md: str) -> tuple:
+        """Tar ut ```-block ur markdown och lämnar platshållare i deras ställe."""
+        fences = []
+
+        def repl(m):
+            fences.append((m.group(1).lower(), m.group(2).rstrip("\n")))
+            return f"\n\nOmaScribeKodblock{len(fences) - 1}Z\n\n"
+
+        return _FENCE_RE.sub(repl, raw_md), fences
+
+    @staticmethod
+    def _restore_fences(text_document: QTextDocument, fences: list, colors=None):
+        """Gör platshållarna till riktiga kodblock igen, med språk och roll."""
+        if not fences:
+            return
+        targets = []
+        block = text_document.begin()
+        while block.isValid():
+            m = _FENCE_PLACEHOLDER_RE.match(block.text().strip())
+            if m:
+                targets.append((block.blockNumber(), int(m.group(1))))
+            block = block.next()
+
+        # Baklänges, så att tidigare blocknummer förblir giltiga när koden
+        # delas upp i flera block
+        for number, idx in reversed(targets):
+            if idx >= len(fences):
+                continue
+            lang, code = fences[idx]
+            b = text_document.findBlockByNumber(number)
+            if not b.isValid():
+                continue
+            c = QTextCursor(b)
+            c.movePosition(QTextCursor.MoveOperation.StartOfBlock)
+            start = c.position()
+            c.movePosition(QTextCursor.MoveOperation.EndOfBlock,
+                           QTextCursor.MoveMode.KeepAnchor)
+            c.removeSelectedText()
+            c.insertText(code)
+            # insertText lämnar markören utan markering. Intervallet måste
+            # anges explicit, annars får bara den sista raden kodrollen och
+            # resten hamnar utanför blocket.
+            sel = QTextCursor(text_document)
+            sel.setPosition(start)
+            sel.setPosition(start + len(code), QTextCursor.MoveMode.KeepAnchor)
+            richtext.apply_role(sel, richtext.ROLE_CODE, colors or {}, lang)
+
+    @staticmethod
+    def _protect_tag_lines(md_text: str) -> str:
+        """Hindrar att en rad med bara #taggar tolkas som rubrik.
+
+        Python-Markdown kräver inget mellanslag efter #, så '#arbete' på egen
+        rad blir <h1>. I Obsidian-liknande anteckningar är det en tagg, och
+        den ska förbli text.
+        """
+        out = []
+        for line in md_text.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("#") and TAG_LINE_RE.match(stripped):
+                out.append(line.replace("#", "&#35;", 1))
+            else:
+                out.append(line)
+        return "\n".join(out)
 
     @staticmethod
     def save_file(filepath, text_document: QTextDocument):
@@ -260,10 +345,28 @@ class DocumentManager:
         block = text_document.begin()
         
         while block.isValid():
+            # Ett kodblock skrivs som ett ```-staket med språket, och hela
+            # följden av kodrader samlas i en enda post.
+            if richtext.block_role(block) == richtext.ROLE_CODE:
+                lang = richtext.lang_of(block.blockFormat())
+                code_lines = []
+                while block.isValid() and richtext.block_role(block) == richtext.ROLE_CODE:
+                    if not lang:
+                        lang = richtext.lang_of(block.blockFormat())
+                    code_lines.append(block.text())
+                    block = block.next()
+                while code_lines and not code_lines[0].strip():
+                    code_lines.pop(0)
+                while code_lines and not code_lines[-1].strip():
+                    code_lines.pop()
+                md_lines.append(f"```{lang}\n" + "\n".join(code_lines) + "\n```\n")
+                continue
+
             fmt = block.blockFormat()
             heading_level = fmt.headingLevel()
             text_list = block.textList()
-            is_quote = fmt.leftMargin() >= 20
+            role = richtext.block_role(block)
+            is_quote = role == richtext.ROLE_QUOTE or (not role and fmt.leftMargin() >= 20)
             
             # Prefix for block
             prefix = ""
@@ -286,8 +389,13 @@ class DocumentManager:
                     txt = frag.text().replace('\ufffc', '')
                     if txt:
                         cf = frag.charFormat()
-                        is_bold = cf.fontWeight() >= 600 or cf.font().bold()
-                        is_italic = cf.fontItalic()
+                        # Rubriker är feta av sig själva. ** runt hela
+                        # rubriken blir bara skräp i markdown.
+                        is_bold = (cf.fontWeight() >= 600 or cf.font().bold()) \
+                            and heading_level not in (1, 2, 3)
+                        # Citatets kursiv är en visuell markering, inte
+                        # innehåll — den ska inte bli *stjärnor* i markdown
+                        is_italic = cf.fontItalic() and role != richtext.ROLE_QUOTE
                         is_strike = cf.fontStrikeOut()
                         is_underline = cf.fontUnderline()
                         

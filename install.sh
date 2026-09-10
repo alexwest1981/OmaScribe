@@ -8,6 +8,20 @@ ICON_DIR="$HOME/.local/share/icons/hicolor/256x256/apps"
 
 echo "=== Installing OmaScribe ==="
 
+# Säkerhetsspärr. Dokumentfiler i projektmappen kan innehålla API-nycklar.
+# Inget sådant får följa med till en installation, och ingen ska behöva
+# upptäcka det i efterhand — avbryt hellre.
+LEAKS="$(find "$SCRIPT_DIR" -maxdepth 1 -type f \
+    \( -iname '*.docx' -o -iname '*.doc' -o -iname '*.pdf' -o -iname '*.odt' \
+       -o -iname '*.key' -o -iname '*.pem' \) 2>/dev/null || true)"
+if [ -n "$LEAKS" ]; then
+    echo "AVBRYTER: dokumentfiler hittades i projektmappen." >&2
+    echo "De kan innehålla API-nycklar och får inte ingå i en installation:" >&2
+    echo "$LEAKS" >&2
+    echo "Flytta dem utanfor projektet och kor om." >&2
+    exit 1
+fi
+
 # Check for uv or python3
 if command -v uv >/dev/null 2>&1; then
     echo "Using uv environment..."

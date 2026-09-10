@@ -27,14 +27,19 @@ DEFAULT_CONFIG = {
     "zoom_level": 100,
     "show_ai_sidebar": True,
     "sidebar_active_tab": 0,
-    "ai_endpoint": "http://127.0.0.1:20128/v1",
+    # Neutral standard för den som installerar appen. Ingen privat slutpunkt
+    # bakas in — användaren anger sin egen leverantör och nyckel i
+    # Inställningar. (En sparad config.json vinner alltid över detta.)
+    "ai_endpoint": "https://api.deepseek.com/v1",
     "ai_key": "",
-    "ai_model": "OmniRoute",
+    "ai_model": "deepseek-chat",
     "dictation_model": "base",
     "dictation_lang": "auto",
     "dictation_auto_punctuate": True,
     "recent_files": [],
-    "has_run_before": False
+    "has_run_before": False,
+    "vault_root": os.path.expanduser("~/Documents/OmaScribe Vault"),
+    "research_searxng_url": ""   # egen SearXNG-instans ger nyckelfri webbsökning
 }
 
 class ConfigManager:

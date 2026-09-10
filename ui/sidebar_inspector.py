@@ -32,6 +32,7 @@ class SidebarInspector(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(4)
 
+        self._extra_tabs = []
         self.tabs = QTabWidget()
         self.tab_review = QWidget()
         self.tab_outline = QWidget()
@@ -304,10 +305,20 @@ class SidebarInspector(QWidget):
         l.addWidget(lbl_err_msg)
         self.cards_layout.insertWidget(0, card)
 
+    def add_tab(self, widget, title_key: str):
+        """Lägger till en flik utifrån och kommer ihåg nyckeln för översättning."""
+        self._extra_tabs.append((widget, title_key))
+        self.tabs.addTab(widget, _(title_key))
+        return widget
+
     def retranslate_ui(self):
         self.tabs.setTabText(0, _("sidebar_tab_review"))
         self.tabs.setTabText(1, _("sidebar_tab_outline"))
         self.tabs.setTabText(2, _("sidebar_tab_metrics"))
+        for widget, key in self._extra_tabs:
+            idx = self.tabs.indexOf(widget)
+            if idx >= 0:
+                self.tabs.setTabText(idx, _(key))
         self._reset_refresh_button()
 
     def apply_theme(self):

@@ -11,6 +11,7 @@ from PyQt6.QtGui import (
     QTextLength, QTextFrameFormat, QBrush, QColor
 )
 from core.i18n import _, i18n
+from core import richtext, directives
 from core.font_manager import FontSelectorComboBox
 from ui.table_dialog import TableDialog
 
@@ -19,6 +20,9 @@ class FormattingToolBar(QToolBar):
     dictation_clicked = pyqtSignal()
     sidebar_toggled = pyqtSignal()
     google_fonts_clicked = pyqtSignal()
+    research_clicked = pyqtSignal()
+    ghostwriter_clicked = pyqtSignal()
+    code_clicked = pyqtSignal()
 
     def __init__(self, editor_view, theme_mgr=None, parent=None):
         super().__init__(parent)
@@ -244,6 +248,18 @@ class FormattingToolBar(QToolBar):
         self.act_dictate.triggered.connect(self.dictation_clicked.emit)
         self.addAction(self.act_dictate)
 
+        self.act_research = QAction("🔎 " + _("tb_research"), self)
+        self.act_research.triggered.connect(self.research_clicked.emit)
+        self.addAction(self.act_research)
+
+        self.act_ghost = QAction("👻 " + _("tb_ghostwriter"), self)
+        self.act_ghost.triggered.connect(self.ghostwriter_clicked.emit)
+        self.addAction(self.act_ghost)
+
+        self.act_code = QAction("⌨ " + _("tb_code_analysis"), self)
+        self.act_code.triggered.connect(self.code_clicked.emit)
+        self.addAction(self.act_code)
+
         self.act_sidebar = QAction("📑 " + _("tb_sidebar_toggle"), self)
         self.act_sidebar.triggered.connect(self.sidebar_toggled.emit)
         self.addAction(self.act_sidebar)
@@ -335,6 +351,9 @@ class FormattingToolBar(QToolBar):
 
         self.act_magic.setText("✨ " + _("tb_magic_ai"))
         self.act_dictate.setText("🎙️ " + _("tb_dictation"))
+        self.act_research.setText("🔎 " + _("tb_research"))
+        self.act_ghost.setText("👻 " + _("tb_ghostwriter"))
+        self.act_code.setText("⌨ " + _("tb_code_analysis"))
         self.act_sidebar.setText("📑 " + _("tb_sidebar_toggle"))
 
         self._build_spacing_menu()
@@ -387,6 +406,27 @@ class FormattingToolBar(QToolBar):
     # -------------------------------------------------------------------------
     def _apply_heading_level(self, level):
         cursor = self.editor.textCursor()
+
+        # Kod och citat får riktiga blockroller i stället för enbart utseende.
+        # Det är rollen som gör att blocket överlever export till markdown och
+        # kan plockas ut igen av AI-analysen.
+        if level in (4, 5) and self.theme_mgr is not None:
+            role = richtext.ROLE_QUOTE if level == 4 else richtext.ROLE_CODE
+            lang = ""
+            if role == richtext.ROLE_CODE:
+                sample = cursor.selectedText().replace("\u2029", "\n")
+                if not sample.strip():
+                    sample = cursor.block().text()
+                lang = directives.detect_language(sample)
+            richtext.apply_role(cursor, role, self.theme_mgr.current, lang)
+            return
+
+        # Normal ska också ta bort en tidigare blockroll. Utan det blir
+        # stycket kvar som kodblock i exporten trots att det ser ut som
+        # vanlig text — rollen och utseendet hamnar i otakt.
+        if level == 0 and self.theme_mgr is not None:
+            richtext.apply_role(cursor, "", self.theme_mgr.current)
+
         block_fmt = QTextBlockFormat()
         char_fmt = QTextCharFormat()
 
@@ -404,17 +444,6 @@ class FormattingToolBar(QToolBar):
             block_fmt.setHeadingLevel(3)
             char_fmt.setFontPointSize(15)
             char_fmt.setFontWeight(QFont.Weight.Bold.value)
-            char_fmt.setFontItalic(False)
-        elif level == 4: # Blockquote
-            block_fmt.setHeadingLevel(0)
-            block_fmt.setLeftMargin(24)
-            char_fmt.setFontPointSize(12)
-            char_fmt.setFontItalic(True)
-        elif level == 5: # Code block
-            block_fmt.setHeadingLevel(0)
-            block_fmt.setLeftMargin(16)
-            char_fmt.setFontFamily("JetBrains Mono")
-            char_fmt.setFontPointSize(11)
             char_fmt.setFontItalic(False)
         else: # Normal Paragraph
             block_fmt.setHeadingLevel(0)

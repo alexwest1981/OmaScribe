@@ -2,7 +2,7 @@ import os
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFileDialog,
     QMessageBox, QLabel, QSplitter, QStatusBar, QApplication,
-    QStackedWidget, QMenu, QDialog, QPushButton
+    QStackedWidget, QMenu, QDialog, QPushButton, QInputDialog
 )
 from PyQt6.QtCore import Qt, QTimer, QPoint, QMarginsF
 from PyQt6.QtGui import QAction, QKeySequence, QTextCursor, QPageLayout, QPageSize, QCursor
@@ -10,6 +10,7 @@ from PyQt6.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
 
 from core.i18n import _, i18n
 from core.doc_manager import DocumentManager
+from core.vault import Vault, VAULT_DEFAULT_DIR
 from ui.editor_view import EditorView
 from ui.toolbar import FormattingToolBar
 from ui.sidebar_inspector import SidebarInspector
@@ -17,6 +18,12 @@ from ui.inline_ai_popup import InlineAIPopup
 from ui.settings_dialog import SettingsDialog
 from ui.google_fonts_dialog import GoogleFontsDialog
 from ui.start_screen import StartScreen
+from ui.notes_panel import NotesPanel
+from ui.research_dialog import ResearchDialog
+from ui.ghostwriter_dialog import GhostwriterDialog
+from ui.graph_dialog import GraphDialog
+from ui.code_dialog import CodeDialog
+from core import richtext, directives
 
 class MainWindow(QMainWindow):
     def __init__(self, ai_client, dictation_engine, theme_mgr, config_mgr):
@@ -28,6 +35,13 @@ class MainWindow(QMainWindow):
 
         self.current_filepath = None
         self.is_modified = False
+
+        # Anteckningsvalvet delas av panelen, graftvyn och wikilänk-förslagen
+        self.vault = Vault(self.config.get("vault_root", VAULT_DEFAULT_DIR))
+        self.research_dialog = None
+        self.ghost_dialog = None
+        self.graph_dialog = None
+        self.code_dialog = None
 
         self.setWindowTitle(_("app_name"))
         self.resize(1200, 850)
@@ -55,6 +69,9 @@ class MainWindow(QMainWindow):
         self.editor.canvas.textChanged.connect(self._on_text_changed)
         self.editor.canvas.cursorPositionChanged.connect(self._update_cursor_pos)
         self.editor.canvas.magic_ai_requested.connect(self._open_inline_ai)
+        self.editor.canvas.wikilink_activated.connect(self._open_wikilink)
+        self.editor.canvas.directives_converted.connect(
+            lambda n: self.status_bar.showMessage(_("fmt_converted", n=n), 6000))
 
         # Dictation engine connections
         self.dictation.state_changed.connect(self._on_dictation_state_changed)
@@ -99,6 +116,16 @@ class MainWindow(QMainWindow):
 
         self.sidebar = SidebarInspector(self.ai, self.theme_mgr, self)
         self.sidebar.setVisible(self.config.get("show_ai_sidebar", True))
+
+        # Anteckningspanelen som egen flik bredvid granskning/disposition
+        self.vault.scan()
+        self.notes_panel = NotesPanel(self.vault, self.theme_mgr, self)
+        self.notes_panel.open_file_requested.connect(self.open_recent_file)
+        self.notes_panel.insert_text_requested.connect(self._insert_text_at_cursor)
+        self.notes_panel.show_graph_requested.connect(self._open_graph)
+        self.notes_panel.vault_changed.connect(self._on_vault_changed)
+        self.sidebar.add_tab(self.notes_panel, "sidebar_tab_notes")
+
         self.splitter.addWidget(self.sidebar)
 
         self.splitter.setStretchFactor(0, 1)
@@ -113,6 +140,9 @@ class MainWindow(QMainWindow):
         self.toolbar.dictation_clicked.connect(self._toggle_dictation)
         self.toolbar.sidebar_toggled.connect(self._toggle_sidebar)
         self.toolbar.google_fonts_clicked.connect(self._open_google_fonts_dialog)
+        self.toolbar.research_clicked.connect(self._open_research)
+        self.toolbar.ghostwriter_clicked.connect(self._open_ghostwriter)
+        self.toolbar.code_clicked.connect(self._open_code_analysis)
         self.addToolBar(self.toolbar)
 
         # 4. Status Bar
@@ -148,6 +178,9 @@ class MainWindow(QMainWindow):
         self.status_bar.addPermanentWidget(self.lbl_dict_status)
         self.status_bar.addPermanentWidget(self.lbl_cursor)
         self.status_bar.addPermanentWidget(self.btn_lang_toggle)
+
+        # Gör valvets anteckningar tillgängliga som [[förslag]] direkt
+        self._refresh_link_titles()
 
     def _add_action(self, menu, text, slot, shortcut=None):
         act = QAction(text, self)
@@ -240,6 +273,8 @@ class MainWindow(QMainWindow):
         self.act_fmt_clear = self._add_action(self.menu_format, _("menu_format_clear"), self.toolbar._clear_formatting, "Ctrl+\\")
         self.menu_format.addSeparator()
         self.act_gfonts = self._add_action(self.menu_format, "🌐 " + _("menu_format_google_fonts"), self._open_google_fonts_dialog)
+        self.menu_format.addSeparator()
+        self.act_fmt_directives = self._add_action(self.menu_format, "⌗ " + _("menu_format_directives"), self._format_directives, "Ctrl+Shift+M")
 
         # AI Assistant Menu
         self.menu_ai = mb.addMenu(_("menu_ai"))
@@ -247,7 +282,23 @@ class MainWindow(QMainWindow):
         self.act_review_ai = self._add_action(self.menu_ai, _("menu_ai_review"), self._trigger_ai_review)
         self.act_dictation = self._add_action(self.menu_ai, _("menu_ai_dictation"), self._toggle_dictation, "F8")
         self.menu_ai.addSeparator()
+        self.act_research = self._add_action(self.menu_ai, "🔎 " + _("menu_ai_research"), self._open_research, "Ctrl+Shift+R")
+        self.act_ghost = self._add_action(self.menu_ai, "👻 " + _("menu_ai_ghostwriter"), self._open_ghostwriter, "Ctrl+Shift+G")
+        self.act_ins_link = self._add_action(self.menu_ai, "🔗 " + _("menu_ai_insert_link"), self._insert_wikilink_dialog, "Ctrl+L")
+        self.act_gen_para = self._add_action(self.menu_ai, "✎ " + _("menu_ai_paragraph"), self._open_generate_paragraph, "Ctrl+Shift+A")
+        self.act_code = self._add_action(self.menu_ai, "⌨ " + _("menu_ai_code"), self._open_code_analysis, "Ctrl+Shift+K")
+        self.menu_ai.addSeparator()
         self.act_settings = self._add_action(self.menu_ai, _("menu_ai_settings"), self._open_settings)
+
+        # Notes Menu
+        self.menu_notes = mb.addMenu(_("menu_notes"))
+        self.act_notes_new = self._add_action(self.menu_notes, "➕ " + _("menu_notes_new"), self._new_note, "Ctrl+Shift+N")
+        self.act_notes_search = self._add_action(self.menu_notes, "🔍 " + _("menu_notes_search"), self._focus_vault_search, "Ctrl+Shift+F")
+        self.menu_notes.addSeparator()
+        self.act_notes_graph = self._add_action(self.menu_notes, "🕸 " + _("menu_notes_graph"), self._open_graph)
+        self.act_notes_rescan = self._add_action(self.menu_notes, "⟳ " + _("menu_notes_rescan"), self._rescan_vault)
+        self.menu_notes.addSeparator()
+        self.act_notes_panel = self._add_action(self.menu_notes, "🗂 " + _("menu_notes_panel"), self._show_vault_panel)
 
         # Help Menu
         self.menu_help = mb.addMenu(_("menu_help"))
@@ -512,8 +563,12 @@ class MainWindow(QMainWindow):
         dlg.exec()
 
     def _open_settings(self):
+        old_root = self.config.get("vault_root", VAULT_DEFAULT_DIR)
         dlg = SettingsDialog(self.config, self.theme_mgr, self)
         dlg.exec()
+        new_root = self.config.get("vault_root", VAULT_DEFAULT_DIR)
+        if new_root and os.path.abspath(new_root) != os.path.abspath(old_root):
+            self._on_vault_changed(new_root)
 
     def _show_about(self):
         QMessageBox.about(
@@ -559,6 +614,8 @@ class MainWindow(QMainWindow):
         self.editor.document.clear()
         self.current_filepath = None
         self.is_modified = False
+        self.notes_panel.set_current_document("")
+        self.notes_panel.set_current_file(None)
         self.show_editor_screen()
 
     def file_open(self):
@@ -588,6 +645,8 @@ class MainWindow(QMainWindow):
             self.is_modified = False
             self.config.add_recent_file(filepath)
             self._update_recent_menu()
+            self.notes_panel.set_current_document(self._current_note_title())
+            self.notes_panel.set_current_file(filepath)
             self.show_editor_screen()
         except Exception as e:
             QMessageBox.critical(self, "Error Opening File", str(e))
@@ -745,6 +804,265 @@ class MainWindow(QMainWindow):
         else:
             event.ignore()
 
+    # ------------------------------------------------------- valv & anteckningar
+
+    def _current_note_title(self):
+        if not self.current_filepath:
+            return ""
+        return os.path.splitext(os.path.basename(self.current_filepath))[0]
+
+    def _refresh_link_titles(self):
+        """Uppdaterar förslagen som dyker upp när man skriver [[ i editorn."""
+        self.editor.canvas.set_link_titles([n.title for n in self.vault.notes])
+
+    def _on_vault_changed(self, folder):
+        self.vault = Vault(folder)
+        self.vault.scan()
+        self.notes_panel.set_vault(self.vault)
+        self.config.set("vault_root", folder)
+        self._refresh_link_titles()
+        self.status_bar.showMessage(_("notes_vault_switched", root=folder), 6000)
+
+    def _show_vault_panel(self):
+        self.sidebar.setVisible(True)
+        self.config.set("show_ai_sidebar", True)
+        idx = self.sidebar.tabs.indexOf(self.notes_panel)
+        if idx >= 0:
+            self.sidebar.tabs.setCurrentIndex(idx)
+
+    def _focus_vault_search(self):
+        self._show_vault_panel()
+        self.notes_panel.input_search.setFocus()
+        self.notes_panel.input_search.selectAll()
+
+    def _rescan_vault(self):
+        n = self.vault.scan()
+        self._refresh_link_titles()
+        self.notes_panel.refresh()
+        self.status_bar.showMessage(
+            _("notes_rescan_done", n=n, root=self.vault.root), 6000)
+
+    def _new_note(self):
+        title, ok = QInputDialog.getText(self, _("menu_notes_new"), _("notes_new_prompt"))
+        if not ok or not title.strip():
+            return
+        note = self.vault.create_note(title.strip())
+        if note is None:
+            QMessageBox.warning(self, _("menu_notes"), _("notes_create_failed"))
+            return
+        self._refresh_link_titles()
+        self.notes_panel.refresh()
+        self.open_recent_file(note.path)
+
+    def _insert_wikilink_dialog(self):
+        titles = [n.title for n in self.vault.notes]
+        if not titles:
+            QMessageBox.information(self, _("menu_notes"), _("notes_no_vault"))
+            return
+        title, ok = QInputDialog.getItem(
+            self, _("menu_ai_insert_link"), _("notes_link_pick"), titles, 0, False)
+        if ok and title:
+            self._insert_text_at_cursor(f"[[{title}]]")
+
+    def _open_wikilink(self, target):
+        """Ctrl+klick på [[länk]]: öppna anteckningen, eller erbjud att skapa den."""
+        note = self.vault.get(target)
+        if note is not None:
+            self.open_recent_file(note.path)
+            return
+        answer = QMessageBox.question(
+            self, _("notes_create_from_link"),
+            _("notes_create_confirm", title=target),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            created = self.vault.create_note(target, content=f"# {target}\n\n")
+            if created is not None:
+                self._refresh_link_titles()
+                self.notes_panel.refresh()
+                self.open_recent_file(created.path)
+
+    def _open_graph(self):
+        self.vault.scan()
+        self.graph_dialog = GraphDialog(self.vault, self.theme_mgr, self)
+        self.graph_dialog.open_file_requested.connect(self.open_recent_file)
+        self.graph_dialog.create_note_requested.connect(self._create_note_from_link)
+        self.graph_dialog.exec()
+
+    def _create_note_from_link(self, target):
+        created = self.vault.create_note(target, content=f"# {target}\n\n")
+        if created is not None:
+            self._refresh_link_titles()
+            self.notes_panel.refresh()
+            if self.graph_dialog is not None and self.graph_dialog.isVisible():
+                self.graph_dialog.canvas.rebuild()
+                self.graph_dialog._refresh()
+
+    # ------------------------------------------------------------ AI i dokumentet
+
+    def _insert_text_at_cursor(self, text):
+        if not text:
+            return
+        if self.stack.currentIndex() != 1:
+            self.show_editor_screen()
+        cursor = self.editor.textCursor()
+        cursor.insertText(text)
+        self.editor.setTextCursor(cursor)
+        self.editor.canvas.setFocus()
+
+    def _open_research(self):
+        if self.stack.currentIndex() != 1:
+            return
+        self.research_dialog = ResearchDialog(
+            self.config, self.theme_mgr,
+            document_text=self.editor.document.toPlainText(),
+            lang=i18n.get_language(), vault=self.vault, parent=self,
+        )
+        if self.research_dialog.exec() == QDialog.DialogCode.Accepted:
+            text = self.research_dialog.inserted_text()
+            if text.strip():
+                self._insert_text_at_cursor("\n\n" + text.strip() + "\n")
+                self._refresh_link_titles()
+                self.notes_panel.refresh()
+
+    def _open_ghostwriter(self):
+        if self.stack.currentIndex() != 1:
+            return
+        self.ghost_dialog = GhostwriterDialog(
+            self.config, self.theme_mgr,
+            document_text=self.editor.document.toPlainText(),
+            lang=i18n.get_language(), vault=self.vault, parent=self,
+        )
+        self.ghost_dialog.insert_requested.connect(self._on_ghost_insert)
+        self.ghost_dialog.exec()
+
+    def _on_ghost_insert(self, text):
+        cursor = self.editor.textCursor()
+        prefix = "" if cursor.atBlockStart() else "\n\n"
+        cursor.insertText(prefix + text.strip())
+        self.editor.setTextCursor(cursor)
+        self.editor.canvas.setFocus()
+
+    def _open_generate_paragraph(self):
+        """Skapa stycken utifrån en instruktion — öppnar ghostwritern i bygg-ut-läget."""
+        if self.stack.currentIndex() != 1:
+            return
+        self.ghost_dialog = GhostwriterDialog(
+            self.config, self.theme_mgr,
+            document_text=self.editor.document.toPlainText(),
+            lang=i18n.get_language(), vault=self.vault, parent=self,
+            preset_mode="expand",
+        )
+        self.ghost_dialog.insert_requested.connect(self._on_ghost_insert)
+        self.ghost_dialog.exec()
+
+    # ------------------------------------------------- markeringar och kodgranskning
+
+    def _format_directives(self):
+        """Gör [kodblock]- och [citat]-markeringar i dokumentet till riktiga block."""
+        converted = self.editor.canvas.format_directives()
+        text = self.editor.document.toPlainText()
+        open_markers = directives.unclosed(text)
+        typos = directives.suspicious_lines(text)
+
+        if converted:
+            self.status_bar.showMessage(_("fmt_converted", n=converted), 7000)
+        elif not open_markers and not typos:
+            self.status_bar.showMessage(_("fmt_nothing"), 5000)
+
+        problems = [_("fmt_unclosed", line=ln, kind=kind) for ln, kind in open_markers]
+        problems += [_("fmt_typo", line=ln, raw=raw) for ln, raw in typos]
+        if problems:
+            QMessageBox.warning(self, _("fmt_title"),
+                                _("fmt_problems") + "\n\n" + "\n".join(problems[:8]))
+        if converted:
+            self._update_stats()
+
+    def _code_block_at_cursor(self):
+        blocks = richtext.code_blocks(self.editor.document)
+        if not blocks:
+            return None
+        current = self.editor.textCursor().blockNumber()
+        for b in blocks:
+            if b["first_block"] <= current <= b["last_block"]:
+                return b
+        if len(blocks) == 1:
+            return blocks[0]
+        labels = [f"{i + 1}: {b['code'].splitlines()[0][:44]}" for i, b in enumerate(blocks)]
+        choice, ok = QInputDialog.getItem(self, _("code_title"), _("code_pick_block"),
+                                          labels, 0, False)
+        if not ok:
+            return None
+        return blocks[labels.index(choice)]
+
+    def _open_code_analysis(self):
+        if self.stack.currentIndex() != 1:
+            return
+        block = self._code_block_at_cursor()
+        if block is None:
+            QMessageBox.information(self, _("code_title"), _("code_no_blocks"))
+            return
+        self.code_dialog = CodeDialog(
+            self.config, self.theme_mgr,
+            code=block["code"], lang=block.get("lang", ""),
+            doc_context=self.editor.document.toPlainText(),
+            lang_ui=i18n.get_language(), parent=self,
+        )
+        self.code_dialog.replace_requested.connect(
+            lambda code, b=block: self._replace_code_block(b, code))
+        self.code_dialog.insert_requested.connect(
+            lambda code, b=block: self._insert_code_after(b, code))
+        self.code_dialog.exec()
+
+    def _replace_code_block(self, block, code):
+        """Sätter in den formaterade koden i stället för den gamla."""
+        lang = block.get("lang") or directives.detect_language(code)
+        richtext.replace_blocks(self.editor.document, block["first_block"],
+                                block["last_block"], code, self.theme_mgr.current, lang)
+        self.status_bar.showMessage(_("code_replaced"), 6000)
+        self._update_stats()
+
+    def _insert_code_after(self, block, code):
+        """Lägger den formaterade koden som ett nytt kodblock under det gamla."""
+        doc = self.editor.document
+        last = doc.findBlockByNumber(block["last_block"])
+        cursor = QTextCursor(doc)
+        if last.isValid():
+            cursor.setPosition(last.position() + last.length() - 1)
+
+        body = code.rstrip("\n")
+        cursor.beginEditBlock()
+        try:
+            # En tom rad emellan, så att det nya blocket blir ett eget block
+            cursor.insertBlock()
+            cursor.insertBlock()
+            start_code = cursor.position()
+            cursor.insertText(body)
+            end_code = cursor.position()
+        finally:
+            cursor.endEditBlock()
+
+        colors = self.theme_mgr.current
+
+        # Separatorraderna ärver blockformatet från koden de skapas efter, och
+        # hade alltså kodroll. Töm den — annars räknas de som kod och båda
+        # kodblocken smälter ihop till ett. Blocken räknas ut explicit: att
+        # utgå från en teckenposition hamnar inuti det gamla blocket, och då
+        # tappar dess sista rad sin roll.
+        first_sep = block["last_block"] + 1
+        code_block = doc.findBlock(start_code)
+        last_sep = code_block.blockNumber() - 1
+        if last_sep >= first_sep:
+            richtext.apply_role_to_blocks(doc, first_sep, last_sep, "", colors)
+
+        lang = block.get("lang") or directives.detect_language(body)
+        sel = QTextCursor(doc)
+        sel.setPosition(start_code)
+        sel.setPosition(end_code, QTextCursor.MoveMode.KeepAnchor)
+        richtext.apply_role(sel, richtext.ROLE_CODE, colors, lang)
+        self.status_bar.showMessage(_("code_inserted"), 6000)
+        self._update_stats()
+
     def retranslate_ui(self):
         self.lbl_ai_status.setText("✨ " + _("status_ai_ready"))
         self.lbl_dict_status.setText("🎙️ " + _("status_dictation_idle"))
@@ -808,6 +1126,19 @@ class MainWindow(QMainWindow):
         self.act_review_ai.setText(_("menu_ai_review"))
         self.act_dictation.setText(_("menu_ai_dictation"))
         self.act_settings.setText(_("menu_ai_settings"))
+        self.act_research.setText("🔎 " + _("menu_ai_research"))
+        self.act_ghost.setText("👻 " + _("menu_ai_ghostwriter"))
+        self.act_ins_link.setText("🔗 " + _("menu_ai_insert_link"))
+        self.act_gen_para.setText("✎ " + _("menu_ai_paragraph"))
+        self.act_code.setText("⌨ " + _("menu_ai_code"))
+        self.act_fmt_directives.setText("⌗ " + _("menu_format_directives"))
+
+        self.menu_notes.setTitle(_("menu_notes"))
+        self.act_notes_new.setText("➕ " + _("menu_notes_new"))
+        self.act_notes_search.setText("🔍 " + _("menu_notes_search"))
+        self.act_notes_graph.setText("🕸 " + _("menu_notes_graph"))
+        self.act_notes_rescan.setText("⟳ " + _("menu_notes_rescan"))
+        self.act_notes_panel.setText("🗂 " + _("menu_notes_panel"))
 
         self.menu_help.setTitle(_("menu_help"))
         self.act_about.setText(_("menu_help_about"))

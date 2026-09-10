@@ -5,7 +5,21 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+*.log
+
+# ---------------------------------------------------------------
+# Dokument och nycklar får ALDRIG följa med i repot eller ett bygge.
+# API-nycklar hamnar lätt i ett .docx/.pdf man sparar i projektmappen,
+# och en sådan fil ska inte kunna råka följa med av misstag.
+# ---------------------------------------------------------------
+*.doc
 *.docx
 *.pdf
-*.log
+*.odt
+*.rtf
+*.key
+*.pem
+secrets*
+.env
+.env.*
 

@@ -25,6 +25,19 @@ Featuring A4 document canvas formatting, real-time AI review & style inspection,
   * Highlight any sentence or paragraph and press `Ctrl + K` to rewrite, make concise, expand, change tone (formal/casual), fix grammar, translate, or format.
   * Preview changes before accepting or inserting below.
 
+* **⌨ Code Blocks and Markers:**
+  * Write `[kodblock python]` … `[/kodblock]` and it becomes a real code block — monospace, shaded, and the language is remembered. `[citat]` … `[/citat]` becomes a quote.
+  * The marker becomes a block the moment you close it. **Format → Format markers** (`Ctrl+Shift+M`) does the whole document at once.
+  * Markers you left unclosed, or misspelled like `[kodblcok]`, are reported instead of being silently ignored.
+  * Code blocks keep their language through `.md` export *and* import.
+
+* **🔍 AI Code Review (`Ctrl+Shift+K`):**
+  * Reads the code block at the cursor: what it does, what is wrong, and a correctly formatted version.
+  * Apply it in place, or insert it below while keeping the original.
+
+* **✎ Create Paragraph (`Ctrl+Shift+A`):**
+  * Give an instruction ("summarise the counter-arguments") and get prose back in your own voice.
+
 * **📑 AI Inspector Sidebar:**
   * **Review & Style:** Readability score (LIX), detected tone, and 1-click apply/dismiss suggestions.
   * **Outline:** Live document headings table of contents with 1-click jump to section.
@@ -76,6 +89,19 @@ Med realistisk A4-sidlayout, AI-granskning och stilanalys i realtid, snabb omskr
   * Markera valfri mening eller stycke och tryck `Ctrl + K` för att skriva om, förkorta, utveckla, ändra tonläge (formellt/avslappnat), rätta grammatik eller översätta.
   * Förhandsgranska AI-förslaget innan du godkänner eller infogar det.
 
+* **⌨ Kodblock och markeringar:**
+  * Skriv `[kodblock python]` … `[/kodblock]` och det blir ett riktigt kodblock — monospace, skuggad bakgrund, och språket sparas. `[citat]` … `[/citat]` blir ett citat.
+  * Markeringen blir ett block i samma stund du stänger den. **Format → Formatera markeringar** (`Ctrl+Shift+M`) tar hela dokumentet på en gång.
+  * Markeringar du lämnat öppna, eller stavat fel som `[kodblcok]`, rapporteras i stället för att tyst ignoreras.
+  * Kodblock behåller sitt språk genom både export *och* import av `.md`.
+
+* **🔍 AI-kodgranskning (`Ctrl+Shift+K`):**
+  * Läser kodblocket vid markören: vad det gör, vad som är fel, och en korrekt formaterad version.
+  * Applicera på plats, eller infoga under det gamla och behåll originalet.
+
+* **✎ Skapa stycke (`Ctrl+Shift+A`):**
+  * Ge en instruktion ("sammanfatta motargumenten") och få text tillbaka i din egen röst.
+
 * **📑 AI-Granskare & Inspektör i sidopanelen:**
   * **Granskning & Stil:** Läsbarhetsbetyg (LIX), identifierat tonläge och förbättringsförslag som tillämpas med ett enda klick.
   * **Disposition:** Automatisk innehållsförteckning över dokumentets rubriker med direktnavigering.
@@ -107,6 +133,20 @@ uv run python main.py
 ```
 
 ---
+
+## 🔒 Your keys, your provider
+
+OmaScribe ships with **no API keys**. Enter your own provider and key under
+`AI-Assistent → Settings` (Ollama, OpenAI, OpenRouter, Gemini, DeepSeek, a local
+server, or any OpenAI-compatible endpoint).
+
+Keys are stored in your local config, never in the code. Two rules the
+installer enforces for you:
+
+- **Never put document files in the project folder.** API keys end up in
+  `.docx`/`.pdf` files people save next to their code. `install.sh` aborts if it
+  finds one, and git, the wheel and the sdist all exclude them.
+- **Never commit your config or `.env`.** Both are ignored.
 
 ## 📄 License
 MIT License © 2026 [Alex Weström](https://github.com/alexwest1981)

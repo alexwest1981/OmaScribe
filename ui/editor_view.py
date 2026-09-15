@@ -1,17 +1,22 @@
 import re
+import math
+import uuid
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QTextEdit, QScrollArea, QFrame, QMenu, QApplication,
-    QListWidget, QListWidgetItem
+    QListWidget, QListWidgetItem, QMessageBox
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QPoint
+from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QRectF, QPointF, QByteArray, QBuffer, QIODevice, QUrl
 from PyQt6.QtGui import (
     QTextDocument, QTextCursor, QTextCharFormat, QTextBlockFormat,
+    QTextTableFormat, QTextTableCellFormat, QTextFrameFormat, QTextLength,
     QFont, QColor, QPainter, QAction, QKeySequence, QPalette,
-    QSyntaxHighlighter
+    QSyntaxHighlighter, QImage, QPixmap, QPen, QBrush, QTextFormat
 )
 from core.i18n import _
 from core.vault import WIKILINK_RE, split_link_target, slugify
 from core import directives, richtext
+from core.doc_manager import DEFAULT_PAGE_SETTINGS
+
 
 class WikiLinkHighlighter(QSyntaxHighlighter):
     """Färgar [[wikilänkar]] så att de syns som länkar och inte som vanlig text.
@@ -65,9 +70,13 @@ class DocumentCanvas(QTextEdit):
     wikilink_activated = pyqtSignal(str)         # [[mål]] följt med Ctrl+klick
     directives_converted = pyqtSignal(int)       # antal [kodblock]/[citat] som blev block
 
+    # Sidhöjd i pixlar för A4-simulering vid visning
+    PAGE_HEIGHT_PX = 1080
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAcceptRichText(True)
+        self.setAcceptDrops(True)
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -75,6 +84,10 @@ class DocumentCanvas(QTextEdit):
         # Document page settings
         doc = self.document()
         doc.setDocumentMargin(36) # ~25mm page padding
+
+        # Sidlayout och sidnummer
+        self.page_settings = DEFAULT_PAGE_SETTINGS.copy()
+        self.paged_view_enabled = True
 
         # Wikilänkar: färgning av länkar + förslag när man skriver [[
         self.highlighter = WikiLinkHighlighter(self.document())
@@ -93,15 +106,27 @@ class DocumentCanvas(QTextEdit):
     def _on_cursor_changed(self):
         self.cursor_format_changed.emit()
 
+    def set_page_settings(self, settings: dict):
+        if settings:
+            self.page_settings.update(settings)
+            vp = self.viewport()
+            if vp is not None:
+                vp.update()
+
     def keyPressEvent(self, event):
         # Trigger inline Magic AI with Ctrl+K
         if event.key() == Qt.Key.Key_K and (event.modifiers() & Qt.KeyboardModifier.ControlModifier):
             cursor = self.textCursor()
             selected = cursor.selectedText()
-            # Calculate global popup point near cursor
             rect = self.cursorRect()
             global_pos = self.mapToGlobal(rect.bottomLeft())
             self.magic_ai_requested.emit(selected, global_pos)
+            event.accept()
+            return
+
+        # Infoga sidbrytning med Ctrl+Enter
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and (event.modifiers() & Qt.KeyboardModifier.ControlModifier):
+            self.insert_page_break()
             event.accept()
             return
 
@@ -130,6 +155,251 @@ class DocumentCanvas(QTextEdit):
         if event.text() == "]":
             self._maybe_convert_directive()
 
+    # ---------------------------------------------------------------- Drag & Drop / Urklipp
+    def dragEnterEvent(self, e):
+        if e is not None:
+            mime = e.mimeData()
+            if mime is not None and (mime.hasUrls() or mime.hasImage() or mime.hasText()):
+                e.acceptProposedAction()
+            else:
+                super().dragEnterEvent(e)
+
+    def dragMoveEvent(self, e):
+        if e is not None:
+            mime = e.mimeData()
+            if mime is not None and (mime.hasUrls() or mime.hasImage() or mime.hasText()):
+                e.acceptProposedAction()
+            else:
+                super().dragMoveEvent(e)
+
+    def dropEvent(self, e):
+        if e is None:
+            return
+        mime = e.mimeData()
+        if mime is not None and mime.hasUrls():
+            for url in mime.urls():
+                fpath = url.toLocalFile()
+                if fpath and fpath.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif", ".bmp")):
+                    self.insert_image(fpath)
+                    e.acceptProposedAction()
+                    return
+        elif mime is not None and mime.hasImage():
+            img = mime.imageData()
+            if isinstance(img, QImage) and not img.isNull():
+                self.insert_image(img)
+                e.acceptProposedAction()
+                return
+        super().dropEvent(e)
+
+    def insertFromMimeData(self, source):
+        if source is None:
+            return
+        # 1. Klistra in bild från urklipp
+        if source.hasImage():
+            img = source.imageData()
+            if isinstance(img, QImage) and not img.isNull():
+                self.insert_image(img)
+                return
+            elif isinstance(img, QPixmap) and not img.isNull():
+                self.insert_image(img.toImage())
+                return
+
+        # 2. Klistra in tabulär data (TSV från Excel, Google Sheets eller LibreOffice Calc)
+        if source.hasText():
+            text = source.text()
+            if "\t" in text and "\n" in text:
+                lines = [ln for ln in text.splitlines() if ln.strip()]
+                if len(lines) >= 2 and all("\t" in ln for ln in lines[:min(3, len(lines))]):
+                    if self._try_insert_tsv_table(lines):
+                        return
+
+        super().insertFromMimeData(source)
+
+    def _try_insert_tsv_table(self, lines: list[str]) -> bool:
+        """Konverterar inklistrad TSV-data till en formaterad tabell."""
+        matrix = [line.split("\t") for line in lines]
+        num_rows = len(matrix)
+        num_cols = max(len(row) for row in matrix)
+        if num_rows < 1 or num_cols < 1:
+            return False
+
+        cursor = self.textCursor()
+        cursor.beginEditBlock()
+        try:
+            table_fmt = QTextTableFormat()
+            table_fmt.setBorder(1)
+            table_fmt.setBorderStyle(QTextFrameFormat.BorderStyle.BorderStyle_Solid)
+            table_fmt.setBorderBrush(QBrush(QColor("#cbd5e1")))
+            table_fmt.setCellPadding(8)
+            table_fmt.setCellSpacing(0)
+            table_fmt.setWidth(QTextLength(QTextLength.Type.PercentageLength, 100))
+
+            table = cursor.insertTable(num_rows, num_cols, table_fmt)
+            if table is None:
+                return False
+            
+            # Header-styling på första raden
+            header_fmt = QTextTableCellFormat()
+            header_fmt.setBackground(QBrush(QColor("#f1f5f9")))
+
+            for r, row in enumerate(matrix):
+                for c, val in enumerate(row):
+                    if c < num_cols:
+                        cell = table.cellAt(r, c)
+                        if cell is not None and cell.isValid():
+                            if r == 0:
+                                cell.setFormat(header_fmt)
+                            cell_cursor = cell.firstCursorPosition()
+                            cell_cursor.insertText(val.strip())
+        finally:
+            cursor.endEditBlock()
+        self.setTextCursor(cursor)
+        return True
+
+    # ---------------------------------------------------------------- Infogning av media
+    def insert_image(self, filepath_or_qimage, width_px: int = 480, align: str = "center", caption: str = ""):
+        """Infogar en bild i dokumentet med angiven bredd, justering och bildtext."""
+        if isinstance(filepath_or_qimage, str):
+            qimg = QImage(filepath_or_qimage)
+            if qimg.isNull():
+                return
+        elif isinstance(filepath_or_qimage, QImage):
+            qimg = filepath_or_qimage
+        elif isinstance(filepath_or_qimage, QPixmap):
+            qimg = filepath_or_qimage.toImage()
+        else:
+            return
+
+        disp_w = min(qimg.width(), width_px) if width_px else min(qimg.width(), 680)
+
+        # Koda till base64 för direkt inbäddning i HTML och dokumentresurser
+        ba = QByteArray()
+        buff = QBuffer(ba)
+        buff.open(QIODevice.OpenModeFlag.WriteOnly)
+        qimg.save(buff, "PNG")
+        b64_str = ba.toBase64().data().decode("utf-8")
+        data_url = f"data:image/png;base64,{b64_str}"
+
+        res_id = f"qrc:///images/{uuid.uuid4().hex[:12]}.png"
+        doc = self.document()
+        if doc is not None:
+            doc.addResource(QTextDocument.ResourceType.ImageResource, QUrl(res_id), qimg)
+
+        cursor = self.textCursor()
+        cursor.beginEditBlock()
+        try:
+            caption_html = f'<br/><span style="font-size: 10pt; color: #64748b; font-style: italic;">{caption}</span>' if caption else ""
+            html_chunk = f'<p style="text-align: {align}; margin: 14px 0;"><img src="{data_url}" width="{disp_w}" />{caption_html}</p><p></p>'
+            cursor.insertHtml(html_chunk)
+        finally:
+            cursor.endEditBlock()
+        self.setTextCursor(cursor)
+
+    def insert_chart(self, qimage: QImage, align: str = "center"):
+        """Infogar ett genererat diagram."""
+        self.insert_image(qimage, width_px=680, align=align)
+
+    def insert_page_break(self):
+        """Infogar en visuell och utskriftsmässig sidbrytning."""
+        cursor = self.textCursor()
+        cursor.beginEditBlock()
+        try:
+            cursor.insertBlock()
+            bfmt = QTextBlockFormat()
+            bfmt.setPageBreakPolicy(QTextFormat.PageBreakFlag.PageBreak_AlwaysBefore)
+            cursor.setBlockFormat(bfmt)
+            cursor.insertHtml('<p style="page-break-before: always; margin-top: 16px;"><br/></p>')
+        finally:
+            cursor.endEditBlock()
+        self.setTextCursor(cursor)
+
+    # ---------------------------------------------------------------- Siduppdelning & Sidnummer
+    def paintEvent(self, e):
+        super().paintEvent(e)
+
+        # Rita siduppdelning, sidbrytningslinjer och sidnummer i editorn
+        if not self.paged_view_enabled:
+            return
+
+        doc = self.document()
+        if doc is None:
+            return
+        doc_height = doc.size().height()
+        page_h = self.PAGE_HEIGHT_PX
+        page_count = max(1, int(math.ceil(doc_height / float(page_h))))
+
+        vp = self.viewport()
+        if vp is None:
+            return
+        viewport_w = vp.width()
+        sb = self.verticalScrollBar()
+        scroll_y = sb.value() if sb is not None else 0
+
+        painter = QPainter(vp)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+
+        try:
+            for i in range(page_count):
+                page_num = i + 1
+                page_bottom_y = int((i + 1) * page_h - scroll_y)
+                page_top_y = int(i * page_h - scroll_y)
+
+                # 1. Rita sidfot med sidnummer
+                if self.page_settings.get("page_numbering", True):
+                    skip_first = bool(self.page_settings.get("skip_first_page", False)) and (i == 0)
+                    if not skip_first:
+                        fmt_type = self.page_settings.get("page_number_format", "page_of_total")
+                        if fmt_type == "number":
+                            page_str = str(page_num)
+                        elif fmt_type == "hyphen":
+                            page_str = f"— {page_num} —"
+                        elif fmt_type == "slash":
+                            page_str = f"{page_num} / {page_count}"
+                        else:
+                            page_str = _("pdf_page_n_of_total", n=page_num, total=page_count)
+
+                        num_pos = str(self.page_settings.get("page_number_pos", "bottom-center"))
+                        if num_pos in ("bottom-alternating", "top-alternating"):
+                            is_right = (page_num % 2 == 1)
+                            align = Qt.AlignmentFlag.AlignRight if is_right else Qt.AlignmentFlag.AlignLeft
+                        elif "right" in num_pos:
+                            align = Qt.AlignmentFlag.AlignRight
+                        elif "left" in num_pos:
+                            align = Qt.AlignmentFlag.AlignLeft
+                        else:
+                            align = Qt.AlignmentFlag.AlignHCenter
+
+                        painter.setFont(QFont("sans-serif", 9))
+                        painter.setPen(QColor("#94a3b8"))
+                        
+                        # Footer-yta
+                        footer_rect = QRectF(24, page_bottom_y - 28, viewport_w - 48, 20)
+                        painter.drawText(footer_rect, align | Qt.AlignmentFlag.AlignVCenter, page_str)
+
+                # 2. Rita tydlig sidseparation mellan sidorna
+                if i < page_count - 1:
+                    # Skuggad separationslinje
+                    pen_sep = QPen(QColor("#cbd5e1"), 1.0, Qt.PenStyle.DashLine)
+                    painter.setPen(pen_sep)
+                    painter.drawLine(18, page_bottom_y, viewport_w - 18, page_bottom_y)
+
+                    # Bricka med sidmarkör i mitten
+                    badge_text = f" Sida {page_num + 1} "
+                    painter.setFont(QFont("sans-serif", 8, QFont.Weight.Bold))
+                    painter.setPen(Qt.PenStyle.NoPen)
+                    painter.setBrush(QBrush(QColor("#f1f5f9")))
+                    
+                    bw = len(badge_text) * 7.5 + 16
+                    bx = (viewport_w - bw) / 2.0
+                    by = page_bottom_y - 9
+                    painter.drawRoundedRect(QRectF(bx, by, bw, 18), 9, 9)
+
+                    painter.setPen(QColor("#64748b"))
+                    painter.drawText(QRectF(bx, by, bw, 18), Qt.AlignmentFlag.AlignCenter, badge_text)
+        finally:
+            painter.end()
+
     # ---------------------------------------------------------------- markeringar
 
     def set_block_colors(self, colors: dict):
@@ -137,11 +407,7 @@ class DocumentCanvas(QTextEdit):
         self._colors = dict(colors or {})
 
     def format_directives(self) -> int:
-        """Gör om [kodblock] och [citat] till riktiga block. Returnerar antalet.
-
-        Baklänges, så att tidigare teckenpositioner förblir giltiga när
-        texter byts ut.
-        """
+        """Gör om [kodblock] och [citat] till riktiga block. Returnerar antalet."""
         found = directives.parse(self.toPlainText())
         if not found:
             return 0
@@ -264,8 +530,6 @@ class DocumentCanvas(QTextEdit):
     def _insert_link(self, title):
         """Ersätter den påbörjade [[söktexten med en färdig länk."""
         cursor = self.textCursor()
-        # Läs av vad som följer INNAN ankaret flyttas — position() pekar annars
-        # på selektionsstarten och vi tappar bort ett befintligt ]].
         original_pos = cursor.position()
         n = max(0, cursor.positionInBlock() - (self._completer_start + 2))
         if n > 0:
@@ -288,7 +552,6 @@ class DocumentCanvas(QTextEdit):
         return None
 
     def mousePressEvent(self, event):
-        # Ctrl+klick följer en wikilänk, som i Obsidian
         if (event.button() == Qt.MouseButton.LeftButton
                 and (event.modifiers() & Qt.KeyboardModifier.ControlModifier)):
             target = self._link_at(event.position().toPoint())
@@ -327,7 +590,6 @@ class DocumentCanvas(QTextEdit):
 
         if table:
             tbl_menu = menu.addMenu("📊 " + _("tb_table"))
-            cell = table.cellAt(cursor)
             
             def add_row_above():
                 c = self.textCursor()
@@ -401,11 +663,8 @@ class EditorView(QWidget):
         # Page Container (Simulating A4 paper)
         self.page_frame = QFrame()
         self.page_frame.setObjectName("PageFrame")
-        # A4-bredd som önskemål, inte som tvång. Med fixed width klipptes
-        # högerkanten av dokumentet på smala fönster — exemplet som avslöjade
-        # det var ett kodblock vars rader blev oläsbara.
         self.page_frame.setMinimumWidth(360)
-        self.page_frame.setMaximumWidth(820)
+        self.page_frame.setMaximumWidth(840)
         self.page_frame.setMinimumHeight(1160)
 
         page_layout = QVBoxLayout(self.page_frame)
@@ -429,6 +688,9 @@ class EditorView(QWidget):
 
     def setTextCursor(self, cursor):
         self.canvas.setTextCursor(cursor)
+
+    def set_page_settings(self, settings: dict):
+        self.canvas.set_page_settings(settings)
 
     def apply_theme(self):
         c = self.theme_mgr.current
@@ -456,8 +718,6 @@ class EditorView(QWidget):
             "border": c["canvas_border"],
             "accent": c["accent"],
         })
-        # Wikilänkar ska synas. Temana har egna länkfärger eftersom accenten
-        # kan ligga mycket nära brödtexten (amber: 6 av 765 i RGB-avstånd).
         self.canvas.style_links(
             c.get("link", c["accent"]),
             c.get("link_missing", "#d97706"),

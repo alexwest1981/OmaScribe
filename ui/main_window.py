@@ -23,6 +23,12 @@ from ui.research_dialog import ResearchDialog
 from ui.ghostwriter_dialog import GhostwriterDialog
 from ui.graph_dialog import GraphDialog
 from ui.code_dialog import CodeDialog
+from ui.template_dialog import TemplateDialog
+from ui.chart_dialog import ChartDialog
+from ui.image_dialog import ImageDialog
+from ui.page_setup_dialog import PageSetupDialog
+from core.templates import get_template_html
+from core.doc_manager import DEFAULT_PAGE_SETTINGS
 from core import richtext, directives
 
 class MainWindow(QMainWindow):
@@ -35,6 +41,7 @@ class MainWindow(QMainWindow):
 
         self.current_filepath = None
         self.is_modified = False
+        self.page_settings = self.config.get("page_settings", DEFAULT_PAGE_SETTINGS.copy())
 
         # Anteckningsvalvet delas av panelen, graftvyn och wikilänk-förslagen
         self.vault = Vault(self.config.get("vault_root", VAULT_DEFAULT_DIR))
@@ -107,10 +114,12 @@ class MainWindow(QMainWindow):
         self.start_screen.new_document_requested.connect(self.file_new)
         self.start_screen.open_document_requested.connect(self.file_open)
         self.start_screen.open_recent_requested.connect(self.open_recent_file)
+        self.start_screen.open_templates_requested.connect(self.open_template_dialog)
         self.stack.addWidget(self.start_screen)
 
         # 2. Editor & Sidebar Container (Index 1)
         self.editor = EditorView(self.theme_mgr, self)
+        self.editor.set_page_settings(self.page_settings)
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
         self.splitter.addWidget(self.editor)
 
@@ -143,6 +152,11 @@ class MainWindow(QMainWindow):
         self.toolbar.research_clicked.connect(self._open_research)
         self.toolbar.ghostwriter_clicked.connect(self._open_ghostwriter)
         self.toolbar.code_clicked.connect(self._open_code_analysis)
+        self.toolbar.image_clicked.connect(self.open_insert_image_dialog)
+        self.toolbar.chart_clicked.connect(self.open_insert_chart_dialog)
+        self.toolbar.templates_clicked.connect(self.open_template_dialog)
+        self.toolbar.page_break_clicked.connect(self.editor.canvas.insert_page_break)
+        self.toolbar.page_setup_clicked.connect(self.open_page_setup_dialog)
         self.addToolBar(self.toolbar)
 
         # 4. Status Bar
@@ -198,6 +212,7 @@ class MainWindow(QMainWindow):
         self.menu_file = mb.addMenu(_("menu_file"))
         self.act_start_page = self._add_action(self.menu_file, _("menu_file_start_page"), self.show_start_screen, "Ctrl+H")
         self.act_new = self._add_action(self.menu_file, _("menu_file_new"), self.file_new, "Ctrl+N")
+        self.act_new_template = self._add_action(self.menu_file, "🎨 " + _("menu_file_new_template"), self.open_template_dialog, "Ctrl+Shift+T")
         self.act_open = self._add_action(self.menu_file, _("menu_file_open"), self.file_open, "Ctrl+O")
         
         # Recent Files submenu
@@ -208,6 +223,7 @@ class MainWindow(QMainWindow):
         self.act_save = self._add_action(self.menu_file, _("menu_file_save"), self.file_save, "Ctrl+S")
         self.act_save_as = self._add_action(self.menu_file, _("menu_file_save_as"), self.file_save_as, "Ctrl+Shift+S")
         self.menu_file.addSeparator()
+        self.act_page_setup = self._add_action(self.menu_file, "⚙️ " + _("menu_file_page_setup"), self.open_page_setup_dialog)
         self.act_print = self._add_action(self.menu_file, _("menu_file_print"), self.file_print, "Ctrl+P")
         self.act_print_prev = self._add_action(self.menu_file, _("menu_file_print_preview"), self.file_print_preview, "Ctrl+Shift+P")
         self.menu_file.addSeparator()
@@ -254,7 +270,11 @@ class MainWindow(QMainWindow):
         # Insert Menu
         self.menu_insert = mb.addMenu(_("menu_insert"))
         self.act_ins_table = self._add_action(self.menu_insert, "📊 " + _("menu_insert_table"), self.toolbar._open_insert_table_dialog)
+        self.act_ins_image = self._add_action(self.menu_insert, "🖼️ " + _("menu_insert_image"), self.open_insert_image_dialog)
+        self.act_ins_chart = self._add_action(self.menu_insert, "📈 " + _("menu_insert_chart"), self.open_insert_chart_dialog)
         self.act_ins_divider = self._add_action(self.menu_insert, "─ " + _("menu_insert_horizontal_rule"), self.toolbar._insert_divider)
+        self.act_ins_page_break = self._add_action(self.menu_insert, "📄 " + _("menu_insert_page_break"), self.editor.canvas.insert_page_break, "Ctrl+Return")
+        self.act_ins_template = self._add_action(self.menu_insert, "🎨 " + _("menu_insert_template"), self.open_template_dialog)
         
         self.menu_ins_callout = self.menu_insert.addMenu("💡 " + _("tb_callout"))
         self.act_callout_info = self.menu_ins_callout.addAction(_("tb_callout_info"), lambda: self.toolbar._insert_callout("info"))
@@ -688,38 +708,33 @@ class MainWindow(QMainWindow):
     def file_print(self):
         if self.stack.currentIndex() == 0:
             return
+        doc = self.editor.document
+        if doc is None:
+            return
         printer = QPrinter(QPrinter.PrinterMode.HighResolution)
-        page_layout = QPageLayout(
-            QPageSize(QPageSize.PageSizeId.A4),
-            QPageLayout.Orientation.Portrait,
-            QMarginsF(20, 20, 20, 20),
-            QPageLayout.Unit.Millimeter
-        )
-        printer.setPageLayout(page_layout)
         dialog = QPrintDialog(printer, self)
         dialog.setWindowTitle(_("menu_file_print"))
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            self.editor.document.print(printer)
+            DocumentManager.print_document_to_printer(doc, printer, page_settings=self.page_settings)
 
     def file_print_preview(self):
         if self.stack.currentIndex() == 0:
             return
+        doc = self.editor.document
+        if doc is None:
+            return
         printer = QPrinter(QPrinter.PrinterMode.HighResolution)
-        page_layout = QPageLayout(
-            QPageSize(QPageSize.PageSizeId.A4),
-            QPageLayout.Orientation.Portrait,
-            QMarginsF(20, 20, 20, 20),
-            QPageLayout.Unit.Millimeter
-        )
-        printer.setPageLayout(page_layout)
         preview = QPrintPreviewDialog(printer, self)
         preview.setWindowTitle(_("menu_file_print_preview"))
         preview.setMinimumSize(800, 600)
         preview.resize(1050, 850)
-        preview.paintRequested.connect(lambda p: self.editor.document.print(p))
+        preview.paintRequested.connect(lambda p: DocumentManager.print_document_to_printer(doc, p, page_settings=self.page_settings))
         preview.exec()
 
     def export_pdf(self):
+        doc = self.editor.document
+        if doc is None:
+            return
         fpath, selected_filter = QFileDialog.getSaveFileName(
             self,
             _("menu_file_export_pdf"),
@@ -729,10 +744,53 @@ class MainWindow(QMainWindow):
         if fpath:
             fpath = self._ensure_extension(fpath, "*.pdf", ".pdf")
             try:
-                DocumentManager.save_file(fpath, self.editor.document)
+                DocumentManager.save_file(fpath, doc, page_settings=self.page_settings)
                 QMessageBox.information(self, _("export_success_title"), _("export_success_text", path=fpath))
             except Exception as e:
                 QMessageBox.critical(self, _("export_error_title"), str(e))
+
+    def open_template_dialog(self):
+        dlg = TemplateDialog(self.theme_mgr, self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            t_id = dlg.get_selected_template_id()
+            if t_id:
+                if self.stack.currentIndex() == 1 and not self._maybe_save_changes():
+                    return
+                html = get_template_html(t_id, lang=i18n.get_language())
+                doc = self.editor.document
+                if doc is not None:
+                    doc.setHtml(html)
+                self.current_filepath = None
+                self.is_modified = False
+                self.notes_panel.set_current_document("")
+                self.notes_panel.set_current_file(None)
+                self.show_editor_screen()
+                self.status_bar.showMessage(_("template_loaded"), 5000)
+
+    def open_insert_image_dialog(self):
+        if self.stack.currentIndex() != 1:
+            self.show_editor_screen()
+        dlg = ImageDialog(self.theme_mgr, parent=self)
+        dlg.image_ready.connect(lambda path, w, a, c: self.editor.canvas.insert_image(path, w, a, c))
+        dlg.exec()
+
+    def open_insert_chart_dialog(self):
+        if self.stack.currentIndex() != 1:
+            self.show_editor_screen()
+        dlg = ChartDialog(self.theme_mgr, self)
+        dlg.chart_ready.connect(lambda img, a: self.editor.canvas.insert_chart(img, a))
+        dlg.exec()
+
+    def open_page_setup_dialog(self):
+        dlg = PageSetupDialog(self.page_settings, self.theme_mgr, self)
+        dlg.settings_applied.connect(self._on_page_settings_applied)
+        dlg.exec()
+
+    def _on_page_settings_applied(self, new_settings: dict):
+        self.page_settings = new_settings
+        self.config.set("page_settings", new_settings)
+        self.editor.set_page_settings(new_settings)
+        self.status_bar.showMessage(_("pagesetup_applied"), 4000)
 
     def export_docx(self):
         fpath, selected_filter = QFileDialog.getSaveFileName(
@@ -1072,10 +1130,12 @@ class MainWindow(QMainWindow):
         self.menu_file.setTitle(_("menu_file"))
         self.act_start_page.setText(_("menu_file_start_page"))
         self.act_new.setText(_("menu_file_new"))
+        self.act_new_template.setText("🎨 " + _("menu_file_new_template"))
         self.act_open.setText(_("menu_file_open"))
         self.menu_recent.setTitle(_("menu_file_recent"))
         self.act_save.setText(_("menu_file_save"))
         self.act_save_as.setText(_("menu_file_save_as"))
+        self.act_page_setup.setText("⚙️ " + _("menu_file_page_setup"))
         self.act_print.setText(_("menu_file_print"))
         self.act_print_prev.setText(_("menu_file_print_preview"))
         self.act_exp_pdf.setText(_("menu_file_export_pdf"))
@@ -1104,7 +1164,11 @@ class MainWindow(QMainWindow):
 
         self.menu_insert.setTitle(_("menu_insert"))
         self.act_ins_table.setText("📊 " + _("menu_insert_table"))
+        self.act_ins_image.setText("🖼️ " + _("menu_insert_image"))
+        self.act_ins_chart.setText("📈 " + _("menu_insert_chart"))
         self.act_ins_divider.setText("─ " + _("menu_insert_horizontal_rule"))
+        self.act_ins_page_break.setText("📄 " + _("menu_insert_page_break"))
+        self.act_ins_template.setText("🎨 " + _("menu_insert_template"))
         self.menu_ins_callout.setTitle("💡 " + _("tb_callout"))
         self.act_callout_info.setText(_("tb_callout_info"))
         self.act_callout_tip.setText(_("tb_callout_tip"))

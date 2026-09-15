@@ -23,6 +23,11 @@ class FormattingToolBar(QToolBar):
     research_clicked = pyqtSignal()
     ghostwriter_clicked = pyqtSignal()
     code_clicked = pyqtSignal()
+    image_clicked = pyqtSignal()
+    chart_clicked = pyqtSignal()
+    page_setup_clicked = pyqtSignal()
+    templates_clicked = pyqtSignal()
+    page_break_clicked = pyqtSignal()
 
     def __init__(self, editor_view, theme_mgr=None, parent=None):
         super().__init__(parent)
@@ -228,9 +233,31 @@ class FormattingToolBar(QToolBar):
         self.btn_callout.setMenu(self.menu_callout)
         self.addWidget(self.btn_callout)
 
-        self.act_divider = QAction("─ Divider", self)
+        self.act_divider = QAction("─ " + _("tb_divider"), self)
         self.act_divider.triggered.connect(self._insert_divider)
         self.addAction(self.act_divider)
+
+        # Bild & Diagram
+        self.act_image = QAction("🖼️ " + _("tb_image"), self)
+        self.act_image.triggered.connect(self.image_clicked.emit)
+        self.addAction(self.act_image)
+
+        self.act_chart = QAction("📈 " + _("tb_chart"), self)
+        self.act_chart.triggered.connect(self.chart_clicked.emit)
+        self.addAction(self.act_chart)
+
+        # Mallar & Sidlayout
+        self.act_templates = QAction("🎨 " + _("tb_templates"), self)
+        self.act_templates.triggered.connect(self.templates_clicked.emit)
+        self.addAction(self.act_templates)
+
+        self.act_page_break = QAction("📄 " + _("tb_page_break"), self)
+        self.act_page_break.triggered.connect(self.page_break_clicked.emit)
+        self.addAction(self.act_page_break)
+
+        self.act_page_setup = QAction("⚙️ " + _("tb_page_setup"), self)
+        self.act_page_setup.triggered.connect(self.page_setup_clicked.emit)
+        self.addAction(self.act_page_setup)
 
         # Expanding spacer
         spacer = QWidget()
@@ -348,6 +375,17 @@ class FormattingToolBar(QToolBar):
         self.btn_table.setText("📊 " + _("tb_table"))
         self.btn_callout.setText("💡 " + _("tb_callout"))
         self.act_divider.setText("─ " + _("tb_divider"))
+
+        self.act_image.setText("🖼️ " + _("tb_image"))
+        self.act_image.setToolTip(_("tb_image"))
+        self.act_chart.setText("📈 " + _("tb_chart"))
+        self.act_chart.setToolTip(_("tb_chart"))
+        self.act_templates.setText("🎨 " + _("tb_templates"))
+        self.act_templates.setToolTip(_("tb_templates"))
+        self.act_page_break.setText("📄 " + _("tb_page_break"))
+        self.act_page_break.setToolTip(_("tb_page_break") + " (Ctrl+Enter)")
+        self.act_page_setup.setText("⚙️ " + _("tb_page_setup"))
+        self.act_page_setup.setToolTip(_("tb_page_setup"))
 
         self.act_magic.setText("✨ " + _("tb_magic_ai"))
         self.act_dictate.setText("🎙️ " + _("tb_dictation"))

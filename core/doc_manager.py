@@ -1,9 +1,9 @@
 import os
 import re
-from PyQt6.QtCore import Qt, QMarginsF
+from PyQt6.QtCore import Qt, QMarginsF, QRectF, QSizeF
 from PyQt6.QtGui import (
     QTextDocument, QTextCursor, QPageLayout, QPageSize,
-    QFont, QColor
+    QFont, QColor, QPainter, QPen, QAbstractTextDocumentLayout
 )
 from PyQt6.QtPrintSupport import QPrinter
 
@@ -20,16 +20,31 @@ except ImportError:
     markdown = None
 
 from core import richtext
+from core.i18n import _
 
 # ```-block i Markdown, med valfritt språk
 _FENCE_RE = re.compile(r"^```([A-Za-z0-9_+#.\-]*)[ \t]*\n(.*?)^```[ \t]*$", re.M | re.S)
 # Platshållaren som tillfälligt ersätter ett kodblock under HTML-konverteringen
 _FENCE_PLACEHOLDER_RE = re.compile(r"^OmaScribeKodblock(\d+)Z$")
 
-
 # En rad som bara består av #taggar (Obsidian-stil), inte en rubrik.
-# [^\W_] = bokstav eller siffra i valfritt skriftsystem (å ä ö ingår).
 TAG_LINE_RE = re.compile(r"^(?:#[^\W_][\w\-/]*\s*)+$")
+
+DEFAULT_PAGE_SETTINGS = {
+    "page_size": "A4",                   # "A4", "Letter"
+    "orientation": "portrait",           # "portrait", "landscape"
+    "margin_top_mm": 20.0,
+    "margin_bottom_mm": 20.0,
+    "margin_left_mm": 20.0,
+    "margin_right_mm": 20.0,
+    "page_numbering": True,              # True / False
+    "page_number_pos": "bottom-center",  # "bottom-center", "bottom-right", "bottom-alternating", "top-right", "top-alternating", "none"
+    "page_number_format": "page_of_total", # "number", "page_of_total", "hyphen", "slash"
+    "skip_first_page": False,            # True för att dölja på titelsida/framsida
+    "header_text": "",                   # Löpande sidhuvud
+    "footer_text": "",                   # Löpande sidfot
+}
+
 
 class DocumentManager:
     @staticmethod
@@ -118,131 +133,234 @@ class DocumentManager:
                     tbl_html.append("<tr>")
                     for cell in row.cells:
                         cell_txt = cell.text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                        tbl_html.append(f"<td>{cell_txt}</td>")
+                        tbl_html.append(f'<td style="padding: 6px; border: 1px solid #cbd5e1;">{cell_txt}</td>')
                     tbl_html.append("</tr>")
                 tbl_html.append("</table>")
                 html_parts.append("".join(tbl_html))
 
-            text_document.setHtml("\n".join(html_parts))
-
-        elif ext in {".md", ".markdown"}:
-            with open(filepath, "r", encoding="utf-8") as f:
-                raw_md = f.read()
-            if markdown:
-                # Kodstaket plockas ut före konverteringen och sätts tillbaka
-                # som riktiga kodblock efteråt. Genom HTML-vägen tappas både
-                # språket och blockrollen, och koden blir vanlig text.
-                protected, fences = DocumentManager._extract_fences(raw_md)
-                html = markdown.markdown(
-                    DocumentManager._protect_tag_lines(protected),
-                    extensions=["tables", "fenced_code", "nl2br", "sane_lists"],
-                )
-                text_document.setHtml(html)
-                DocumentManager._restore_fences(text_document, fences, colors)
-            else:
-                text_document.setPlainText(raw_md)
+            text_document.setHtml("".join(html_parts))
 
         elif ext in {".html", ".htm"}:
             with open(filepath, "r", encoding="utf-8") as f:
-                html = f.read()
-            text_document.setHtml(html)
+                content = f.read()
+            text_document.setHtml(content)
 
-        else:  # .txt or fallback
+        elif ext in {".md", ".markdown"}:
             with open(filepath, "r", encoding="utf-8") as f:
-                text = f.read()
-            text_document.setPlainText(text)
+                md_text = f.read()
 
-    @staticmethod
-    def _extract_fences(raw_md: str) -> tuple:
-        """Tar ut ```-block ur markdown och lämnar platshållare i deras ställe."""
-        fences = []
+            fences = []
+            def _stash(m):
+                idx = len(fences)
+                fences.append((m.group(1) or "", m.group(2)))
+                return f"OmaScribeKodblock{idx}Z"
 
-        def repl(m):
-            fences.append((m.group(1).lower(), m.group(2).rstrip("\n")))
-            return f"\n\nOmaScribeKodblock{len(fences) - 1}Z\n\n"
+            stashed_md = _FENCE_RE.sub(_stash, md_text)
 
-        return _FENCE_RE.sub(repl, raw_md), fences
+            clean_lines = []
+            for line in stashed_md.splitlines():
+                if TAG_LINE_RE.match(line):
+                    line = "&#35;" + line[1:]
+                clean_lines.append(line)
+            stashed_md = "\n".join(clean_lines)
 
-    @staticmethod
-    def _restore_fences(text_document: QTextDocument, fences: list, colors=None):
-        """Gör platshållarna till riktiga kodblock igen, med språk och roll."""
-        if not fences:
-            return
-        targets = []
-        block = text_document.begin()
-        while block.isValid():
-            m = _FENCE_PLACEHOLDER_RE.match(block.text().strip())
-            if m:
-                targets.append((block.blockNumber(), int(m.group(1))))
-            block = block.next()
-
-        # Baklänges, så att tidigare blocknummer förblir giltiga när koden
-        # delas upp i flera block
-        for number, idx in reversed(targets):
-            if idx >= len(fences):
-                continue
-            lang, code = fences[idx]
-            b = text_document.findBlockByNumber(number)
-            if not b.isValid():
-                continue
-            c = QTextCursor(b)
-            c.movePosition(QTextCursor.MoveOperation.StartOfBlock)
-            start = c.position()
-            c.movePosition(QTextCursor.MoveOperation.EndOfBlock,
-                           QTextCursor.MoveMode.KeepAnchor)
-            c.removeSelectedText()
-            c.insertText(code)
-            # insertText lämnar markören utan markering. Intervallet måste
-            # anges explicit, annars får bara den sista raden kodrollen och
-            # resten hamnar utanför blocket.
-            sel = QTextCursor(text_document)
-            sel.setPosition(start)
-            sel.setPosition(start + len(code), QTextCursor.MoveMode.KeepAnchor)
-            richtext.apply_role(sel, richtext.ROLE_CODE, colors or {}, lang)
-
-    @staticmethod
-    def _protect_tag_lines(md_text: str) -> str:
-        """Hindrar att en rad med bara #taggar tolkas som rubrik.
-
-        Python-Markdown kräver inget mellanslag efter #, så '#arbete' på egen
-        rad blir <h1>. I Obsidian-liknande anteckningar är det en tagg, och
-        den ska förbli text.
-        """
-        out = []
-        for line in md_text.splitlines():
-            stripped = line.strip()
-            if stripped.startswith("#") and TAG_LINE_RE.match(stripped):
-                out.append(line.replace("#", "&#35;", 1))
+            if markdown:
+                html_content = markdown.markdown(
+                    stashed_md,
+                    extensions=["extra", "tables", "nl2br", "sane_lists"]
+                )
             else:
-                out.append(line)
-        return "\n".join(out)
+                html_content = f"<pre>{stashed_md}</pre>"
+
+            text_document.setHtml(html_content)
+
+            if fences:
+                doc = text_document
+                for idx, (lang, code) in enumerate(fences):
+                    token = f"OmaScribeKodblock{idx}Z"
+                    cursor = doc.find(token)
+                    while not cursor.isNull():
+                        cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+                        if cursor.selectedText() != token:
+                            cursor.select(QTextCursor.SelectionType.BlockUnderCursor)
+                        b_first = cursor.blockNumber()
+                        cursor.beginEditBlock()
+                        try:
+                            cursor.removeSelectedText()
+                            cursor.insertText(code.rstrip("\n"))
+                            b_last = cursor.blockNumber()
+                        finally:
+                            cursor.endEditBlock()
+
+                        sel = QTextCursor(doc)
+                        sel.setPosition(doc.findBlockByNumber(b_first).position())
+                        sel.setPosition(
+                            doc.findBlockByNumber(b_last).position() + doc.findBlockByNumber(b_last).length() - 1,
+                            QTextCursor.MoveMode.KeepAnchor
+                        )
+                        richtext.apply_role(sel, richtext.ROLE_CODE, colors or {}, lang)
+                        cursor = doc.find(token)
+
+        else:  # .txt or plain text
+            with open(filepath, "r", encoding="utf-8") as f:
+                content = f.read()
+            text_document.setPlainText(content)
 
     @staticmethod
-    def save_file(filepath, text_document: QTextDocument):
-        """Saves a QTextDocument to the specified format (.docx, .pdf, .md, .html, .txt) with full formatting."""
+    def print_document_to_printer(text_document: QTextDocument, printer: QPrinter, page_settings: dict | None = None):
+        """Utskrift och PDF-generering med 100% formateringstrogenhet, sidnummer och sidhuvud/sidfot."""
+        cfg = DEFAULT_PAGE_SETTINGS.copy()
+        if page_settings:
+            cfg.update(page_settings)
+
+        # 1. Konfigurera sidlayout
+        is_landscape = cfg.get("orientation") == "landscape"
+        orient = QPageLayout.Orientation.Landscape if is_landscape else QPageLayout.Orientation.Portrait
+        page_size_id = QPageSize.PageSizeId.Letter if cfg.get("page_size") == "Letter" else QPageSize.PageSizeId.A4
+        
+        margins = QMarginsF(
+            float(cfg.get("margin_left_mm", 20.0)),
+            float(cfg.get("margin_top_mm", 20.0)),
+            float(cfg.get("margin_right_mm", 20.0)),
+            float(cfg.get("margin_bottom_mm", 20.0))
+        )
+        page_layout = QPageLayout(QPageSize(page_size_id), orient, margins, QPageLayout.Unit.Millimeter)
+        printer.setPageLayout(page_layout)
+
+        # 2. Beräkna utskriftsmått i pixlar
+        paint_rect = printer.pageLayout().paintRectPixels(printer.resolution())
+        
+        # Reservera utrymme för sidhuvud och sidfot i pixlar
+        has_header = bool(cfg.get("header_text")) or "top" in str(cfg.get("page_number_pos", ""))
+        has_footer = bool(cfg.get("footer_text")) or ("bottom" in str(cfg.get("page_number_pos", "bottom-center")) and cfg.get("page_number_pos") != "none")
+        
+        # Pixels per mm vid aktuell upplösning
+        dpmm = printer.resolution() / 25.4
+        header_h = (8.0 * dpmm) if has_header else 0.0
+        footer_h = (8.0 * dpmm) if has_footer else 0.0
+
+        content_w = paint_rect.width()
+        content_h = paint_rect.height() - header_h - footer_h
+
+        # 3. Klona dokumentet för layout utan att röra originalet
+        doc_clone = text_document.clone()
+        if doc_clone is None:
+            return
+        doc_clone.setPageSize(QSizeF(content_w, content_h))
+        page_count = max(1, doc_clone.pageCount())
+
+        painter = QPainter(printer)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+
+        font_hf = QFont("sans-serif", 9)
+        color_hf = QColor("#64748b")
+
+        try:
+            for page_idx in range(page_count):
+                if page_idx > 0:
+                    printer.newPage()
+
+                page_num = page_idx + 1
+                skip_page = bool(cfg.get("skip_first_page", False)) and (page_idx == 0)
+
+                # Formatera sidnumret
+                fmt_type = cfg.get("page_number_format", "page_of_total")
+                if fmt_type == "number":
+                    page_str = str(page_num)
+                elif fmt_type == "hyphen":
+                    page_str = f"— {page_num} —"
+                elif fmt_type == "slash":
+                    page_str = f"{page_num} / {page_count}"
+                else:  # "page_of_total"
+                    page_str = _("pdf_page_n_of_total", n=page_num, total=page_count)
+
+                num_pos = str(cfg.get("page_number_pos", "bottom-center"))
+                
+                # Bestäm justering för sidnumret
+                if num_pos in ("bottom-alternating", "top-alternating"):
+                    # Udda sidor till höger, jämna till vänster (bok/avhandlingsstandard)
+                    is_right = (page_num % 2 == 1)
+                    align_num = Qt.AlignmentFlag.AlignRight if is_right else Qt.AlignmentFlag.AlignLeft
+                elif "right" in num_pos:
+                    align_num = Qt.AlignmentFlag.AlignRight
+                elif "left" in num_pos:
+                    align_num = Qt.AlignmentFlag.AlignLeft
+                else:
+                    align_num = Qt.AlignmentFlag.AlignHCenter
+
+                # --- 1. RITA SIDHUVUD ---
+                if has_header and not skip_page:
+                    painter.setFont(font_hf)
+                    painter.setPen(color_hf)
+                    header_rect = QRectF(0, 0, content_w, header_h)
+                    
+                    if cfg.get("header_text"):
+                        painter.drawText(header_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop, str(cfg.get("header_text")))
+                    
+                    if "top" in num_pos and cfg.get("page_numbering", True):
+                        painter.drawText(header_rect, align_num | Qt.AlignmentFlag.AlignTop, page_str)
+
+                    # Tunn linje under sidhuvud
+                    pen_line = QPen(QColor("#e2e8f0"), 0.75)
+                    painter.setPen(pen_line)
+                    painter.drawLine(0, int(header_h - (2 * dpmm)), int(content_w), int(header_h - (2 * dpmm)))
+
+                # --- 2. RITA DOKUMENTSIDA ---
+                painter.save()
+                # Flytta origo till sidans innehållsyta
+                painter.translate(0, header_h - (page_idx * content_h))
+                
+                # Klipp mot aktuell sidas del av dokumentet
+                page_clip = QRectF(0, page_idx * content_h, content_w, content_h)
+                painter.setClipRect(page_clip)
+
+                ctx = QAbstractTextDocumentLayout.PaintContext()
+                ctx.clip = page_clip
+                ctx.cursorPosition = -1
+                layout = doc_clone.documentLayout()
+                if layout is not None:
+                    layout.draw(painter, ctx)
+                painter.restore()
+
+                # --- 3. RITA SIDFOT ---
+                if has_footer and not skip_page:
+                    painter.setFont(font_hf)
+                    painter.setPen(color_hf)
+                    footer_y = header_h + content_h + (2 * dpmm)
+                    footer_rect = QRectF(0, footer_y, content_w, footer_h)
+
+                    # Tunn linje ovanför sidfot
+                    pen_line = QPen(QColor("#e2e8f0"), 0.75)
+                    painter.setPen(pen_line)
+                    painter.drawLine(0, int(footer_y), int(content_w), int(footer_y))
+
+                    if cfg.get("footer_text"):
+                        painter.drawText(footer_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, str(cfg.get("footer_text")))
+
+                    if "bottom" in num_pos and cfg.get("page_numbering", True):
+                        painter.drawText(footer_rect, align_num | Qt.AlignmentFlag.AlignVCenter, page_str)
+
+        finally:
+            painter.end()
+
+    @staticmethod
+    def save_file(filepath, text_document: QTextDocument, colors=None, page_settings: dict = None):
+        """Saves a QTextDocument to a file (.docx, .md, .html, .txt, .pdf) preserving all formatting."""
         ext = os.path.splitext(filepath)[1].lower()
 
-        if ext == ".docx" or not ext:
+        if ext == ".docx":
             if docx is None:
                 raise ImportError("python-docx is required to write .docx files.")
-            
             doc = docx.Document()
-            
-            # Standard A4 margins (20mm)
-            for section in doc.sections:
-                section.top_margin = Inches(0.79)
-                section.bottom_margin = Inches(0.79)
-                section.left_margin = Inches(0.79)
-                section.right_margin = Inches(0.79)
-                
             block = text_document.begin()
+            
             while block.isValid():
                 fmt = block.blockFormat()
                 heading_level = fmt.headingLevel()
                 alignment = fmt.alignment()
                 text_list = block.textList()
                 
-                # Check heading / style
                 if heading_level == 1:
                     p = doc.add_heading(level=1)
                 elif heading_level == 2:
@@ -254,7 +372,6 @@ class DocumentManager:
                 else:
                     p = doc.add_paragraph()
                     
-                # Alignment
                 if alignment & Qt.AlignmentFlag.AlignHCenter:
                     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 elif alignment & Qt.AlignmentFlag.AlignRight:
@@ -264,48 +381,38 @@ class DocumentManager:
                 elif alignment & Qt.AlignmentFlag.AlignLeft:
                     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
                     
-                # Walk character fragments in block
                 it = block.begin()
                 while not it.atEnd():
                     frag = it.fragment()
                     if frag.isValid():
                         raw_txt = frag.text()
-                        # Filter Qt object replacement chars (e.g. embedded tables/images)
                         txt = raw_txt.replace('\ufffc', '')
                         if txt:
                             char_fmt = frag.charFormat()
                             run = p.add_run(txt)
                             
-                            # Bold
                             if char_fmt.fontWeight() >= 600 or char_fmt.font().bold():
                                 run.bold = True
-                            # Italic
                             if char_fmt.fontItalic():
                                 run.italic = True
-                            # Underline
                             if char_fmt.fontUnderline():
                                 run.underline = True
-                            # Strikethrough
                             if char_fmt.fontStrikeOut():
                                 run.font.strike = True
-                            # Font Family
                             try:
                                 fam = char_fmt.font().family()
                                 if fam and fam.lower() not in {"default", "sans-serif", "serif"}:
                                     run.font.name = fam
                             except Exception:
                                 pass
-                            # Font Size
                             pt_sz = char_fmt.fontPointSize()
                             if pt_sz > 0:
                                 run.font.size = Pt(pt_sz)
-                            # Text Color
                             fg = char_fmt.foreground().color()
                             if fg.isValid() and fg.name() != "#000000":
                                 run.font.color.rgb = RGBColor(fg.red(), fg.green(), fg.blue())
                                 
                     it += 1
-                    
                 block = block.next()
                 
             doc.save(filepath)
@@ -314,16 +421,7 @@ class DocumentManager:
             printer = QPrinter(QPrinter.PrinterMode.HighResolution)
             printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
             printer.setOutputFileName(filepath)
-            
-            # A4 page layout with 20mm standard margins
-            page_layout = QPageLayout(
-                QPageSize(QPageSize.PageSizeId.A4),
-                QPageLayout.Orientation.Portrait,
-                QMarginsF(20, 20, 20, 20),
-                QPageLayout.Unit.Millimeter
-            )
-            printer.setPageLayout(page_layout)
-            text_document.print(printer)
+            DocumentManager.print_document_to_printer(text_document, printer, page_settings)
 
         elif ext in {".html", ".htm"}:
             with open(filepath, "w", encoding="utf-8") as f:
@@ -345,8 +443,6 @@ class DocumentManager:
         block = text_document.begin()
         
         while block.isValid():
-            # Ett kodblock skrivs som ett ```-staket med språket, och hela
-            # följden av kodrader samlas i en enda post.
             if richtext.block_role(block) == richtext.ROLE_CODE:
                 lang = richtext.lang_of(block.blockFormat())
                 code_lines = []
@@ -368,7 +464,6 @@ class DocumentManager:
             role = richtext.block_role(block)
             is_quote = role == richtext.ROLE_QUOTE or (not role and fmt.leftMargin() >= 20)
             
-            # Prefix for block
             prefix = ""
             if heading_level == 1:
                 prefix = "# "
@@ -389,12 +484,8 @@ class DocumentManager:
                     txt = frag.text().replace('\ufffc', '')
                     if txt:
                         cf = frag.charFormat()
-                        # Rubriker är feta av sig själva. ** runt hela
-                        # rubriken blir bara skräp i markdown.
                         is_bold = (cf.fontWeight() >= 600 or cf.font().bold()) \
                             and heading_level not in (1, 2, 3)
-                        # Citatets kursiv är en visuell markering, inte
-                        # innehåll — den ska inte bli *stjärnor* i markdown
                         is_italic = cf.fontItalic() and role != richtext.ROLE_QUOTE
                         is_strike = cf.fontStrikeOut()
                         is_underline = cf.fontUnderline()
@@ -424,6 +515,5 @@ class DocumentManager:
             block = block.next()
             
         full_md = "\n".join(md_lines)
-        # Collapse 3+ consecutive newlines
         full_md = re.sub(r'\n{3,}', '\n\n', full_md)
         return full_md.strip() + "\n"

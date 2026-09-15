@@ -14,6 +14,7 @@ class StartScreen(QWidget):
     new_document_requested = pyqtSignal()
     open_document_requested = pyqtSignal()
     open_recent_requested = pyqtSignal(str)
+    open_templates_requested = pyqtSignal()
 
     def __init__(self, config_mgr, theme_mgr, parent=None):
         super().__init__(parent)
@@ -116,6 +117,29 @@ class StartScreen(QWidget):
         card_new_layout.addWidget(self.lbl_new_sub)
         card_new_layout.addStretch()
 
+        # Templates Card Button
+        self.btn_templates = QPushButton()
+        self.btn_templates.setObjectName("ActionCard")
+        self.btn_templates.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_templates.clicked.connect(self.open_templates_requested.emit)
+
+        card_tpl_layout = QVBoxLayout(self.btn_templates)
+        card_tpl_layout.setContentsMargins(20, 20, 20, 20)
+        card_tpl_layout.setSpacing(6)
+
+        lbl_tpl_icon = QLabel("🎨")
+        lbl_tpl_icon.setStyleSheet("font-size: 26px;")
+        self.lbl_tpl_title = QLabel(_("start_templates_doc"))
+        self.lbl_tpl_title.setObjectName("CardTitle")
+        self.lbl_tpl_sub = QLabel(_("start_templates_doc_sub"))
+        self.lbl_tpl_sub.setObjectName("CardSubtitle")
+        self.lbl_tpl_sub.setWordWrap(True)
+
+        card_tpl_layout.addWidget(lbl_tpl_icon)
+        card_tpl_layout.addWidget(self.lbl_tpl_title)
+        card_tpl_layout.addWidget(self.lbl_tpl_sub)
+        card_tpl_layout.addStretch()
+
         # Browse Files Card Button
         self.btn_open = QPushButton()
         self.btn_open.setObjectName("ActionCard")
@@ -140,6 +164,7 @@ class StartScreen(QWidget):
         card_open_layout.addStretch()
 
         cards_layout.addWidget(self.btn_new)
+        cards_layout.addWidget(self.btn_templates)
         cards_layout.addWidget(self.btn_open)
         self.content_layout.addLayout(cards_layout)
 
@@ -403,6 +428,8 @@ class StartScreen(QWidget):
         self.lbl_subtitle.setText(_("start_tagline"))
         self.lbl_new_title.setText(_("start_new_doc"))
         self.lbl_new_sub.setText(_("start_new_doc_sub"))
+        self.lbl_tpl_title.setText(_("start_templates_doc"))
+        self.lbl_tpl_sub.setText(_("start_templates_doc_sub"))
         self.lbl_open_title.setText(_("start_open_doc"))
         self.lbl_open_sub.setText(_("start_open_doc_sub"))
         self.lbl_recent_heading.setText(_("start_recent_files"))

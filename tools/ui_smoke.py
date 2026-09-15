@@ -16,6 +16,8 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from typing import cast  # noqa: E402
+
 from PyQt6.QtWidgets import QApplication  # noqa: E402
 from PyQt6.QtGui import QImage, QColor, QTextDocument  # noqa: E402
 
@@ -36,7 +38,7 @@ def check(ok: bool, label: str):
 
 
 def main() -> int:
-    app = QApplication.instance() or QApplication(sys.argv[:1])
+    app = cast(QApplication, QApplication.instance() or QApplication(sys.argv[:1]))
     out = Path(tempfile.mkdtemp(prefix="omascribe-smoke-"))
 
     print("1. Huvudfönstret")
@@ -118,7 +120,87 @@ def main() -> int:
     check("Rubrik" in (out / "export.txt").read_text(encoding="utf-8"),
           "text-exporten innehåller dokumentets text")
 
-    print("\n7. Papperets färger")
+    print("\n7. Ingen text kläms ihop")
+    # Fällan: en QPushButton räknar sin storlek ur sin egen text och struntar i
+    # en layout inuti. Appens globala stilmall ger knappen min-height 22px +
+    # padding 6px 16px + 1px ram = 36px, så etiketterna inuti fick dela på 36
+    # pixlar och klämdes ihop till en pixel per rad — korten såg tomma ut och
+    # texten gick inte att läsa. Provet kör därför med den globala stilmallen
+    # satt (som main.py) och med dubbelt så stort teckensnitt (som GDK_SCALE=2
+    # ger via GTK-temat), alltså värsta fallet.
+    from PyQt6.QtWidgets import QLabel, QPushButton
+    from PyQt6.QtGui import QFont
+    from ui.widgets import ClickableCard
+
+    app.setStyleSheet(theme_mgr.get_stylesheet())
+    big = QFont(app.font())
+    big.setPointSizeF(app.font().pointSizeF() * 2.0)
+    app.setFont(big)
+
+    def squeezed(widget, label):
+        bad = []
+        for lbl in widget.findChildren(QLabel):
+            if not lbl.isVisible() or not lbl.text().strip():
+                continue
+            if lbl.height() < lbl.fontMetrics().height() * 0.8:
+                bad.append(f"{lbl.objectName() or 'label'} '{lbl.text()[:24]}' "
+                           f"({lbl.height()} av {lbl.fontMetrics().height()} px)")
+        check(not bad, f"{label}: ingen etikett är lägre än sin textrad"
+              + ("" if not bad else f" — {len(bad)} klämda: {bad[:3]}"))
+        return len(bad)
+
+    # Regeln bakom felet: en knapp får aldrig bära en layout
+    knappar_med_layout = [b.objectName() or b.text() for b in win.findChildren(QPushButton)
+                          if b.layout() is not None]
+    check(not knappar_med_layout,
+          "ingen QPushButton bär en layout (det var felet)"
+          + ("" if not knappar_med_layout else f" — {knappar_med_layout}"))
+
+    from ui.start_screen import StartScreen
+    start = StartScreen(config_mgr, theme_mgr)
+    start.resize(1100, 800)
+    start.show()
+    app.processEvents()
+    kort = [c for c in start.findChildren(ClickableCard) if c.objectName() == "ActionCard"]
+    check(len(kort) == 3 and all(c.height() >= 90 for c in kort),
+          f"startskärmens tre kort är fullhöga ({[c.height() for c in kort]} px)")
+    squeezed(start, "Startskärmen")
+    start.close()
+
+    from ui.template_dialog import TemplateDialog
+    dlg = TemplateDialog(theme_mgr)
+    dlg.show()
+    app.processEvents()
+    mallkort = dlg.findChildren(ClickableCard)
+    check(len(mallkort) == len(templates.TEMPLATES)
+          and all(c.height() >= 120 for c in mallkort),
+          f"alla {len(mallkort)} mallkort är fullhöga "
+          f"({mallkort[0].height() if mallkort else 0} px i stället för 36)")
+    squeezed(dlg, "Mallväljaren")
+    dlg.close()
+
+    from ui.chart_dialog import ChartDialog
+    from ui.image_dialog import ImageDialog
+    from ui.page_setup_dialog import PageSetupDialog
+    from ui.table_dialog import TableDialog
+    for factory, namn in ((lambda: ChartDialog(theme_mgr), "Diagramdialogen"),
+                          (lambda: ImageDialog(theme_mgr), "Bilddialogen"),
+                          (lambda: PageSetupDialog(dict(win.page_settings), theme_mgr),
+                           "Sidinställningar"),
+                          (lambda: TableDialog(theme_mgr), "Tabell dialogen")):
+        try:
+            d = factory()
+            d.show()
+            app.processEvents()
+            squeezed(d, namn)
+            d.close()
+        except Exception as exc:          # noqa: BLE001
+            check(False, f"{namn} kunde inte kontrolleras: {exc}")
+
+    # Tillbaka till appens eget typsnitt för resten av provet
+    app.setFont(QFont())
+
+    print("\n8. Papperets färger")
     check(print_style.PAPER_WHITE == "#ffffff", "papperet är vitt")
     check(print_style.PAPER_TEXT == "#000000", "texten är svart")
     pal = print_style.paper_palette()

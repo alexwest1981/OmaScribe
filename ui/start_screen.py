@@ -9,6 +9,20 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QPixmap, QFont, QIcon, QCursor
 
 from core.i18n import _, i18n
+from ui.widgets import ClickableCard
+
+
+def no_squeeze(*labels):
+    """Ser till att en etikett aldrig blir lägre än sin egen textrad.
+
+    Skyddsnät mot den härledda klassen av fel: en layout som är övertrasserad
+    trycker ihop etiketter under deras text, och texten blir en strimma. Kortet
+    (ClickableCard) gör att det normalt inte kan hända — det här är spärren som
+    gör att det inte kan hända tyst.
+    """
+    for lbl in labels:
+        lbl.setMinimumHeight(lbl.fontMetrics().height())
+
 
 class StartScreen(QWidget):
     new_document_requested = pyqtSignal()
@@ -95,12 +109,12 @@ class StartScreen(QWidget):
         cards_layout.setSpacing(16)
 
         # New Document Card Button
-        self.btn_new = QPushButton()
-        self.btn_new.setObjectName("ActionCard")
-        self.btn_new.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_new = ClickableCard(object_name="ActionCard")
+        self.btn_new.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.btn_new.setMinimumHeight(100)
         self.btn_new.clicked.connect(self.new_document_requested.emit)
 
-        card_new_layout = QVBoxLayout(self.btn_new)
+        card_new_layout = self.btn_new.body
         card_new_layout.setContentsMargins(20, 20, 20, 20)
         card_new_layout.setSpacing(6)
 
@@ -116,14 +130,15 @@ class StartScreen(QWidget):
         card_new_layout.addWidget(self.lbl_new_title)
         card_new_layout.addWidget(self.lbl_new_sub)
         card_new_layout.addStretch()
+        no_squeeze(self.lbl_new_title, self.lbl_new_sub)
 
         # Templates Card Button
-        self.btn_templates = QPushButton()
-        self.btn_templates.setObjectName("ActionCard")
-        self.btn_templates.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_templates = ClickableCard(object_name="ActionCard")
+        self.btn_templates.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.btn_templates.setMinimumHeight(100)
         self.btn_templates.clicked.connect(self.open_templates_requested.emit)
 
-        card_tpl_layout = QVBoxLayout(self.btn_templates)
+        card_tpl_layout = self.btn_templates.body
         card_tpl_layout.setContentsMargins(20, 20, 20, 20)
         card_tpl_layout.setSpacing(6)
 
@@ -139,14 +154,15 @@ class StartScreen(QWidget):
         card_tpl_layout.addWidget(self.lbl_tpl_title)
         card_tpl_layout.addWidget(self.lbl_tpl_sub)
         card_tpl_layout.addStretch()
+        no_squeeze(self.lbl_tpl_title, self.lbl_tpl_sub)
 
         # Browse Files Card Button
-        self.btn_open = QPushButton()
-        self.btn_open.setObjectName("ActionCard")
-        self.btn_open.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_open = ClickableCard(object_name="ActionCard")
+        self.btn_open.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.btn_open.setMinimumHeight(100)
         self.btn_open.clicked.connect(self.open_document_requested.emit)
 
-        card_open_layout = QVBoxLayout(self.btn_open)
+        card_open_layout = self.btn_open.body
         card_open_layout.setContentsMargins(20, 20, 20, 20)
         card_open_layout.setSpacing(6)
 
@@ -162,6 +178,7 @@ class StartScreen(QWidget):
         card_open_layout.addWidget(self.lbl_open_title)
         card_open_layout.addWidget(self.lbl_open_sub)
         card_open_layout.addStretch()
+        no_squeeze(self.lbl_open_title, self.lbl_open_sub)
 
         cards_layout.addWidget(self.btn_new)
         cards_layout.addWidget(self.btn_templates)
@@ -233,14 +250,13 @@ class StartScreen(QWidget):
         return "📄"
 
     def _create_recent_item_widget(self, filepath):
-        btn = QPushButton()
-        btn.setObjectName("RecentItemButton")
-        btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        btn = ClickableCard(object_name="RecentItemButton",
+                            orientation=Qt.Orientation.Horizontal)
         btn.setMinimumHeight(68)
-        btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        btn.clicked.connect(lambda checked, fp=filepath: self.open_recent_requested.emit(fp))
+        btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        btn.clicked.connect(lambda fp=filepath: self.open_recent_requested.emit(fp))
 
-        layout = QHBoxLayout(btn)
+        layout = btn.body
         layout.setContentsMargins(18, 12, 18, 12)
         layout.setSpacing(16)
 
@@ -294,6 +310,7 @@ class StartScreen(QWidget):
         date_layout.addWidget(lbl_meta)
         layout.addLayout(date_layout)
 
+        no_squeeze(lbl_name, lbl_dir, lbl_meta)
         return btn
 
     def _toggle_language(self):
@@ -361,7 +378,8 @@ class StartScreen(QWidget):
                 border-color: {c['accent']};
                 background-color: {c['btn_hover']};
             }}
-            #ActionCard:pressed {{
+            #ActionCard:focus {{
+                border-color: {c['accent']};
                 background-color: {c['btn_active']};
             }}
             #CardTitle {{
@@ -384,7 +402,8 @@ class StartScreen(QWidget):
                 border-color: {c['accent']};
                 background-color: {c['btn_hover']};
             }}
-            #RecentItemButton:pressed {{
+            #RecentItemButton:focus {{
+                border-color: {c['accent']};
                 background-color: {c['btn_active']};
             }}
             #RecentFileName {{
@@ -402,7 +421,7 @@ class StartScreen(QWidget):
             }}
             #RecentFileMissing {{
                 font-size: 11px;
-                color: #ef4444;
+                color: {c['link_missing']};
                 font-style: italic;
             }}
             #EmptyRecentsLabel {{

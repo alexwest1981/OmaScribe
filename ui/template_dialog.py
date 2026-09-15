@@ -15,6 +15,7 @@ from PyQt6.QtGui import QCursor
 
 from core.i18n import _, i18n
 from core.templates import TEMPLATES, get_template_html
+from ui.widgets import ClickableCard
 
 
 class TemplateDialog(QDialog):
@@ -43,7 +44,7 @@ class TemplateDialog(QDialog):
         root_layout.addWidget(lbl_title)
 
         lbl_sub = QLabel(_("templates_dialog_sub"))
-        lbl_sub.setStyleSheet("font-size: 12px; color: #64748b; margin-top: -6px;")
+        lbl_sub.setStyleSheet(f"font-size: 12px; color: {self.theme_mgr.current['text_muted']};")
         root_layout.addWidget(lbl_sub)
 
         # Scroll Area with Template Cards Grid
@@ -64,14 +65,12 @@ class TemplateDialog(QDialog):
             title = t.get(f"title_{lang}") or t.get("title_sv", "")
             desc = t.get(f"desc_{lang}") or t.get("desc_sv", "")
 
-            card_btn = QPushButton()
-            card_btn.setObjectName("TemplateCard")
-            card_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            card_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            card_btn = ClickableCard(object_name="TemplateCard")
+            card_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
             card_btn.setMinimumHeight(120)
-            card_btn.clicked.connect(lambda checked, tid=t_id: self._select_template(tid))
+            card_btn.clicked.connect(lambda tid=t_id: self._select_template(tid))
 
-            card_layout = QVBoxLayout(card_btn)
+            card_layout = card_btn.body
             card_layout.setContentsMargins(16, 14, 16, 14)
             card_layout.setSpacing(6)
 
@@ -80,15 +79,21 @@ class TemplateDialog(QDialog):
             lbl_icon.setStyleSheet("font-size: 24px;")
             lbl_card_title = QLabel(title)
             lbl_card_title.setObjectName("TemplateCardTitle")
-            row_top.addWidget(lbl_icon)
+            lbl_card_title.setWordWrap(True)
+            row_top.addWidget(lbl_icon, 0, Qt.AlignmentFlag.AlignTop)
             row_top.addWidget(lbl_card_title, 1)
             card_layout.addLayout(row_top)
 
             lbl_desc = QLabel(desc)
             lbl_desc.setObjectName("TemplateCardDesc")
             lbl_desc.setWordWrap(True)
+            lbl_desc.setAlignment(Qt.AlignmentFlag.AlignTop)
             card_layout.addWidget(lbl_desc)
             card_layout.addStretch()
+
+            # Ingen etikett får tryckas ihop under sin egen textrad
+            for lbl in (lbl_card_title, lbl_desc):
+                lbl.setMinimumHeight(lbl.fontMetrics().height())
 
             row = idx // 2
             col = idx % 2

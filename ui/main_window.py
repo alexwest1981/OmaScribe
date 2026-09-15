@@ -778,7 +778,9 @@ class MainWindow(QMainWindow):
         if self.stack.currentIndex() != 1:
             self.show_editor_screen()
         dlg = ChartDialog(self.theme_mgr, self)
-        dlg.chart_ready.connect(lambda img, a: self.editor.canvas.insert_chart(img, a))
+        dlg.chart_ready.connect(
+            lambda img, mono, a: self.editor.canvas.insert_chart(img, a, mono_image=mono)
+        )
         dlg.exec()
 
     def open_page_setup_dialog(self):

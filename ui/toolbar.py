@@ -11,7 +11,7 @@ from PyQt6.QtGui import (
     QTextLength, QTextFrameFormat, QBrush, QColor
 )
 from core.i18n import _, i18n
-from core import richtext, directives
+from core import richtext, directives, print_style
 from core.font_manager import FontSelectorComboBox
 from ui.table_dialog import TableDialog
 
@@ -558,8 +558,9 @@ class FormattingToolBar(QToolBar):
         clean_fmt.setFontStrikeOut(False)
         clean_fmt.setVerticalAlignment(QTextCharFormat.VerticalAlignment.AlignNormal)
         clean_fmt.setBackground(QBrush(Qt.GlobalColor.transparent))
-        if self.theme_mgr:
-            clean_fmt.setForeground(QBrush(QColor(self.theme_mgr.get_color("text_color", "#1a1d24"))))
+        # Svart, inte temats textfärg: färgen bakas in i dokumentet och följer
+        # med till exporten. Ett mörkt tema skulle skriva vit text på vitt papper.
+        clean_fmt.setForeground(QBrush(QColor(print_style.PAPER_TEXT)))
         
         cursor.setCharFormat(clean_fmt)
         self.editor.setTextCursor(cursor)
@@ -614,7 +615,10 @@ class FormattingToolBar(QToolBar):
             self.editor.setTextCursor(cursor)
 
     def _pick_highlight_color(self):
-        col = QColorDialog.getColor(QColor("#fff59d"), self, _("tb_highlight_color"))
+        # Neutral grå som förval: markeringen syns på papper utan att bli en
+        # färgklick i en svartvit utskrift. Användaren kan välja annan ton,
+        # men exporten renar den ändå till grått.
+        col = QColorDialog.getColor(QColor(print_style.PAPER_TINT_STRONG), self, _("tb_highlight_color"))
         if col.isValid():
             cursor = self.editor.textCursor()
             fmt = QTextCharFormat()
@@ -629,20 +633,29 @@ class FormattingToolBar(QToolBar):
 
     def _insert_divider(self):
         cursor = self.editor.textCursor()
-        cursor.insertHtml('<hr style="border: 0; border-top: 1.5px solid #cbd5e1; margin: 16px 0;"/><p></p>')
+        cursor.insertHtml(
+            f'<hr style="border: 0; border-top: 1px solid {print_style.PAPER_RULE};'
+            ' margin: 16px 0;"/><p></p>'
+        )
 
     def _insert_callout(self, callout_type):
         cursor = self.editor.textCursor()
-        bg = "#eff6ff" if callout_type == "info" else ("#f0fdf4" if callout_type == "tip" else ("#fffbeb" if callout_type == "warning" else "#f8fafc"))
-        border = "#3b82f6" if callout_type == "info" else ("#22c55e" if callout_type == "tip" else ("#f59e0b" if callout_type == "warning" else "#64748b"))
-        icon = "ℹ️" if callout_type == "info" else ("💡" if callout_type == "tip" else ("⚠️" if callout_type == "warning" else "❝"))
-        title = "Note" if callout_type == "info" else ("Tip" if callout_type == "tip" else ("Warning" if callout_type == "warning" else "Quote"))
-        
-        html_content = f"""<table width="100%" style="background-color: {bg}; border-left: 4px solid {border}; border-radius: 4px; margin: 12px 0; padding: 10px 14px;">
+        # Neutrala toner: rutan ska skilja sig i struktur (grå botten + ram),
+        # inte i kulör. Emojin är borta med flit — färgade emojiglyfer blir
+        # färgpixlar i PDF:en och kan inte tryckas rent.
+        label = {
+            "info": _("callout_note"),
+            "tip": _("callout_tip"),
+            "warning": _("callout_warning"),
+            "quote": _("callout_quote"),
+        }.get(callout_type, _("callout_note"))
+        bg = print_style.PAPER_TINT if callout_type != "warning" else print_style.PAPER_TINT_STRONG
+        border = print_style.PAPER_TEXT if callout_type == "warning" else print_style.PAPER_RULE
+
+        html_content = f"""<table width="100%" style="background-color: {bg}; border-left: 3px solid {border}; margin: 12px 0;">
             <tr>
-                <td style="vertical-align: top; width: 24px; font-size: 16px;">{icon}</td>
-                <td style="vertical-align: top; padding-left: 8px; color: #1e293b; font-size: 11pt;">
-                    <b>{title}:</b> Type your text here...
+                <td style="vertical-align: top; padding: 10px 14px; color: {print_style.PAPER_TEXT}; font-size: 11pt;">
+                    <b>{label}:</b> {_("callout_placeholder")}
                 </td>
             </tr>
         </table><p></p>"""
@@ -663,16 +676,16 @@ class FormattingToolBar(QToolBar):
         table_fmt = QTextTableFormat()
         table_fmt.setBorder(1)
         table_fmt.setBorderStyle(QTextFrameFormat.BorderStyle.BorderStyle_Solid)
-        table_fmt.setBorderBrush(QBrush(QColor("#cbd5e1")))
+        table_fmt.setBorderBrush(QBrush(QColor(print_style.PAPER_RULE)))
         table_fmt.setCellPadding(8)
         table_fmt.setCellSpacing(0)
         table_fmt.setWidth(QTextLength(QTextLength.Type.PercentageLength, 100))
 
         table = cursor.insertTable(rows, cols, table_fmt)
         
-        if has_header and rows > 0:
+        if has_header and rows > 0 and table is not None:
             header_fmt = QTextTableCellFormat()
-            header_fmt.setBackground(QBrush(QColor("#f1f5f9")))
+            header_fmt.setBackground(QBrush(QColor(print_style.PAPER_TINT)))
             for c in range(cols):
                 cell = table.cellAt(0, c)
                 cell.setFormat(header_fmt)

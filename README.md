@@ -52,8 +52,33 @@ Featuring A4 document canvas formatting, real-time AI review & style inspection,
 * **🎨 Themes & Google Fonts Catalog:**
   * Beautiful themes (Classic Paper, Dark Obsidian, Nord Arctic, Retro Amber CRT) and built-in Google Fonts downloader and manager.
 
+* **📄 Pages, Numbering and Print Layout:**
+  * Pages are separated on screen with real page breaks (`Ctrl+Enter`). Page
+    numbers can sit centred, right, or alternating left/right (odd/even) — top
+    or bottom — as `Page N of M`, `N`, `— N —` or `N / M`, with optional running
+    header/footer text and a title page that skips the numbering.
+
+* **🖼️ Images, Charts and Tables:**
+  * Insert images (file, drag & drop, or paste) with scaling, alignment, and a
+    caption. Build bar, horizontal bar, line, area, pie and donut charts from an
+    editable data grid. Tab-separated data pasted from a spreadsheet becomes a
+    formatted table.
+
+* **🎨 Document Templates:**
+  * Seven ready-made, print-clean templates — Report, Thesis, Minutes, Project
+    Plan, Memo, Formal Letter, CV — in Swedish and English.
+
 * **💾 Versatile Document Export & Import:**
   * Open & Save `.docx` (Microsoft Word), `.pdf` (print-quality vector PDF with preview), `.md` (Markdown), `.html`, and `.txt`.
+
+* **⚪ Clean Documents by Default:**
+  * What leaves the app is paper: white background, black text, grey rules — no
+    tint from the app theme, from pasted content, or from imported files. A dark
+    theme changes the application around the page, never the page itself. Charts
+    are grayscale by default (colour palettes remain available for screen work),
+    and embedded photos can be converted to grayscale on export. Toggle it under
+    `File → Page Setup → Clean print & export`; `tools/print_purity_check.py`
+    measures the contract page by page.
 
 ### 🚀 Installation & Launch
 
@@ -116,8 +141,34 @@ Med realistisk A4-sidlayout, AI-granskning och stilanalys i realtid, snabb omskr
 * **🎨 Teman & Google Fonts-bibliotek:**
   * Fyra anpassade designteman (Klassiskt Papper, Mörk Obsidian, Nord Arctic, Retro Bärnsten CRT) samt inbyggd Google Fonts-katalog.
 
+* **📄 Sidor, sidnummer och utskriftslayout:**
+  * Sidorna separeras på skärmen med riktiga sidbrytningar (`Ctrl+Enter`).
+    Sidnummer kan stå centrerat, till höger eller växelvis vänster/höger (udda
+    och jämna sidor) — upptill eller nedtill — som `Sida N av M`, `N`, `— N —`
+    eller `N / M`, med valfri löpande sidhuvuds- och sidfotstext och en titelsida
+    som hoppar över numreringen.
+
+* **🖼️ Bilder, diagram och tabeller:**
+  * Infoga bilder (fil, dra-och-släpp eller inklistrat) med skalning, justering
+    och bildtext. Bygg stapel-, liggande stapel-, linje-, områdes-, cirkel- och
+    donutdiagram från ett redigerbart datarutnät. Tabbsepararerad data som
+    klistras in från ett kalkylark blir en formaterad tabell.
+
+* **🎨 Dokumentmallar:**
+  * Sju färdiga, utskriftsrena mallar — Rapport, Avhandling, Mötesprotokoll,
+    Projektplan, PM, Formellt brev och CV — på svenska och engelska.
+
 * **💾 Flexibel dokumenthantering & Export:**
   * Öppna och spara direkt som `.docx` (Microsoft Word), utskriftsklar `.pdf` (med förhandsgranskning), `.md` (Markdown), `.html` och `.txt`.
+
+* **⚪ Rena dokument som standard:**
+  * Det som lämnar programmet är papper: vit botten, svart text, grå linjer —
+    ingen ton från programmets tema, från inklistrat innehåll eller från
+    importerade filer. Ett mörkt tema ändrar applikationen runt sidan, aldrig
+    sidan själv. Diagram är i gråskala som standard (färgpaletterna finns kvar
+    för skärmarbete) och inbäddade foton kan göras gråskaliga vid export.
+    Stängs av och på under `Arkiv → Sidinställningar → Ren utskrift & export`;
+    `tools/print_purity_check.py` mäter kontraktet sida för sida.
 
 ### 🚀 Installation och start
 

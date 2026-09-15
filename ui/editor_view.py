@@ -14,7 +14,7 @@ from PyQt6.QtGui import (
 )
 from core.i18n import _
 from core.vault import WIKILINK_RE, split_link_target, slugify
-from core import directives, richtext
+from core import directives, richtext, print_style
 from core.doc_manager import DEFAULT_PAGE_SETTINGS
 
 
@@ -229,7 +229,7 @@ class DocumentCanvas(QTextEdit):
             table_fmt = QTextTableFormat()
             table_fmt.setBorder(1)
             table_fmt.setBorderStyle(QTextFrameFormat.BorderStyle.BorderStyle_Solid)
-            table_fmt.setBorderBrush(QBrush(QColor("#cbd5e1")))
+            table_fmt.setBorderBrush(QBrush(QColor(print_style.PAPER_RULE)))
             table_fmt.setCellPadding(8)
             table_fmt.setCellSpacing(0)
             table_fmt.setWidth(QTextLength(QTextLength.Type.PercentageLength, 100))
@@ -240,7 +240,7 @@ class DocumentCanvas(QTextEdit):
             
             # Header-styling på första raden
             header_fmt = QTextTableCellFormat()
-            header_fmt.setBackground(QBrush(QColor("#f1f5f9")))
+            header_fmt.setBackground(QBrush(QColor(print_style.PAPER_TINT)))
 
             for r, row in enumerate(matrix):
                 for c, val in enumerate(row):
@@ -288,16 +288,63 @@ class DocumentCanvas(QTextEdit):
         cursor = self.textCursor()
         cursor.beginEditBlock()
         try:
-            caption_html = f'<br/><span style="font-size: 10pt; color: #64748b; font-style: italic;">{caption}</span>' if caption else ""
+            caption_html = (
+                f'<br/><span style="font-size: 10pt; color: {print_style.PAPER_MUTED};'
+                f' font-style: italic;">{caption}</span>'
+            ) if caption else ""
             html_chunk = f'<p style="text-align: {align}; margin: 14px 0;"><img src="{data_url}" width="{disp_w}" />{caption_html}</p><p></p>'
             cursor.insertHtml(html_chunk)
         finally:
             cursor.endEditBlock()
         self.setTextCursor(cursor)
 
-    def insert_chart(self, qimage: QImage, align: str = "center"):
-        """Infogar ett genererat diagram."""
+    def insert_chart(self, qimage: QImage, align: str = "center",
+                     mono_image: QImage | None = None):
+        """Infogar ett genererat diagram och märker det som vårt eget.
+
+        Märkningen gör att en export kan byta till gråskaleversionen även om
+        man valde en färgpalett på skärmen — diagrammet är programmets utdata,
+        inte användarens innehåll. ``mono_image`` är samma diagram ritat i
+        gråskala; utan den nyanseras bilden ned vid export i stället.
+        """
         self.insert_image(qimage, width_px=680, align=align)
+        self._mark_last_image_as_chart(mono_image)
+
+    def _mark_last_image_as_chart(self, mono_image: QImage | None = None) -> bool:
+        """Ger den senast infogade bilden före markören diagrammärkningen."""
+        doc = self.document()
+        if doc is None:
+            return False
+
+        mono_name = ""
+        if mono_image is not None and not mono_image.isNull():
+            mono_name = f"omascribe-diagram-mono://{uuid.uuid4().hex}"
+            doc.addResource(QTextDocument.ResourceType.ImageResource,
+                            QUrl(mono_name), mono_image)
+        pos = self.textCursor().position()
+        block = doc.findBlock(pos)
+        while block.isValid():
+            frags = []
+            it = block.begin()
+            while not it.atEnd():
+                frag = it.fragment()
+                if frag.isValid():
+                    frags.append(frag)
+                it += 1
+            for frag in reversed(frags):
+                if not frag.charFormat().isImageFormat() or frag.position() > pos:
+                    continue
+                fmt = print_style.mark_as_generated_chart(
+                    QTextCharFormat(frag.charFormat()), mono_name
+                )
+                sel = QTextCursor(doc)
+                sel.setPosition(frag.position())
+                sel.setPosition(frag.position() + frag.length(),
+                                QTextCursor.MoveMode.KeepAnchor)
+                sel.setCharFormat(fmt)
+                return True
+            block = block.previous()
+        return False
 
     def insert_page_break(self):
         """Infogar en visuell och utskriftsmässig sidbrytning."""
@@ -371,7 +418,7 @@ class DocumentCanvas(QTextEdit):
                             align = Qt.AlignmentFlag.AlignHCenter
 
                         painter.setFont(QFont("sans-serif", 9))
-                        painter.setPen(QColor("#94a3b8"))
+                        painter.setPen(QColor(print_style.PAPER_MUTED))
                         
                         # Footer-yta
                         footer_rect = QRectF(24, page_bottom_y - 28, viewport_w - 48, 20)
@@ -380,22 +427,22 @@ class DocumentCanvas(QTextEdit):
                 # 2. Rita tydlig sidseparation mellan sidorna
                 if i < page_count - 1:
                     # Skuggad separationslinje
-                    pen_sep = QPen(QColor("#cbd5e1"), 1.0, Qt.PenStyle.DashLine)
+                    pen_sep = QPen(QColor(print_style.PAPER_RULE), 1.0, Qt.PenStyle.DashLine)
                     painter.setPen(pen_sep)
                     painter.drawLine(18, page_bottom_y, viewport_w - 18, page_bottom_y)
 
                     # Bricka med sidmarkör i mitten
-                    badge_text = f" Sida {page_num + 1} "
+                    badge_text = f" {_('editor_page_badge', n=page_num + 1)} "
                     painter.setFont(QFont("sans-serif", 8, QFont.Weight.Bold))
                     painter.setPen(Qt.PenStyle.NoPen)
-                    painter.setBrush(QBrush(QColor("#f1f5f9")))
-                    
+                    painter.setBrush(QBrush(QColor(print_style.PAPER_TINT)))
+
                     bw = len(badge_text) * 7.5 + 16
                     bx = (viewport_w - bw) / 2.0
                     by = page_bottom_y - 9
                     painter.drawRoundedRect(QRectF(bx, by, bw, 18), 9, 9)
 
-                    painter.setPen(QColor("#64748b"))
+                    painter.setPen(QColor(print_style.PAPER_MUTED))
                     painter.drawText(QRectF(bx, by, bw, 18), Qt.AlignmentFlag.AlignCenter, badge_text)
         finally:
             painter.end()
@@ -694,10 +741,14 @@ class EditorView(QWidget):
 
     def apply_theme(self):
         c = self.theme_mgr.current
+        paper = print_style.paper_colors()
         self.scroll_area.setStyleSheet(f"background-color: {c['window_bg']};")
+        # Själva pappret är alltid vitt med svart text — appens tema får färga
+        # ramen omkring, aldrig arket. Då ser dokumentet likadant ut på skärmen
+        # som i PDF:en, och ingen temafärg kan smitta en export.
         self.page_frame.setStyleSheet(f"""
             #PageFrame {{
-                background-color: {c['canvas_bg']};
+                background-color: {paper['canvas_bg']};
                 border: 1px solid {c['canvas_border']};
                 border-radius: 4px;
                 margin-top: 20px;
@@ -705,13 +756,19 @@ class EditorView(QWidget):
             }}
         """)
         self.canvas.setStyleSheet(f"""
-            background-color: {c['canvas_bg']};
-            color: {c['text_color']};
+            background-color: {paper['canvas_bg']};
+            color: {paper['text_color']};
             selection-background-color: {c['accent']};
             selection-color: #ffffff;
             font-size: 13pt;
             line-height: 1.5;
         """)
+        pal = self.canvas.palette()
+        pal.setColor(QPalette.ColorRole.Base, QColor(paper["canvas_bg"]))
+        pal.setColor(QPalette.ColorRole.Text, QColor(paper["text_color"]))
+        pal.setColor(QPalette.ColorRole.Highlight, QColor(c["accent"]))
+        pal.setColor(QPalette.ColorRole.HighlightedText, QColor("#ffffff"))
+        self.canvas.setPalette(pal)
         self.canvas.style_completer({
             "bg": c["sidebar_card"],
             "fg": c["text_color"],
@@ -722,4 +779,6 @@ class EditorView(QWidget):
             c.get("link", c["accent"]),
             c.get("link_missing", "#d97706"),
         )
-        self.canvas.set_block_colors(c)
+        # Kod- och citatblock får pappersfärger, inte temafärger: blocken är
+        # en del av dokumentet och följer därför med ut i exporten.
+        self.canvas.set_block_colors(paper)

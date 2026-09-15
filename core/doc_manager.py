@@ -1,6 +1,6 @@
 import os
 import re
-from PyQt6.QtCore import Qt, QMarginsF, QRectF, QSizeF
+from PyQt6.QtCore import Qt, QMarginsF, QRectF, QSizeF, QPointF
 from PyQt6.QtGui import (
     QTextDocument, QTextCursor, QPageLayout, QPageSize,
     QFont, QColor, QPainter, QPen, QAbstractTextDocumentLayout
@@ -19,7 +19,7 @@ try:
 except ImportError:
     markdown = None
 
-from core import richtext
+from core import richtext, print_style
 from core.i18n import _
 
 # ```-block i Markdown, med valfritt språk
@@ -29,6 +29,12 @@ _FENCE_PLACEHOLDER_RE = re.compile(r"^OmaScribeKodblock(\d+)Z$")
 
 # En rad som bara består av #taggar (Obsidian-stil), inte en rubrik.
 TAG_LINE_RE = re.compile(r"^(?:#[^\W_][\w\-/]*\s*)+$")
+
+# Dokumentets layout räknar i enheter om 1/96 tum. Skrivaren räknar i sin egen
+# upplösning (1200 dpi för PDF i HighResolution-läge), så målningen skalas med
+# resolution / LAYOUT_DPI. Slår man ihop de två blir allt text några millimeter
+# stor i ena hörnet i stället för en full sida.
+LAYOUT_DPI = 96.0
 
 DEFAULT_PAGE_SETTINGS = {
     "page_size": "A4",                   # "A4", "Letter"
@@ -43,6 +49,8 @@ DEFAULT_PAGE_SETTINGS = {
     "skip_first_page": False,            # True för att dölja på titelsida/framsida
     "header_text": "",                   # Löpande sidhuvud
     "footer_text": "",                   # Löpande sidfot
+    "clean_print": True,                 # Rena svartvita exporter (papper, inte tema)
+    "grayscale_images": False,           # Gör inbäddade bilder gråskaliga vid export
 }
 
 
@@ -198,7 +206,8 @@ class DocumentManager:
                             doc.findBlockByNumber(b_last).position() + doc.findBlockByNumber(b_last).length() - 1,
                             QTextCursor.MoveMode.KeepAnchor
                         )
-                        richtext.apply_role(sel, richtext.ROLE_CODE, colors or {}, lang)
+                        richtext.apply_role(sel, richtext.ROLE_CODE,
+                                            colors or print_style.paper_colors(), lang)
                         cursor = doc.find(token)
 
         else:  # .txt or plain text
@@ -227,39 +236,68 @@ class DocumentManager:
         page_layout = QPageLayout(QPageSize(page_size_id), orient, margins, QPageLayout.Unit.Millimeter)
         printer.setPageLayout(page_layout)
 
-        # 2. Beräkna utskriftsmått i pixlar
-        paint_rect = printer.pageLayout().paintRectPixels(printer.resolution())
-        
-        # Reservera utrymme för sidhuvud och sidfot i pixlar
+        # 2. Mått. Dokumentet räknar i layoutenheter (96 dpi) medan skrivaren
+        #    räknar i sin egen upplösning. Skalan förmedlar mellan dem: utan
+        #    den sätts sidstorleken i skrivarpixlar, dokumentet tror att hela
+        #    upplagan får plats på en sida och texten ritas några millimeter
+        #    stor i hörnet i stället för över hela arket.
+        resolution = printer.resolution()
+        scale = resolution / LAYOUT_DPI
+        dpmm = resolution / 25.4               # millimeter i skrivarpixlar
+
+        paint_rect = printer.pageLayout().paintRectPixels(resolution)
+        full_rect = printer.pageLayout().fullRectPixels(resolution)
+
+        # Reservera utrymme för sidhuvud och sidfot
         has_header = bool(cfg.get("header_text")) or "top" in str(cfg.get("page_number_pos", ""))
         has_footer = bool(cfg.get("footer_text")) or ("bottom" in str(cfg.get("page_number_pos", "bottom-center")) and cfg.get("page_number_pos") != "none")
-        
-        # Pixels per mm vid aktuell upplösning
-        dpmm = printer.resolution() / 25.4
+
         header_h = (8.0 * dpmm) if has_header else 0.0
         footer_h = (8.0 * dpmm) if has_footer else 0.0
 
-        content_w = paint_rect.width()
-        content_h = paint_rect.height() - header_h - footer_h
+        # Skrivarpixlar: sidhuvud, sidfot och pappersbotten ritas oskalat, så
+        # att 9 pt verkligen blir 9 pt i stället för 9 pt gånger skalan.
+        content_w_px = paint_rect.width()
+        content_h_px = paint_rect.height() - header_h - footer_h
+        page_left = paint_rect.x()
+        page_top = paint_rect.y()
+
+        # Layoutenheter: dokumentets egen yta
+        content_w = content_w_px / scale
+        content_h = content_h_px / scale
 
         # 3. Klona dokumentet för layout utan att röra originalet
         doc_clone = text_document.clone()
         if doc_clone is None:
             return
+
+        # 3b. Rening: papperet får färg av dokumentet, aldrig av programmets tema
+        if cfg.get("clean_print", True):
+            print_style.normalize_document(
+                doc_clone, grayscale_images=bool(cfg.get("grayscale_images", False))
+            )
+
         doc_clone.setPageSize(QSizeF(content_w, content_h))
         page_count = max(1, doc_clone.pageCount())
 
         painter = QPainter(printer)
+        if not painter.isActive():
+            return
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
 
         font_hf = QFont("sans-serif", 9)
-        color_hf = QColor("#64748b")
+        color_hf = QColor(print_style.PAPER_MUTED)
+        color_rule = QColor(print_style.PAPER_RULE)
+        full_page = QRectF(0, 0, full_rect.width(), full_rect.height())
 
         try:
             for page_idx in range(page_count):
                 if page_idx > 0:
                     printer.newPage()
+
+                # Vit pappersbotten på varje sida — även om dokumentet är tomt
+                painter.fillRect(full_page, QColor(print_style.PAPER_WHITE))
 
                 page_num = page_idx + 1
                 skip_page = bool(cfg.get("skip_first_page", False)) and (page_idx == 0)
@@ -276,7 +314,7 @@ class DocumentManager:
                     page_str = _("pdf_page_n_of_total", n=page_num, total=page_count)
 
                 num_pos = str(cfg.get("page_number_pos", "bottom-center"))
-                
+
                 # Bestäm justering för sidnumret
                 if num_pos in ("bottom-alternating", "top-alternating"):
                     # Udda sidor till höger, jämna till vänster (bok/avhandlingsstandard)
@@ -289,28 +327,31 @@ class DocumentManager:
                 else:
                     align_num = Qt.AlignmentFlag.AlignHCenter
 
-                # --- 1. RITA SIDHUVUD ---
+                # --- 1. RITA SIDHUVUD (oskalat, i skrivarpixlar) ---
                 if has_header and not skip_page:
                     painter.setFont(font_hf)
                     painter.setPen(color_hf)
-                    header_rect = QRectF(0, 0, content_w, header_h)
-                    
+                    header_rect = QRectF(page_left, page_top, content_w_px, header_h)
+
                     if cfg.get("header_text"):
                         painter.drawText(header_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop, str(cfg.get("header_text")))
-                    
+
                     if "top" in num_pos and cfg.get("page_numbering", True):
                         painter.drawText(header_rect, align_num | Qt.AlignmentFlag.AlignTop, page_str)
 
                     # Tunn linje under sidhuvud
-                    pen_line = QPen(QColor("#e2e8f0"), 0.75)
-                    painter.setPen(pen_line)
-                    painter.drawLine(0, int(header_h - (2 * dpmm)), int(content_w), int(header_h - (2 * dpmm)))
+                    painter.setPen(QPen(color_rule, 0.75))
+                    rule_y = page_top + header_h - (2 * dpmm)
+                    painter.drawLine(QPointF(page_left, rule_y),
+                                     QPointF(page_left + content_w_px, rule_y))
 
-                # --- 2. RITA DOKUMENTSIDA ---
+                # --- 2. RITA DOKUMENTSIDA (skalad till layoutenheterna) ---
                 painter.save()
-                # Flytta origo till sidans innehållsyta
-                painter.translate(0, header_h - (page_idx * content_h))
-                
+                painter.scale(scale, scale)
+                # Flytta origo till sidans innehållsyta, i layoutenheter
+                painter.translate(page_left / scale,
+                                  (page_top + header_h) / scale - page_idx * content_h)
+
                 # Klipp mot aktuell sidas del av dokumentet
                 page_clip = QRectF(0, page_idx * content_h, content_w, content_h)
                 painter.setClipRect(page_clip)
@@ -318,22 +359,23 @@ class DocumentManager:
                 ctx = QAbstractTextDocumentLayout.PaintContext()
                 ctx.clip = page_clip
                 ctx.cursorPosition = -1
+                ctx.palette = print_style.paper_palette()
                 layout = doc_clone.documentLayout()
                 if layout is not None:
                     layout.draw(painter, ctx)
                 painter.restore()
 
-                # --- 3. RITA SIDFOT ---
+                # --- 3. RITA SIDFOT (oskalat, i skrivarpixlar) ---
                 if has_footer and not skip_page:
                     painter.setFont(font_hf)
                     painter.setPen(color_hf)
-                    footer_y = header_h + content_h + (2 * dpmm)
-                    footer_rect = QRectF(0, footer_y, content_w, footer_h)
+                    footer_y = page_top + header_h + content_h_px + (2 * dpmm)
+                    footer_rect = QRectF(page_left, footer_y, content_w_px, footer_h)
 
                     # Tunn linje ovanför sidfot
-                    pen_line = QPen(QColor("#e2e8f0"), 0.75)
-                    painter.setPen(pen_line)
-                    painter.drawLine(0, int(footer_y), int(content_w), int(footer_y))
+                    painter.setPen(QPen(color_rule, 0.75))
+                    painter.drawLine(QPointF(page_left, footer_y),
+                                     QPointF(page_left + content_w_px, footer_y))
 
                     if cfg.get("footer_text"):
                         painter.drawText(footer_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, str(cfg.get("footer_text")))
@@ -345,15 +387,64 @@ class DocumentManager:
             painter.end()
 
     @staticmethod
+    def _force_black_styles(doc) -> int:
+        """Sätter svart på samtliga stilar i Word-mallen.
+
+        Word-mallens inbyggda stilar bär kulörta färger (blå rubriker, blå
+        länkar, grön "Intense Quote"). Även om dokumentet bara använder några
+        få av dem ligger de kvar i filen och kan plockas fram av den som
+        öppnar den. Här sätts svart på varje stil som har ett typsnitt, så
+        filen inte innehåller någon kulör alls.
+        """
+        if docx is None:
+            return 0
+        from docx.shared import RGBColor as _RGB
+
+        changed = 0
+        for style in doc.styles:
+            font = getattr(style, "font", None)
+            if font is None:
+                continue
+            try:
+                font.color.rgb = _RGB(0, 0, 0)
+                changed += 1
+            except (AttributeError, ValueError, TypeError):
+                continue
+        return changed
+
+    @staticmethod
+    def _export_clone(text_document: QTextDocument, page_settings: dict | None) -> QTextDocument:
+        """Klon för export, rensad om sidinställningarna begär det."""
+        cfg = DEFAULT_PAGE_SETTINGS.copy()
+        if page_settings:
+            cfg.update(page_settings)
+        clone = text_document.clone()
+        if clone is not None and cfg.get("clean_print", True):
+            print_style.normalize_document(
+                clone, grayscale_images=bool(cfg.get("grayscale_images", False))
+            )
+        return clone if clone is not None else text_document
+
+    @staticmethod
     def save_file(filepath, text_document: QTextDocument, colors=None, page_settings: dict = None):
         """Saves a QTextDocument to a file (.docx, .md, .html, .txt, .pdf) preserving all formatting."""
         ext = os.path.splitext(filepath)[1].lower()
+        cfg = DEFAULT_PAGE_SETTINGS.copy()
+        if page_settings:
+            cfg.update(page_settings)
+        clean = bool(cfg.get("clean_print", True))
 
         if ext == ".docx":
             if docx is None:
                 raise ImportError("python-docx is required to write .docx files.")
             doc = docx.Document()
-            block = text_document.begin()
+            if clean:
+                # Word-mallens rubrikstilar är blå. Direkt formatering på
+                # stilen själv gör att rubrikerna blir svarta i hela filen,
+                # även i navigeringsfönstret och innehållsförteckningen.
+                DocumentManager._force_black_styles(doc)
+            export_doc = DocumentManager._export_clone(text_document, page_settings)
+            block = export_doc.begin()
             
             while block.isValid():
                 fmt = block.blockFormat()
@@ -409,13 +500,20 @@ class DocumentManager:
                             if pt_sz > 0:
                                 run.font.size = Pt(pt_sz)
                             fg = char_fmt.foreground().color()
-                            if fg.isValid() and fg.name() != "#000000":
-                                run.font.color.rgb = RGBColor(fg.red(), fg.green(), fg.blue())
+                            if fg.isValid():
+                                safe = print_style.clean_foreground(fg) if clean else fg.name()
+                                if safe != print_style.PAPER_TEXT:
+                                    sc = QColor(safe)
+                                    run.font.color.rgb = RGBColor(sc.red(), sc.green(), sc.blue())
                                 
                     it += 1
                 block = block.next()
                 
             doc.save(filepath)
+            if clean:
+                # Städa filen på nytt: python-docx når inte de kopplade
+                # teckenstilarna, men XML:en innehåller dem.
+                print_style.neutralize_docx(filepath)
 
         elif ext == ".pdf":
             printer = QPrinter(QPrinter.PrinterMode.HighResolution)
@@ -424,8 +522,10 @@ class DocumentManager:
             DocumentManager.print_document_to_printer(text_document, printer, page_settings)
 
         elif ext in {".html", ".htm"}:
+            export_doc = DocumentManager._export_clone(text_document, page_settings)
+            html = print_style.clean_html(export_doc) if clean else export_doc.toHtml()
             with open(filepath, "w", encoding="utf-8") as f:
-                f.write(text_document.toHtml())
+                f.write(html)
 
         elif ext in {".md", ".markdown"}:
             md_text = DocumentManager.document_to_markdown(text_document)

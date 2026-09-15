@@ -14,6 +14,11 @@ from PyQt6.QtGui import (
 )
 
 PALETTES = {
+    # Förval: gråskala. Ett diagram i ett dokument ska kunna tryckas rent —
+    # staplar och linjer skiljs åt av ljushet, inte av kulör.
+    "mono": [
+        "#1a1a1a", "#4d4d4d", "#808080", "#a6a6a6", "#c9c9c9", "#e8e8e8"
+    ],
     "modern_blue": [
         "#2563eb", "#0ea5e9", "#6366f1", "#3b82f6", "#0284c7", "#818cf8"
     ],
@@ -26,13 +31,10 @@ PALETTES = {
     "royal_purple": [
         "#7c3aed", "#9333ea", "#c026d3", "#8b5cf6", "#a855f7", "#d946ef"
     ],
-    "slate_mono": [
-        "#334155", "#475569", "#64748b", "#94a3b8", "#cbd5e1", "#1e293b"
-    ]
 }
 
 def get_palette_colors(palette_name: str, count: int) -> list[QColor]:
-    hex_list = PALETTES.get(palette_name, PALETTES["modern_blue"])
+    hex_list = PALETTES.get(palette_name, PALETTES["mono"])
     colors = []
     for i in range(count):
         hex_val = hex_list[i % len(hex_list)]
@@ -50,14 +52,14 @@ class ChartRenderer:
         categories: list[str],
         series_data: list[dict],  # [{"name": "...", "values": [1, 2, ...], "color": "#..."}]
         subtitle: str = "",
-        palette: str = "modern_blue",
+        palette: str = "mono",
         width: int = 720,
         height: int = 420,
         show_values: bool = True,
         show_grid: bool = True,
         show_legend: bool = True,
         bg_color: str = "#ffffff",
-        text_color: str = "#1e293b"
+        text_color: str = "#000000"
     ) -> QImage:
         # Skapa en 2x supersamplad bild för perfekt skärpa på Retina/HiDPI och vid PDF-utskrift
         scale = 2
@@ -484,18 +486,18 @@ class ChartRenderer:
 
             # Stödlinje
             if show_grid and i > 0:
-                grid_pen = QPen(QColor("#e2e8f0"), 1.0, Qt.PenStyle.DashLine)
+                grid_pen = QPen(QColor("#d9d9d9"), 1.0, Qt.PenStyle.DashLine)
                 painter.setPen(grid_pen)
                 painter.drawLine(QPointF(plot_rect.left(), y), QPointF(plot_rect.right(), y))
 
             # Y-axel etikett
-            axis_pen = QPen(QColor(text_color).lighter(150))
+            axis_pen = QPen(QColor("#666666"))
             painter.setPen(axis_pen)
             lbl_rect = QRectF(0, y - 8, plot_rect.left() - 8, 16)
             painter.drawText(lbl_rect, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, f"{val:g}")
 
         # Rita baslinjen på X-axeln
-        base_pen = QPen(QColor("#cbd5e1"), 1.5, Qt.PenStyle.SolidLine)
+        base_pen = QPen(QColor("#999999"), 1.5, Qt.PenStyle.SolidLine)
         painter.setPen(base_pen)
         painter.drawLine(QPointF(plot_rect.left(), plot_rect.bottom()), QPointF(plot_rect.right(), plot_rect.bottom()))
 

@@ -16,10 +16,14 @@ from PyQt6.QtGui import QPixmap, QImage, QColor, QCursor
 
 from core.i18n import _
 from core.charts import ChartRenderer, PALETTES
+from core import print_style
 
 
 class ChartDialog(QDialog):
-    chart_ready = pyqtSignal(QImage, str)  # (qimage, alignment)
+    # (färgbild, gråskaleversion, justering). Två bilder av samma data: den
+    # färgade är för skärmen, den gråskaliga är den som följer med till papper
+    # och PDF — annars blev en kulört palett platta till nästan samma grå nyans.
+    chart_ready = pyqtSignal(QImage, QImage, str)
 
     def __init__(self, theme_mgr, parent=None):
         super().__init__(parent)
@@ -104,11 +108,13 @@ class ChartDialog(QDialog):
         lbl_pal = QLabel(_("chart_palette") + ":")
         lbl_pal.setFixedWidth(90)
         self.combo_palette = QComboBox()
+        # Gråskala först: det är förvalet, och det enda som garanterat kan
+        # tryckas rent. Färgpaletterna finns kvar för skärm och färgtryck.
+        self.combo_palette.addItem("⚫ " + _("chart_pal_mono"), "mono")
         self.combo_palette.addItem("🔵 " + _("chart_pal_modern_blue"), "modern_blue")
         self.combo_palette.addItem("🟢 " + _("chart_pal_emerald"), "emerald_teal")
         self.combo_palette.addItem("🌅 " + _("chart_pal_warm"), "warm_sunset")
         self.combo_palette.addItem("🟣 " + _("chart_pal_purple"), "royal_purple")
-        self.combo_palette.addItem("⚪ " + _("chart_pal_mono"), "slate_mono")
         self.combo_palette.currentIndexChanged.connect(self._update_preview)
         row_pal.addWidget(lbl_pal)
         row_pal.addWidget(self.combo_palette)
@@ -328,8 +334,8 @@ class ChartDialog(QDialog):
             show_values=show_values,
             show_grid=show_grid,
             show_legend=show_legend,
-            bg_color="#ffffff",
-            text_color="#1e293b"
+            bg_color=print_style.PAPER_WHITE,
+            text_color=print_style.PAPER_TEXT
         )
         self.generated_image = img
 
@@ -353,23 +359,27 @@ class ChartDialog(QDialog):
         show_legend = self.chk_legend.isChecked()
 
         # Generera fullskalig högupplöst bild för dokumentet
-        high_res_img = ChartRenderer.render(
-            chart_type=chart_type,
-            title=title,
-            categories=categories,
-            series_data=series_data,
-            subtitle=subtitle,
-            palette=palette,
-            width=760,
-            height=440,
-            show_values=show_values,
-            show_grid=show_grid,
-            show_legend=show_legend,
-            bg_color="#ffffff",
-            text_color="#1e293b"
-        )
+        def render(pal: str) -> QImage:
+            return ChartRenderer.render(
+                chart_type=chart_type,
+                title=title,
+                categories=categories,
+                series_data=series_data,
+                subtitle=subtitle,
+                palette=pal,
+                width=760,
+                height=440,
+                show_values=show_values,
+                show_grid=show_grid,
+                show_legend=show_legend,
+                bg_color=print_style.PAPER_WHITE,
+                text_color=print_style.PAPER_TEXT,
+            )
+
+        high_res_img = render(palette)
+        mono_img = high_res_img if palette == "mono" else render("mono")
         align = self.combo_align.currentData() or "center"
-        self.chart_ready.emit(high_res_img, align)
+        self.chart_ready.emit(high_res_img, mono_img, align)
         self.accept()
 
     def apply_theme(self):

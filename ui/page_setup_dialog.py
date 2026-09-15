@@ -213,6 +213,28 @@ class PageSetupDialog(QDialog):
         text_layout.addLayout(row_foot_txt)
 
         layout_headers.addWidget(grp_text)
+
+        # Ren utskrift — papper, inte tema
+        grp_clean = QGroupBox(_("pagesetup_grp_clean"))
+        clean_layout = QVBoxLayout(grp_clean)
+        clean_layout.setSpacing(6)
+
+        self.chk_clean_print = QCheckBox(_("pagesetup_clean_print"))
+        self.chk_clean_print.setChecked(True)
+        self.chk_clean_print.setToolTip(_("pagesetup_clean_print_hint"))
+        clean_layout.addWidget(self.chk_clean_print)
+
+        lbl_clean_hint = QLabel(_("pagesetup_clean_print_hint"))
+        lbl_clean_hint.setWordWrap(True)
+        lbl_clean_hint.setObjectName("PageSetupHint")
+        clean_layout.addWidget(lbl_clean_hint)
+
+        self.chk_grayscale_images = QCheckBox(_("pagesetup_grayscale_images"))
+        self.chk_grayscale_images.setChecked(False)
+        self.chk_grayscale_images.setToolTip(_("pagesetup_grayscale_images_hint"))
+        clean_layout.addWidget(self.chk_grayscale_images)
+
+        layout_headers.addWidget(grp_clean)
         layout_headers.addStretch()
         tabs.addTab(tab_headers, "🔢 " + _("pagesetup_tab_numbers"))
 
@@ -260,6 +282,8 @@ class PageSetupDialog(QDialog):
         self.chk_skip_first.setChecked(bool(self.settings.get("skip_first_page", False)))
         self.input_header_text.setText(str(self.settings.get("header_text", "")))
         self.input_footer_text.setText(str(self.settings.get("footer_text", "")))
+        self.chk_clean_print.setChecked(bool(self.settings.get("clean_print", True)))
+        self.chk_grayscale_images.setChecked(bool(self.settings.get("grayscale_images", False)))
 
         self._on_numbers_toggled(self.chk_enable_numbers.isChecked())
 
@@ -300,6 +324,8 @@ class PageSetupDialog(QDialog):
             "skip_first_page": self.chk_skip_first.isChecked(),
             "header_text": self.input_header_text.text().strip(),
             "footer_text": self.input_footer_text.text().strip(),
+            "clean_print": self.chk_clean_print.isChecked(),
+            "grayscale_images": self.chk_grayscale_images.isChecked(),
         }
         self.settings.update(new_cfg)
         self.settings_applied.emit(self.settings)

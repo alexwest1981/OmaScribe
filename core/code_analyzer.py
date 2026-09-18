@@ -18,6 +18,8 @@ import json
 import re
 from PyQt6.QtCore import QThread, pyqtSignal
 
+from core.config import DEFAULT_AI_ENDPOINT, DEFAULT_AI_MODEL
+
 from core.ai_client import chat_completion, parse_json_response
 from core import directives
 
@@ -153,9 +155,9 @@ class CodeAnalysisWorker(QThread):
             code = self.code[:MAX_CODE_CHARS]
             sys_prompt, user_prompt = build_prompt(
                 code, self.lang, self.lang_ui, self.format_only, self.doc_context)
-            endpoint = self.config.get("ai_endpoint", "https://api.deepseek.com/v1")
+            endpoint = self.config.get("ai_endpoint", DEFAULT_AI_ENDPOINT)
             api_key = self.config.get("ai_key", "")
-            model = self.config.get("ai_model", "deepseek-chat")
+            model = self.config.get("ai_model", DEFAULT_AI_MODEL)
             raw = chat_completion(endpoint, api_key, model, sys_prompt, user_prompt,
                                   timeout=150.0, temperature=0.15)
             self.finished.emit(parse_analysis(raw, code))

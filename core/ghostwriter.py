@@ -22,6 +22,7 @@ from collections import Counter
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from core.ai_client import chat_completion, parse_json_response
+from core.config import DEFAULT_AI_ENDPOINT, DEFAULT_AI_MODEL
 
 # Vanliga småord som inte säger något om stilen
 STOPWORDS = {
@@ -192,9 +193,9 @@ class GhostwriterWorker(QThread):
 
             sys_prompt, user_prompt, want_variants = self._build_prompt(style_note)
 
-            endpoint = self.config.get("ai_endpoint", "http://127.0.0.1:20128/v1")
+            endpoint = self.config.get("ai_endpoint", DEFAULT_AI_ENDPOINT)
             api_key = self.config.get("ai_key", "")
-            model = self.config.get("ai_model", "OmniRoute")
+            model = self.config.get("ai_model", DEFAULT_AI_MODEL)
 
             out = chat_completion(endpoint, api_key, model, sys_prompt, user_prompt,
                                   timeout=120.0, temperature=0.85)

@@ -7,6 +7,7 @@ import os
 from PyQt6.QtCore import Qt
 from core.i18n import _, i18n
 from core.vault import VAULT_DEFAULT_DIR
+from core.config import DEFAULT_AI_ENDPOINT
 from ui.theme_manager import THEMES
 
 class SettingsDialog(QDialog):
@@ -69,7 +70,7 @@ class SettingsDialog(QDialog):
             ("custom", "Custom / Self-Hosted Endpoint", "", "")
         ]
 
-        curr_url = self.config.get("ai_endpoint", "http://127.0.0.1:20128/v1")
+        curr_url = self.config.get("ai_endpoint", DEFAULT_AI_ENDPOINT)
         matched_idx = len(self.providers) - 1 # default custom
         for i, (pid, pname, purl, pmodel) in enumerate(self.providers):
             self.combo_provider.addItem(pname, pid)

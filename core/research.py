@@ -20,6 +20,7 @@ import httpx
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from core.ai_client import chat_completion
+from core.config import DEFAULT_AI_ENDPOINT, DEFAULT_AI_MODEL
 
 USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -233,9 +234,9 @@ class ResearchWorker(QThread):
         """Låter modellen skriva texten utifrån källmaterialet."""
         lang = "Swedish (svenska)" if str(self.lang).startswith("sv") else "English"
 
-        endpoint = self.config.get("ai_endpoint", "http://127.0.0.1:20128/v1")
+        endpoint = self.config.get("ai_endpoint", DEFAULT_AI_ENDPOINT)
         api_key = self.config.get("ai_key", "")
-        model = self.config.get("ai_model", "OmniRoute")
+        model = self.config.get("ai_model", DEFAULT_AI_MODEL)
 
         if not sources:
             # Ren kunskapsfråga — modellen svarar utan underlag

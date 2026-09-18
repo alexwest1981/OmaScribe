@@ -2,15 +2,23 @@ import json
 import httpx
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
+from core.config import DEFAULT_AI_ENDPOINT, DEFAULT_AI_MODEL, DEFAULT_CONFIG
+
 
 def chat_completion(endpoint, api_key, model, system_prompt, user_prompt,
                     timeout=30.0, temperature=0.3):
     """Synkront anrop mot en OpenAI-kompatibel /chat/completions.
 
     Kastar httpx.HTTPStatusError vid felstatus och httpx.HTTPError vid
-    nätverksfel. Används av AIWorker och av research-/ghostwriter-arbetarna
-    så att all HTTP-logik bor på ett ställe.
+    nätverksfel, och RuntimeError om ingen slutpunkt är vald. Används av
+    AIWorker och av research-/ghostwriter-arbetarna så att all HTTP-logik bor
+    på ett ställe — inklusive kontrollen att det finns någonstans att skicka.
     """
+    if not (endpoint or "").strip():
+        raise RuntimeError(
+            "No AI endpoint is configured. Choose a provider and a key in "
+            "Settings → AI; nothing was sent anywhere."
+        )
     url = f"{endpoint.rstrip('/')}/chat/completions"
     headers = {"Content-Type": "application/json"}
     if api_key:
@@ -71,6 +79,17 @@ class AIWorker(QThread):
         self.model = model
         self.system_prompt = system_prompt
         self.user_prompt = user_prompt
+        self._cancelled = False
+
+    def cancel(self):
+        """Be tråden strunta i sitt svar.
+
+        Ingen QThread.terminate(): den dödar tråden mitt i en HTTP-läsning och
+        kan lämna Qt-objekt halvt förstörda. Tråden får avsluta sig själv —
+        anropet har en timeout — och ett svar från en avbruten körning
+        publiceras inte.
+        """
+        self._cancelled = True
 
     def run(self):
         try:
@@ -78,6 +97,8 @@ class AIWorker(QThread):
                 self.endpoint, self.api_key, self.model,
                 self.system_prompt, self.user_prompt
             )
+            if self._cancelled:
+                return
             self.finished.emit({"success": True, "content": content})
         except httpx.HTTPStatusError as e:
             self.error.emit(f"AI API Error {e.response.status_code}: {e.response.text}")
@@ -101,10 +122,17 @@ class AIClient(QObject):
         if not text or len(text.strip()) < 10:
             return
 
-        # Abort previous review worker if still running
-        if self._review_worker is not None and self._review_worker.isRunning():
-            self._review_worker.terminate()
-            self._review_worker.wait()
+        # En äldre granskning som fortfarande kör får sin flagga satt och sin
+        # signal frånkopplad i stället för att dödas med terminate().
+        previous = self._review_worker
+        if previous is not None and previous.isRunning():
+            previous.cancel()
+            for signal in (previous.finished, previous.error):
+                try:
+                    signal.disconnect()
+                except TypeError:
+                    pass
+            self._active_workers.discard(previous)
 
         self.ai_status_changed.emit("analyzing")
 
@@ -130,9 +158,9 @@ Respond ONLY with a valid JSON object matching this schema:
 Do NOT wrap with markdown fences. Return raw JSON.
 """
 
-        endpoint = self.config.get("ai_endpoint", "http://localhost:8000/v1")
+        endpoint = self.config.get("ai_endpoint", DEFAULT_AI_ENDPOINT)
         api_key = self.config.get("ai_key", "")
-        model = self.config.get("ai_model", "claude-3-5-sonnet")
+        model = self.config.get("ai_model", DEFAULT_AI_MODEL)
 
         worker = AIWorker(endpoint, api_key, model, sys_prompt, text)
         self._review_worker = worker
@@ -149,14 +177,11 @@ Do NOT wrap with markdown fences. Return raw JSON.
 
         self.ai_status_changed.emit("ready")
         raw = res.get("content", "")
-        # Clean JSON if fenced
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
+        # Samma tolkning som code_analyzer och ghostwriter redan använder:
+        # staket, inledande prosa och efterföljande text hanteras av
+        # parse_json_response i stället för av en egen kopia här.
         try:
-            data = json.loads(raw.strip())
-            self.review_completed.emit(data)
+            self.review_completed.emit(parse_json_response(raw))
         except Exception as e:
             print(f"[AIClient] JSON parse error: {e}, raw was: {raw[:100]}")
             self.review_error.emit(f"AI response format error: {e}")
@@ -180,9 +205,9 @@ Context after: {context_after[:200]}
 
 Instruction: {instruction}
 """
-        endpoint = self.config.get("ai_endpoint", "http://localhost:8000/v1")
+        endpoint = self.config.get("ai_endpoint", DEFAULT_AI_ENDPOINT)
         api_key = self.config.get("ai_key", "")
-        model = self.config.get("ai_model", "claude-3-5-sonnet")
+        model = self.config.get("ai_model", DEFAULT_AI_MODEL)
 
         worker = AIWorker(endpoint, api_key, model, sys_prompt, user_prompt)
         self._active_workers.add(worker)
@@ -195,3 +220,45 @@ Instruction: {instruction}
         self._active_workers.discard(worker)
         self.ai_status_changed.emit("ready")
         self.transform_completed.emit(content.strip())
+
+
+# ------------------------------------------------------------------ självtest
+
+def _self_test() -> int:
+    """De två sakerna som inte syns förrän de är fel: att ingen leverantör är
+    förvald, och att ett tomt mål stoppas innan något lämnar maskinen."""
+    failures = []
+
+    def check(label, got, want):
+        if got != want:
+            failures.append(f"{label}: fick {got!r}, väntade {want!r}")
+
+    check("förvald slutpunkt", DEFAULT_CONFIG["ai_endpoint"], "")
+    check("förvald modell", DEFAULT_CONFIG["ai_model"], "")
+
+    for endpoint in ("", "   ", None):
+        try:
+            chat_completion(endpoint, "", "", "s", "u")
+            failures.append(f"tom slutpunkt {endpoint!r} gick igenom")
+        except RuntimeError as e:
+            if "endpoint" not in str(e):
+                failures.append(f"oklart fel för {endpoint!r}: {e}")
+        except Exception as e:
+            failures.append(f"fel feltyp för {endpoint!r}: {type(e).__name__}: {e}")
+
+    worker = AIWorker("http://127.0.0.1:1/v1", "", "", "s", "u")
+    worker.cancel()
+    check("cancel sätter flaggan", worker._cancelled, True)
+
+    if failures:
+        print("✗ ai_client:")
+        for f in failures:
+            print("   ", f)
+        return 1
+    print("✓ ai_client: ingen leverantör förvald, tom slutpunkt stoppas före "
+          "anropet, cancel() sätter flaggan")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_self_test())

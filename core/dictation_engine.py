@@ -115,8 +115,14 @@ class DictationEngine(QObject):
                 except Exception as e:
                     self.error.emit(f"Transcription error: {str(e)}")
             else:
-                # Fallback mock speech for development testing if faster-whisper not yet downloaded
-                self.transcription_ready.emit(" [Dictation transcription ready] ")
+                # Ingen påhittad text. Utan faster-whisper finns ingen
+                # transkription, och en påhittad rad i dokumentet ser ut som en
+                # trasig diktering i stället för en modul som saknas.
+                self.error.emit(
+                    "Dictation needs the faster-whisper package, which is not "
+                    "installed here (pip install faster-whisper). Nothing was "
+                    "transcribed."
+                )
         except Exception as ex:
             self.error.emit(f"Audio processing error: {str(ex)}")
         finally:

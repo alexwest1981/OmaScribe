@@ -17,6 +17,15 @@ def get_system_default_language():
         pass
     return "en"
 
+# AI-standarder på ett ställe. Tidigare hade varje modul sin egen reserv
+# (api.deepseek.com/v1 i två filer, localhost:8000/v1 i ai_client,
+# 127.0.0.1:20128/v1 i tre) och modellreserven var "claude-3-5-sonnet" även mot
+# en DeepSeek-endpoint. En ny installation kunde alltså skicka dokumentet till
+# en leverantör ingen hade valt. Tom sträng = ingen AI vald, och då görs inget
+# anrop alls: chat_completion säger till i klartext i stället.
+DEFAULT_AI_ENDPOINT = ""
+DEFAULT_AI_MODEL = ""
+
 DEFAULT_CONFIG = {
     "language": get_system_default_language(),
     "theme": "paper",  # "paper", "dark", "nord", "amber"
@@ -30,9 +39,9 @@ DEFAULT_CONFIG = {
     # Neutral standard för den som installerar appen. Ingen privat slutpunkt
     # bakas in — användaren anger sin egen leverantör och nyckel i
     # Inställningar. (En sparad config.json vinner alltid över detta.)
-    "ai_endpoint": "https://api.deepseek.com/v1",
+    "ai_endpoint": DEFAULT_AI_ENDPOINT,
     "ai_key": "",
-    "ai_model": "deepseek-chat",
+    "ai_model": DEFAULT_AI_MODEL,
     "dictation_model": "base",
     "dictation_lang": "auto",
     "dictation_auto_punctuate": True,

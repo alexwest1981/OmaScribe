@@ -526,5 +526,9 @@
   "scene_target_none": "no target",
   "scene_revision": "Draft",
   "scene_words": "{words} words",
-  "scene_words_of": "{words} of {target} words ({percent} %)"
+  "scene_words_of": "{words} of {target} words ({percent} %)",
+  "scrivenings_info": "{heading} — {scenes} scenes, {words} words",
+  "scrivenings_cut": "Showing {limit} scenes; {cut} more are left out.",
+  "menu_view_scrivenings": "Continuous reading view",
+  "scrivenings_stats": "{words} words in the reading view"
 }

@@ -362,6 +362,56 @@ def main() -> int:
     check(len(igen3.children(kap.id)) == 1, "kapitel ett har en scen i den sparade filen")
     win._deactivate_project()
 
+    print("\n12. Sammanhängande läsvy")
+    win._activate_project(bok)
+    binder = win.binder
+    # scen två flyttades till översta nivån i avsnitt 11 — tillbaka in i kapitlet
+    binder.move_by_drop(tva.id, ett.id, "below")
+    check(bok.by_id(tva.id).parent == kap.id, "scen två är tillbaka i kapitlet")
+    binder.refresh(select_id=ett.id)
+    binder.select_node(ett.id)
+    fore = win.editor.document.toHtml()
+    check(win.act_view_scrivenings.isEnabled(), "läsvyn går att välja i projektläge")
+
+    win._toggle_scrivenings()
+    check(win.stack.currentIndex() == win._scrivenings_index, "läsvyn är framme")
+    lastext = win.scrivenings.pane.toPlainText()
+    check("Alfa beta gamma." in lastext, f"scen ett läses i vyn ({lastext[:40]!r})")
+    check("Delta epsilon." in lastext, "scen två läses i samma text")
+    check(lastext.index("Alfa") < lastext.index("Delta"), "scenerna kommer i läsordning")
+    check("ord i läsvyn" in win.lbl_stats.text(),
+          f"statusfältet visar läsvyns ord ({win.lbl_stats.text()!r})")
+    check(win.windowTitle().startswith("Provbok"), f"titeln visar projektet ({win.windowTitle()})")
+    check(len(win.scrivenings.shown_nodes()) == 2,
+          f"båda scenerna är med ({len(win.scrivenings.shown_nodes())})")
+
+    # scenen i editorn skall vara orörd av att vyn byggdes
+    check(win.editor.document.toHtml() == fore, "editorn rördes inte av läsvyn")
+
+    # klick på en scenrubrik skall lämna vyn och öppna scenen
+    win.scrivenings.scene_activated.emit(tva2 := win.scrivenings.shown_nodes()[1].id)
+    check(win.stack.currentIndex() == 1, "klicket lämnar läsvyn")
+    check(win.active_scene_id == tva2, f"och öppnar den scenen ({win.active_scene_id})")
+
+    # Escape stänger också
+    win._toggle_scrivenings()
+    check(win.stack.currentIndex() == win._scrivenings_index, "läsvyn är framme igen")
+    win.scrivenings.closed.emit()
+    check(win.stack.currentIndex() == 1, "Escape går tillbaka till editorn")
+    check(win.active_scene_id is not None, "och scenen i editorn finns kvar")
+
+    # samma genväg två gånger växlar fram och tillbaka
+    win._toggle_scrivenings()
+    win._toggle_scrivenings()
+    check(win.stack.currentIndex() == 1, "samma val två gånger stänger läsvyn")
+
+    # utan projekt skall den inte gå att öppna
+    win._deactivate_project()
+    check(not win.act_view_scrivenings.isEnabled(), "läsvyn stängs av utan projekt")
+    win.show_editor_screen()
+    win._toggle_scrivenings()
+    check(win.stack.currentIndex() == 1, "läsvyn öppnas inte utan projekt")
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

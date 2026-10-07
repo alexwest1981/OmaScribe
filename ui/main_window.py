@@ -26,6 +26,7 @@ from ui.code_dialog import CodeDialog
 from ui.template_dialog import TemplateDialog
 from ui.binder_panel import BinderPanel
 from ui.scene_inspector import SceneInspector
+from ui.scrivenings import ScriveningsView
 from core.project import Project
 from ui.chart_dialog import ChartDialog
 from ui.image_dialog import ImageDialog
@@ -161,6 +162,14 @@ class MainWindow(QMainWindow):
         self.splitter.setStretchFactor(2, 0)   # sidopanelen
         self.stack.addWidget(self.splitter)
 
+        # Läsvyn: flera scener som en sammanhängande text. Egen sida i stacken,
+        # så den vanliga editorn står orörd kvar när man går tillbaka.
+        self.scrivenings = ScriveningsView(self)
+        self.scrivenings.scene_activated.connect(self._open_from_scrivenings)
+        self.scrivenings.closed.connect(self._close_scrivenings)
+        self.stack.addWidget(self.scrivenings)
+        self._scrivenings_index = self.stack.indexOf(self.scrivenings)
+
         self.setCentralWidget(self.stack)
 
         # 3. Formatting Toolbar
@@ -273,6 +282,9 @@ class MainWindow(QMainWindow):
         self.menu_view = mb.addMenu(_("menu_view"))
         self.act_view_sidebar = self._add_action(self.menu_view, _("menu_view_ai_sidebar"), self._toggle_sidebar, "Ctrl+Shift+I")
         self.act_view_focus = self._add_action(self.menu_view, _("menu_view_focus_mode"), self._toggle_focus_mode, "F11")
+        self.act_view_scrivenings = self._add_action(
+            self.menu_view, _("menu_view_scrivenings"), self._toggle_scrivenings, "Ctrl+Shift+L")
+        self.act_view_scrivenings.setEnabled(False)     # bara i projektläge
         self.menu_view.addSeparator()
         self.act_zoom_in = self._add_action(self.menu_view, _("menu_view_zoom_in"), self._zoom_in, "Ctrl++")
         self.act_zoom_out = self._add_action(self.menu_view, _("menu_view_zoom_out"), self._zoom_out, "Ctrl+-")
@@ -481,6 +493,11 @@ class MainWindow(QMainWindow):
         self.lbl_cursor.setText(f"Ln {line}, Col {col}")
 
     def _update_stats(self):
+        if self.stack.currentIndex() == getattr(self, "_scrivenings_index", -1):
+            words = sum(self.project.words(n.id) for n in self.scrivenings.shown_nodes()) \
+                if self.project else 0
+            self.lbl_stats.setText(_("scrivenings_stats", words=words))
+            return
         self.sidebar.update_metrics_and_outline(self.editor.document)
         stats = self.sidebar.lbl_words.text()
         chars = self.sidebar.lbl_chars.text()
@@ -491,6 +508,10 @@ class MainWindow(QMainWindow):
             self.setWindowTitle(_("app_name"))
             return
         if self.project is not None:
+            if self.stack.currentIndex() == getattr(self, "_scrivenings_index", -1):
+                self.setWindowTitle(
+                    f"{self.project.title} — {_('menu_view_scrivenings')} — {_('app_name')}")
+                return
             scene = ""
             if self.active_scene_id:
                 try:
@@ -719,6 +740,7 @@ class MainWindow(QMainWindow):
         self.project = project
         self.binder.set_project(project)
         self.binder.setVisible(True)
+        self.act_view_scrivenings.setEnabled(True)
         broken = project.validate()
         if broken:
             QMessageBox.warning(self, _("project_broken_title"),
@@ -739,6 +761,9 @@ class MainWindow(QMainWindow):
         self.binder.set_project(None)
         self.binder.setVisible(False)
         self.scene_inspector.set_scene(None, None)
+        self.act_view_scrivenings.setEnabled(False)
+        if self.stack.currentIndex() == getattr(self, "_scrivenings_index", -1):
+            self.show_editor_screen()
 
     def _flush_scene(self, quiet: bool = False) -> bool:
         """Skriver editorns text till den scen som är öppen."""
@@ -795,6 +820,56 @@ class MainWindow(QMainWindow):
             return
         self._save_project_manifest()
         self.binder.refresh(select_id=self.active_scene_id)
+
+    # ---------------------------------------------------------------- läsvyn
+
+    def _scrivenings_content(self) -> tuple[list, str]:
+        """Vilka scener läsvyn skall visa, och vad den skall kalla dem."""
+        node_id = self.binder.current_node_id() or self.active_scene_id
+        node = None
+        if node_id:
+            try:
+                node = self.project.by_id(node_id)
+            except KeyError:
+                node = None
+        if node is None:
+            return self.project.manuscript(), self.project.title
+        if node.is_writable:
+            # En scen: läs hela dess kapitel, annars tappar vyn sammanhanget.
+            if not node.parent:
+                return [node], node.title
+            kap = self.project.by_id(node.parent)
+            return [n for n in self.project.walk(kap.id) if n.is_writable], kap.title
+        return [n for n in self.project.walk(node.id) if n.is_writable], node.title
+
+    def _toggle_scrivenings(self):
+        if self.project is None:
+            return
+        if self.stack.currentIndex() == self._scrivenings_index:
+            self._close_scrivenings()
+            return
+        nodes, heading = self._scrivenings_content()
+        if not nodes:
+            return
+        self._flush_scene(quiet=True)          # scenen i editorn sparas först
+        self.scrivenings.set_content(self.project, nodes, heading=heading)
+        self.stack.setCurrentIndex(self._scrivenings_index)
+        self._update_stats()
+        self._update_window_title()
+
+    def _close_scrivenings(self):
+        if self.stack.currentIndex() != self._scrivenings_index:
+            return
+        self.show_editor_screen()
+        if self.active_scene_id:
+            self._load_scene(self.active_scene_id)
+        self._update_stats()
+        self._update_window_title()
+
+    def _open_from_scrivenings(self, node_id: str):
+        """Ett klick på en scenrubrik: tillbaka till editorn med den scenen."""
+        self._close_scrivenings()
+        self.binder.select_node(node_id)
 
     def file_new(self):
         if self.stack.currentIndex() == 1 and not self._maybe_save_changes():

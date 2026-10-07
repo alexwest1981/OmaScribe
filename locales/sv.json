@@ -526,5 +526,9 @@
   "scene_target_none": "inget mål",
   "scene_revision": "Utkast",
   "scene_words": "{words} ord",
-  "scene_words_of": "{words} av {target} ord ({percent} %)"
+  "scene_words_of": "{words} av {target} ord ({percent} %)",
+  "scrivenings_info": "{heading} — {scenes} scener, {words} ord",
+  "scrivenings_cut": "Visar {limit} scener; {cut} till är inte med.",
+  "menu_view_scrivenings": "Sammanhängande läsvy",
+  "scrivenings_stats": "{words} ord i läsvyn"
 }

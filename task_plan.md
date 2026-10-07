@@ -14,12 +14,14 @@ taget (`ui/main_window.py:663`). Se `findings.md`.
 
 ## Next Step
 
-Fas 1.7: sammanhängande läsvy — flera scener som ett manus i editorn, med
-skiljelinjer och redigerbart innehåll. Därefter summerade ordmål i trädet (1.8).
+Fas 1.8: ordmål i trädet — scenens och kapitlets mål summerade i hierarkin.
+Därefter 1.9 samlingar, 1.10 researchmapp, 1.11 anteckningar per scen, 1.12
+projektmallar, 1.13 scenkopplingar. Kvar att slutföra i 1.5 (statusfärg) och
+1.7 (redigering i läsvyn) finns också.
 
 ## Current Phase
 
-Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.6 klara)
+Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.4 och 1.6 klara)
 
 ## Arbetsregler
 
@@ -64,7 +66,7 @@ Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.6 klara)
 - [x] **1.4** Synopsis och sammanfattning per scen, i inspector och på kortet. R01.4
 - [~] **1.5** Status och etiketter per scen, redigerbara värdelistor, färg + text. R01.5 — *text klar, färg kvar (statusar är fria strängar i projektet, färgen hör ihop med kortdelegaten)*
 - [x] **1.6** Dra-och-släpp och omordning i träd och kortvy, atomiskt. R01.11
-- [ ] **1.7** Sammanhängande läsvy (Scrivenings): flera scener som ett manus. R01.9
+- [~] **1.7** Sammanhängande läsvy (Scrivenings): flera scener som ett manus. R01.9 — *läsningen klar; redigering i vyn kvar (kräver att verktygsraden och Edit-åtgärderna riktas mot den scen som har fokus — 28 anrop pekar på `editor.canvas`)*
 - [~] **1.8** Ordräkningsmål per scen, kapitel och projekt, summerat i hierarkin. R01.10 — *mål och framsteg per scen klart, summeringen i trädet kvar*
 - [ ] **1.9** Samlingar: manuella grupper och sparade sökningar, utan att ändra binderordningen. R01.8
 - [ ] **1.10** Researchmapp: källor, länkar och bilder skilda från manuset, uteslutna ur export. R01.7

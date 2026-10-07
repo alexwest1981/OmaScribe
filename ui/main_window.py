@@ -36,7 +36,9 @@ from ui.plot_grid import PlotGrid
 from ui.exercise_dialog import ExerciseDialog
 from ui.overview_dialog import OverviewDialog
 from ui.snapshot_dialog import HistoryDialog
+from ui.review_dialog import ReviewDialog
 from core.font_manager import install_dropdown_style
+from core import revisions
 from ui.scrivenings import ScriveningsView
 from core.project import Project
 from ui.chart_dialog import ChartDialog
@@ -348,6 +350,8 @@ class MainWindow(QMainWindow):
                                              self._open_overview, "Ctrl+Shift+O")
         self.act_history = self._add_action(self.menu_file, "🕘 " + _("menu_file_history"),
                                             self._open_history, "Ctrl+Shift+H")
+        self.act_review = self._add_action(self.menu_file, "📝 " + _("menu_file_review"),
+                                           self._open_review, "Ctrl+Alt+R")
         self.act_open = self._add_action(self.menu_file, _("menu_file_open"), self.file_open, "Ctrl+O")
         self.menu_file.addSeparator()
         self.act_new_project = self._add_action(self.menu_file, "📚 " + _("menu_file_new_project"), self.new_project)
@@ -1155,6 +1159,49 @@ class MainWindow(QMainWindow):
         self._save_project_manifest()
         self.scene_inspector.set_scene(self.project, self.project.by_id(node.id))
         self.status_bar.showMessage(_("exercise_saved"), 5000)
+
+    def _open_review(self) -> None:
+        """Vad som ändrats sedan senaste punkten, med ett beslut per stycke (R02.1).
+
+        Ändringarna räknas ur samma jämförelse som historiken visar: punkten mot
+        texten på disk nu. Finns inget att granska sägs det i statusfältet i
+        stället för att öppna en tom ruta.
+        """
+        if self.project is None or not self.active_scene_id:
+            self.status_bar.showMessage(_("history_needs_scene"), 5000)
+            return
+        path = self.project.scene_path(self.active_scene_id)
+        if path is None:
+            self.status_bar.showMessage(_("history_needs_scene"), 5000)
+            return
+        self._flush_scene(quiet=True)
+        punkter = self.project.snapshots().list(str(path))
+        if not punkter:
+            self.status_bar.showMessage(_("review_no_point"), 5000)
+            return
+        senaste = punkter[0]
+        före = self.project.snapshots().read(senaste.id)
+        nu = self.project.read(self.active_scene_id)
+        if not revisions.changes(före, nu):
+            self.status_bar.showMessage(_("review_none"), 5000)
+            return
+        etikett = (f"{HistoryDialog._lokal_tid(senaste.created)} · "
+                   f"{senaste.label or _('history_automatic')}")
+        dialog = ReviewDialog(före, nu, etikett, self)
+        dialog.apply_requested.connect(
+            lambda beslut, f=före, n=nu: self._apply_review(f, n, beslut))
+        dialog.exec()
+
+    def _apply_review(self, before_html: str, after_html: str, decisions: list) -> None:
+        """Skriver texten som granskningen beslutade — med en punkt före ingreppet."""
+        node_id = self.active_scene_id
+        if not node_id:
+            return
+        resultat = revisions.apply_changes(before_html, after_html, decisions)
+        self.project.snapshot_scene(node_id, label=_("review_before"))
+        self.project.write(node_id, resultat)
+        self._show_scene_html(node_id, resultat)
+        self.status_bar.showMessage(_("review_applied"), 5000)
 
     def _open_history(self) -> None:
         """Scenens punkter, skillnaden mot texten nu, och vägen tillbaka (R02.4).
@@ -2056,6 +2103,7 @@ class MainWindow(QMainWindow):
         self.act_instructions.setText("📌 " + _("menu_file_instructions"))
         self.act_overview.setText("📊 " + _("menu_file_overview"))
         self.act_history.setText("🕘 " + _("menu_file_history"))
+        self.act_review.setText("📝 " + _("menu_file_review"))
         self.act_open.setText(_("menu_file_open"))
         self.menu_recent.setTitle(_("menu_file_recent"))
         self.act_save.setText(_("menu_file_save"))

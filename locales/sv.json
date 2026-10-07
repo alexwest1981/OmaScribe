@@ -763,5 +763,20 @@
   "history_needs_scene": "Öppna en scen först",
   "scene_comment_reply": "Svara i tråden",
   "comment_reply_title": "Svara på kommentaren",
-  "comment_reply_label": "Svar på \"{quote}\":"
+  "comment_reply_label": "Svar på \"{quote}\":",
+  "menu_file_review": "Granska ändringar sedan senaste punkten…",
+  "review_title": "Granska ändringar",
+  "review_since": "Ändringar sedan {label}",
+  "review_changes": "Ändringar (kryssad = behåll)",
+  "review_preview": "Så blir texten",
+  "review_keep_all": "Behåll alla",
+  "review_revert_all": "Ångra alla",
+  "review_apply": "Verkställ",
+  "review_status": "{kept} av {total} ändringar behålls",
+  "review_empty": "(inget)",
+  "review_row_tooltip": "Före: {before}\nEfter: {after}\nAnkare: {anchor}",
+  "review_no_point": "Ingen punkt att jämföra mot än — öppna historiken och spara en",
+  "review_none": "Inga ändringar sedan senaste punkten",
+  "review_before": "före granskning",
+  "review_applied": "Texten är granskad"
 }

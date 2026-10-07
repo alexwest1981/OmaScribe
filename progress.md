@@ -358,3 +358,24 @@
   garantin är att läsningen blir densamma, och det står i docstringen.
 - **Kvar i 3.2:** rutan med Behåll/Ångra per stycke och menyvägen (senaste punkten mot texten nu),
   samt textdiff inom ett ändrat stycke.
+
+### Fas 3.2 (del 2 av 2): granskningsrutan
+
+- **Status:** complete, grindad (466 rökprov + 54 renhetsprov + revisionernas 30 egna, GRÖNT).
+- `ui/review_dialog.py`: en rad per ändring med tecknet först (`+` tillagt, `−` borttaget,
+  `~` omskrivet), **kryssad rad = behåll**, och en förhandsvisning längst ner som räknas om för
+  varje kryss — den är exakt den text som skrivs, ur samma funktion som skriver den.
+- Menyväg: Arkiv → Granska ändringar sedan senaste punkten (Ctrl+Alt+R). Ändringarna räknas ur
+  samma jämförelse som historiken visar (nyaste punkten mot texten på disk nu). Finns inget att
+  granska sägs det i statusfältet i stället för att öppna en tom ruta.
+- Texten före granskningen sparas som egen punkt, så ingreppet går att ångra med samma knapp som
+  allt annat i historiken.
+- **Finare parning:** ett stycke som blivit två paras i tur och ordning (det första blir en
+  omskrivning, resten egna tillägg) i stället för att slås ihop till en klump — närmare en läsares
+  uppfattning, och det syns i provet.
+- **En PyQt6-fälla som kostade mest tid i hela passet:** `clicked.connect(self._verkställ)`
+  kraschade med signal 11, i kopplingen, innan rutan ens fanns. Minimalt prov: lambda ok, ASCII-namn
+  ok, svenskt metodnamn = segfault. Svensk text i strängar och gränssnitt är ofarlig — det är
+  *metodnamn* som kopplas till signaler som måste vara ASCII. Regeln är skriven i Qt-skillen, och
+  `python -X faulthandler` pekade ut raden på ett försök.
+- **Kvar i 3.2:** textdiff *inom* ett ändrat stycke (ett omskrivet stycke visas som en helhet).

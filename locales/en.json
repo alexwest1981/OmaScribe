@@ -763,5 +763,20 @@
   "history_needs_scene": "Open a scene first",
   "scene_comment_reply": "Reply in the thread",
   "comment_reply_title": "Reply to the comment",
-  "comment_reply_label": "Reply to \"{quote}\":"
+  "comment_reply_label": "Reply to \"{quote}\":",
+  "menu_file_review": "Review changes since the last point…",
+  "review_title": "Review changes",
+  "review_since": "Changes since {label}",
+  "review_changes": "Changes (ticked = keep)",
+  "review_preview": "The text becomes",
+  "review_keep_all": "Keep all",
+  "review_revert_all": "Revert all",
+  "review_apply": "Apply",
+  "review_status": "{kept} of {total} changes kept",
+  "review_empty": "(nothing)",
+  "review_row_tooltip": "Before: {before}\nAfter: {after}\nAnchor: {anchor}",
+  "review_no_point": "No point to compare against yet — open the history and save one",
+  "review_none": "No changes since the last point",
+  "review_before": "before review",
+  "review_applied": "The text has been reviewed"
 }

@@ -154,8 +154,8 @@ def _slots(before_html: str, after_html: str):
     """Blocken på båda sidor, parade i de enheter en granskning beslutar om.
 
     Ett omskrivet stycke är ett beslut för sig — inte en klump med grannstycket.
-    Bara när antalet stycken skiljer sig (ett stycke som blir tre) slås de ihop
-    till ett beslut, och det står i så fall i granskningen.
+    Har ett stycke blivit två paras de första i tur och ordning, och det som blir
+    över blir egna tillägg eller borttagningar.
     """
     före, efter = blocks(before_html), blocks(after_html)
     matcher = difflib.SequenceMatcher(a=[plain(b) for b in före],
@@ -171,11 +171,18 @@ def _slots(before_html: str, after_html: str):
         elif tag == "delete":
             for i in range(i1, i2):
                 platser.append(("removed", före[i], ""))
-        elif (i2 - i1) == (j2 - j1):
-            for i, j in zip(range(i1, i2), range(j1, j2)):
-                platser.append(("changed", före[i], efter[j]))
         else:
-            platser.append(("changed", "".join(före[i1:i2]), "".join(efter[j1:j2])))
+            # Ett stycke kan ha blivit två. Då paras de första i tur och ordning
+            # ("stycket skrevs om") och resten blir egna tillägg eller
+            # borttagningar — så nära en läsares uppfattning man kommer utan att
+            # jämföra inne i styckena.
+            par = min(i2 - i1, j2 - j1)
+            for k in range(par):
+                platser.append(("changed", före[i1 + k], efter[j1 + k]))
+            for i in range(i1 + par, i2):
+                platser.append(("removed", före[i], ""))
+            for j in range(j1 + par, j2):
+                platser.append(("added", "", efter[j]))
     return platser
 
 
@@ -290,6 +297,13 @@ def _self_test() -> int:
           gammal.replace("Nyckeln låg på bordet.", "Nyckeln låg på hyllan."))
     check("utan beslut behålls allt", apply_changes(gammal, tre, []), tre)
     check("ingen ändring ger ingen ändring", changes(gammal, gammal), [])
+
+    ett_blir_tva = changes("<p>a</p><p>b</p>", "<p>a2</p><p>b2</p><p>c</p>")
+    check("ett stycke som blir två ger en omskrivning och ett tillägg",
+          [c.kind for c in ett_blir_tva], ["changed", "changed", "added"])
+    check("och besluten ger rätt text",
+          apply_changes("<p>a</p><p>b</p>", "<p>a2</p><p>b2</p><p>c</p>",
+                        ["keep", "revert", "revert"]), "<p>a2</p><p>b</p>")
 
     lista_fore = "<ul><li>a</li><li>b</li></ul>"
     lista_efter = "<ul><li>a</li><li>b</li><li>c</li></ul>"

@@ -126,15 +126,15 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       ligger på disk nu, och en väg tillbaka. En punkt tas automatiskt **när en scen öppnas** (så
       texten finns som den såg ut när man lämnade den), och bara om den skiljer sig från den
       senaste — annars fylls historiken av kopior av samma mening. R01.6, R02.4
-- [~] **3.2** Spårade ändringar som operationer, acceptera/avvisa enskilt: **kärnan är byggd och
-      grindad** — `core/revisions.py` gör ändringar till operationer (typ, gammal och ny text,
-      ankare, stycke) och beslutar per stycke, precis den form forskningen pekar ut. Jämförelsen
-      sker på **blocknivå och läser text**, inte HTML: en omskrivning av attributen räknas inte som
-      en ändring (Qt skriver om dem vid varje sparning, och en naiv HTML-diff vore falska ändringar
-      hela dagen — forskningen varnar för just det). Ett `<ul>` med sina `<li>` är **en** enhet, så
-      ett beslut kan aldrig lämna halv HTML. **Kvar:** rutan som visar ändringarna med Behåll/Ångra
-      per stycke, och vägen dit från menyn (snapshot mot texten nu). Textdiff *inom* ett ändrat
-      stycke är ett eget steg efter det. R02.1
+- [x] **3.2** Spårade ändringar som operationer, acceptera/avvisa enskilt: `core/revisions.py` gör
+      ändringar till operationer (typ, gammal och ny text, ankare, stycke) och beslutar per stycke;
+      `ui/review_dialog.py` visar dem med **kryssad rad = behåll**, förhandsvisar exakt den text som
+      skrivs, och Arkiv → Granska ändringar sedan senaste punkten (Ctrl+Alt+R) är vägen dit. Texten
+      före granskningen sparas som egen punkt, så ingreppet går att ångra. **Jämförelsen läser text,
+      inte HTML** — annars vore varje sparning en ändring, eftersom Qt skriver om attributen (det är
+      fällan forskningen varnar för). Ett `<ul>` med sina `<li>` är en enhet, så inget beslut kan
+      lämna halv HTML. **Kvar:** textdiff *inom* ett ändrat stycke (ett stycke som skrivs om visas som
+      en helhet, inte ord för ord). R02.1
 - [x] **3.3** Kommentarer i marginalen med tråd och "löst": kommentarerna, markeringarna i
       texten, hoppa-till-citatet och **löst** fanns redan färdiga i scenpanelen (kontrollerat, inte
       antaget). Det som saknades var **tråden**: `add_reply()` i projektet, en ↳-knapp i panelen och

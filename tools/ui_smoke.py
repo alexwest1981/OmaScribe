@@ -1633,6 +1633,78 @@ def main() -> int:
     check(len(ovningsbok.comment(scenen.id, kommentar["id"])["replies"]) == 2,
           "och det hamnar i samma tråd")
 
+    print("\n33. Granska ändringar stycke för stycke (fas 3.2, del 2)")
+
+    from ui.review_dialog import ReviewDialog
+    from core import revisions as rev
+    from core.i18n import _ as tr
+
+    scen = ovningsscen
+    fore = ("<p>Hon gick in i källaren.</p><p>Nyckeln låg på bordet.</p>"
+            "<p>Hon tände lampan.</p>")
+    efter = ("<p>Hon smög in i källaren.</p><p>Nyckeln låg på bordet.</p>"
+             "<p>Hon tände lampan och väntade.</p><p>Dörren stod öppen.</p>")
+    ovningsbok.write(scen.id, fore)
+    ovningsbok.snapshot_scene(scen.id, label="före omskrivningen")
+    ovningsbok.write(scen.id, efter)
+    win._show_scene_html(scen.id, efter)
+
+    ändringar = rev.changes(fore, efter)
+    check([c.kind for c in ändringar] == ["changed", "changed", "added"],
+          f"tre ändringar: två omskrivningar och ett tillägg ({[c.kind for c in ändringar]})")
+
+    # rutan: kryssad rad = behåll, och förhandsvisningen är exakt det som skrivs
+    ruta = ReviewDialog(fore, efter, "testpunkten", win)
+    check(ruta.lst_changes.count() == 3, "rutan visar en rad per ändring")
+    check(all(ruta.lst_changes.item(i).checkState() == Qt.CheckState.Checked
+              for i in range(3)), "och alla är kryssade från början")
+    ny_text = "\n\n".join(rev.plain(b) for b in rev.blocks(efter) if rev.plain(b))
+    gammal_text = "\n\n".join(rev.plain(b) for b in rev.blocks(fore) if rev.plain(b))
+    check(ruta.preview_text() == ny_text, "förhandsvisningen är hela den nya texten")
+    ruta.lst_changes.item(0).setCheckState(Qt.CheckState.Unchecked)
+    check("smög" not in ruta.preview_text() and "gick in i källaren" in ruta.preview_text(),
+          "och ett avkryssat stycke visar den gamla texten")
+    check(ruta.lbl_status.text() == tr("review_status", kept=2, total=3),
+          f"räknaren följer kryssen ({ruta.lbl_status.text()})")
+    ruta._sätt_alla(Qt.CheckState.Unchecked)
+    check(ruta.preview_text() == gammal_text, "ångra alla ger den gamla texten")
+
+    # verkställ: skriver enligt besluten och sparar texten före som egen punkt
+    antal_fore = len(ovningsbok.snapshots().list(str(ovningsbok.scene_path(scen.id))))
+    ruta._sätt_alla(Qt.CheckState.Checked)
+    ruta.lst_changes.item(2).setCheckState(Qt.CheckState.Unchecked)   # avvisa tillägget
+    beslut = ruta.decisions()
+    ruta.apply_requested.connect(lambda b: win._apply_review(fore, efter, b))
+    ruta._apply()
+    check(ovningsbok.read(scen.id) == rev.apply_changes(fore, efter, beslut),
+          "texten är skriven enligt besluten")
+    check("Dörren stod öppen" not in ovningsbok.read(scen.id),
+          "det avvisade tillägget finns inte kvar")
+    check("smög" in ovningsbok.read(scen.id) and "och väntade" in ovningsbok.read(scen.id),
+          "och de behållna ändringarna finns")
+    punkter = ovningsbok.snapshots().list(str(ovningsbok.scene_path(scen.id)))
+    check(len(punkter) == antal_fore + 1 and punkter[0].label == tr("review_before"),
+          f"och texten före granskningen är sparad som punkt ({punkter[0].label!r})")
+    check("smög" in win.editor.document.toPlainText(),
+          "och texten ligger i editorn, inte bara på disk")
+
+    # menyn: utan ändringar öppnas ingen ruta. Först sparas det som står i
+    # editorn (Qt skriver om sin HTML), och sedan tas punkten på just de byten —
+    # annars finns det en ändring att granska, och det är rätt svar.
+    win._flush_scene(quiet=True)
+    ovningsbok.snapshot_scene(scen.id)
+    oppnade = []
+    riktig_exec = ReviewDialog.exec
+    ReviewDialog.exec = lambda self: (oppnade.append(self), 0)[1]
+    win._open_review()
+    ReviewDialog.exec = riktig_exec
+    check(not oppnade, "utan ändringar öppnas ingen granskningsruta")
+    check(win.status_bar.currentMessage() == tr("review_none"),
+          f"och statusfältet säger varför ({win.status_bar.currentMessage()})")
+    ruta.close()
+    win.editor.document.setModified(False)
+    win.is_modified = False
+
     # Arken: ett ark per sida med ett mellanrum där ytan syns, och texten delad
     # mellan rader. Mätt i en riktig rendering, med temats färger.
     from PyQt6.QtCore import QPointF as QtPunkt, QRect as QtRect

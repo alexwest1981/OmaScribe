@@ -1661,9 +1661,13 @@ def main() -> int:
     ny_text = "\n\n".join(rev.plain(b) for b in rev.blocks(efter) if rev.plain(b))
     gammal_text = "\n\n".join(rev.plain(b) for b in rev.blocks(fore) if rev.plain(b))
     check(ruta.preview_text() == ny_text, "förhandsvisningen är hela den nya texten")
+    check(ruta.lst_changes.item(0).text().startswith("✓"),
+          f"och raden visar att den behålls ({ruta.lst_changes.item(0).text()[:12]!r})")
     ruta.lst_changes.item(0).setCheckState(Qt.CheckState.Unchecked)
     check("smög" not in ruta.preview_text() and "gick in i källaren" in ruta.preview_text(),
           "och ett avkryssat stycke visar den gamla texten")
+    check(ruta.lst_changes.item(0).text().startswith("↩"),
+          f"och raden visar att den ångras ({ruta.lst_changes.item(0).text()[:12]!r})")
     check(ruta.lbl_status.text() == tr("review_status", kept=2, total=3),
           f"räknaren följer kryssen ({ruta.lbl_status.text()})")
     ruta._sätt_alla(Qt.CheckState.Unchecked)

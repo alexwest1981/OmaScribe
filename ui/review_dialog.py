@@ -20,6 +20,9 @@ from core.i18n import _
 from core.revisions import apply_changes, blocks, changes, plain
 
 MARK = {"added": "+", "removed": "−", "changed": "~"}
+KEPT = "✓"          # behålls
+REVERTED = "↩"      # ångras — tecknet står i raden, så beslutet syns även om
+                    # kryssrutan ritas svagt (den är formen, inte betydelsen)
 
 
 def _kort(text: str, längd: int = 84) -> str:
@@ -45,7 +48,7 @@ class ReviewDialog(QDialog):
         self.changes = changes(before_html, after_html)
         self.setWindowTitle(_("review_title"))
         self.setModal(True)
-        self.resize(880, 600)
+        self.resize(880, 460)
 
         layout = QVBoxLayout(self)
         if label:
@@ -61,8 +64,7 @@ class ReviewDialog(QDialog):
         övre_layout.addWidget(QLabel(_("review_changes")))
         self.lst_changes = QListWidget()
         for change in self.changes:
-            text = change.after_text or change.before_text
-            item = QListWidgetItem(f"{MARK.get(change.kind, '~')} {_kort(text)}")
+            item = QListWidgetItem(self._rad(change))
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             item.setCheckState(Qt.CheckState.Checked)      # kryssad = behåll
             item.setToolTip(_("review_row_tooltip",
@@ -105,6 +107,14 @@ class ReviewDialog(QDialog):
         layout.addWidget(self.lbl_status)
         self._uppdatera()
 
+    def _rad(self, change) -> str:
+        """Radens text: beslutet först, sedan vad som hände."""
+        i = self.changes.index(change)
+        beslutad = (self.lst_changes.item(i).checkState() == Qt.CheckState.Checked
+                    if self.lst_changes.count() > i else True)
+        text = change.after_text or change.before_text
+        return f"{KEPT if beslutad else REVERTED} {MARK.get(change.kind, '~')} {_kort(text)}"
+
     # ------------------------------------------------------------------ beslut
     def decisions(self) -> list:
         return ["keep" if self.lst_changes.item(i).checkState() == Qt.CheckState.Checked
@@ -122,6 +132,11 @@ class ReviewDialog(QDialog):
 
     def _uppdatera(self) -> None:
         self.visning.setPlainText(self.preview_text())
+        # radens tecken följer beslutet — kryssrutan får inte vara enda beviset
+        self.lst_changes.blockSignals(True)
+        for i, change in enumerate(self.changes):
+            self.lst_changes.item(i).setText(self._rad(change))
+        self.lst_changes.blockSignals(False)
         behåll = sum(1 for d in self.decisions() if d == "keep")
         self.lbl_status.setText(_("review_status", kept=behåll, total=len(self.changes)))
 

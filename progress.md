@@ -379,3 +379,8 @@
   *metodnamn* som kopplas till signaler som måste vara ASCII. Regeln är skriven i Qt-skillen, och
   `python -X faulthandler` pekade ut raden på ett försök.
 - **Kvar i 3.2:** textdiff *inom* ett ändrat stycke (ett omskrivet stycke visas som en helhet).
+
+- **Radens tecken bär beslutet:** skärmdumpen visade att en okryssad rad kunde se tom ut — kryssrutan
+  ritas svagt i den här stilen. Raden inleds nu med ✓ (behålls) eller ↩ (ångras) före ändringstecknet,
+  så beslutet syns även om formen inte gör det. Sett i skärmdump: rad 1 `✓ ~`, rad 2 `↩ +`, och
+  förhandsvisningen stämmer med raderna.

@@ -709,5 +709,7 @@
   "grid_col_revision": "Utkast",
   "grid_draft": "Utkast:",
   "grid_draft_all": "Alla",
-  "grid_count_draft": "{n} av {total} scener i utkast {draft}"
+  "grid_count_draft": "{n} av {total} scener i utkast {draft}",
+  "menu_view_readability": "Markera tunga meningar",
+  "readability_on": "Tunga meningar är markerade — korta dem där det går"
 }

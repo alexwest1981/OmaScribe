@@ -140,6 +140,7 @@ class MainWindow(QMainWindow):
         self.editor.set_page_settings(self.page_settings)
         # Skrivmaskinsläget är ett val användaren gjort förut, inte ett påhitt
         self.editor.set_typewriter_mode(bool(self.config.get("typewriter_mode", False)))
+        self.editor.set_readability_marks(bool(self.config.get("readability_marks", False)))
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
         self.splitter.addWidget(self.editor)
 
@@ -378,6 +379,11 @@ class MainWindow(QMainWindow):
             self.menu_view, _("menu_view_typewriter"), self._toggle_typewriter)
         self.act_view_grid = self._add_action(
             self.menu_view, _("menu_view_grid"), self._toggle_plot_grid)
+        self.act_view_readability = self._add_action(
+            self.menu_view, _("menu_view_readability"), self._toggle_readability)
+        self.act_view_readability.setCheckable(True)
+        self.act_view_readability.setChecked(
+            bool(self.config.get("readability_marks", False)))
         self.act_view_typewriter.setCheckable(True)
         self.act_view_typewriter.setChecked(bool(self.config.get("typewriter_mode", False)))
         self.act_view_scrivenings = self._add_action(
@@ -775,6 +781,19 @@ class MainWindow(QMainWindow):
         vis = not self.sidebar.isVisible()
         self.sidebar.setVisible(vis)
         self.config.set("show_ai_sidebar", vis)
+
+    def _toggle_readability(self) -> None:
+        """Markerar tunga meningar i texten — en läsbarhetsanalys man kan se.
+
+        Meningen är den enhet LIX drivs av, så det är där rådet blir konkret:
+        markeringen visar vilka meningar som är värda att korta. Texten rörs inte.
+        """
+        på = not self.editor.readability_marks()
+        self.editor.set_readability_marks(på)
+        self.act_view_readability.setChecked(på)
+        self.config.set("readability_marks", på)
+        if på:
+            self.status_bar.showMessage(_("readability_on"), 5000)
 
     def _toggle_plot_grid(self) -> None:
         """Växlar mellan manuset och plot-tavlan (samma projekt, annan vy)."""
@@ -1885,6 +1904,7 @@ class MainWindow(QMainWindow):
         self.act_view_sidebar.setText(_("menu_view_ai_sidebar"))
         self.act_view_focus.setText(_("menu_view_focus_mode"))
         self.act_view_grid.setText(_("menu_view_grid"))
+        self.act_view_readability.setText(_("menu_view_readability"))
         self.act_zoom_in.setText(_("menu_view_zoom_in"))
         self.act_zoom_out.setText(_("menu_view_zoom_out"))
         self.act_zoom_reset.setText(_("menu_view_zoom_reset"))

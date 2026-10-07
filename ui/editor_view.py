@@ -14,6 +14,7 @@ from PyQt6.QtGui import (
     QSyntaxHighlighter, QImage, QPixmap, QPen, QBrush, QTextFormat
 )
 from core.i18n import _
+from core.document_stats import DocumentStats, sentence_ranges
 from core.vault import WIKILINK_RE, split_link_target, slugify
 from core import directives, richtext, print_style
 from core.doc_manager import DEFAULT_PAGE_SETTINGS
@@ -73,6 +74,35 @@ class WikiLinkHighlighter(QSyntaxHighlighter):
             self.setFormat(m.start(), m.end() - m.start(), fmt)
 
 
+class ReadabilityHighlighter(QSyntaxHighlighter):
+    """Markerar tunga meningar med en prickad understrykning.
+
+    Målar över texten utan att röra den, precis som wikilänkarna: markeringen
+    hamnar aldrig i scenfilen. Formen (prickad linje) bär betydelsen, färgen
+    bara förstärker — en färgblind författare ser den också. Gränsen är orden
+    per mening, samma sak som driver LIX.
+    """
+
+    def __init__(self, document, max_words: int = 20):
+        super().__init__(document)
+        self.max_words = max_words
+        self.active = False
+        self.colour = QColor("#c2410c")          # uppmärksamhet, inte temats accent
+
+    def set_active(self, on: bool) -> None:
+        self.active = bool(on)
+        self.rehighlight()
+
+    def highlightBlock(self, text: str) -> None:
+        if not self.active or not text.strip():
+            return
+        fmt = QTextCharFormat()
+        fmt.setUnderlineStyle(QTextCharFormat.UnderlineStyle.DotLine)
+        fmt.setUnderlineColor(self.colour)
+        for start, längd in sentence_ranges(text, self.max_words):
+            self.setFormat(start, längd, fmt)
+
+
 class DocumentCanvas(QTextEdit):
     cursor_format_changed = pyqtSignal()
     magic_ai_requested = pyqtSignal(str, QPoint) # (selected_text, global_pos)
@@ -100,6 +130,7 @@ class DocumentCanvas(QTextEdit):
 
         # Wikilänkar: färgning av länkar + förslag när man skriver [[
         self.highlighter = WikiLinkHighlighter(self.document())
+        self.readability = ReadabilityHighlighter(self.document())
         self._link_titles = []
         self._colors = {}          # temafärger för kod- och citatblock
         self._completer_start = 0
@@ -114,6 +145,13 @@ class DocumentCanvas(QTextEdit):
 
     def _on_cursor_changed(self):
         self.cursor_format_changed.emit()
+
+    def set_readability_marks(self, on: bool) -> None:
+        """Slår på markeringen av tunga meningar (R03.17)."""
+        self.readability.set_active(on)
+
+    def readability_marks(self) -> bool:
+        return self.readability.active
 
     def set_page_settings(self, settings: dict):
         if settings:
@@ -726,6 +764,13 @@ class EditorView(QWidget):
         self.typewriter = bool(on)
         if self.typewriter:
             self.paper.center_cursor()
+
+    def set_readability_marks(self, on: bool) -> None:
+        """Vidare till arbetsytan, som äger markeringen (R03.17)."""
+        self.canvas.set_readability_marks(on)
+
+    def readability_marks(self) -> bool:
+        return self.canvas.readability_marks()
 
     def _typewriter_follow(self) -> None:
         if self.typewriter:

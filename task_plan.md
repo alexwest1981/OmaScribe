@@ -14,16 +14,16 @@ taget (`ui/main_window.py:663`). Se `findings.md`.
 
 ## Next Step
 
-Fas 2.14 (övningar mot skrivblock) och 2.15 (läsbarhetsanalys) — 2.11 och 2.13
-är markerade låg. Därefter fas 3 (revision och granskning)
+Fas 2.14 (övningar mot skrivblock), därefter fas 3 (revision och granskning) —
+2.11, 2.13, 2.16 och 2.17 är kvar i fas 2 varav 2.11 och 2.13 är markerade låg
 (tidslinje och plot-tavla) som är nästa större punkt. Rutnätet i 2.9 bygger på
 scenmodellen och på att scenens status redan finns.
 
 ## Current Phase
 
-Fas 2 — Författarlagret (2.1–2.6 och 2.8–2.10, 2.12 klara: skrivloggen, kvot,
-historik, sprintar, skrivmaskinsläget, story biblen, plot-tavlan, samlingen som
-läsvy, revisionsläget).
+Fas 2 — Författarlagret (2.1–2.6, 2.8–2.10, 2.12 och 2.15 klara: skrivloggen,
+kvot, historik, sprintar, skrivmaskinsläget, story biblen, plot-tavlan, samlingen
+som läsvy, revisionsläget, läsbarhetsmarkeringen).
 Fas 0, 0b och 1 är klara. Sedan dess: appskalet följer v0-referensen, och
 pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 
@@ -96,10 +96,10 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 - [x] **2.12** Revisionsläge och mål per utkast: plot-tavlan har en **Utkast**-kolumn (1–9, samma gränser som sceninspektören, redigerbar direkt i tabellen och skriven till manifestet) och ett **utkastfilter** — välj utkast 2 och tabellen visar bara de scener som nått dit, med räkningen "1 av 3 scener i utkast 2". Det är revisionsläget: arbetet blir en lista i stället för ett helt manus. *Målet per utkast* blev räkningen i stället för ett talfält per utkast — målet för ett utkast är att scenerna har nått det, och nio målfält som ingen fyller i är sämre än en siffra som stämmer. Vill du ha egna ordmål per utkast är det ett fält i projektdialogen; säg till. R03.13
 - [ ] **2.13** Blurb och synopsis som projektfält. R03.15 — *låg*
 - [ ] **2.14** Övningar mot skrivblock ("vad händer nu?"). R03.16
-- [ ] **2.15** Läsbarhetsanalys och stilråd i texten (LIX finns, markeringar saknas). R03.17
+- [x] **2.15** Läsbarhetsanalys och stilråd i texten: LIX fanns i `core/document_stats.py` och visades i panelen, men ingenstans i texten. Nu finns `sentence_ranges(text, max_words=20)` (ren funktion, eget självprov) och `ReadabilityHighlighter` i editorn, som markerar tunga meningar med en **prickad understrykning** — formen bär betydelsen, färgen förstärker. Markeringen är en *vy*-format (som kommentarerna): texten rörs inte och inget hamnar i scenfilen. Slås på i Visa-menyn och kommer ihåg sig i configen. Valet av enhet är inte slumpat: meningen är det LIX drivs av, så markeringen visar precis det rådet gäller. R03.17
 - [ ] **2.16** Projektöversikt och anteckningar (valvet som projektlager, taggar/properties). R03.18
 - [ ] **2.17** Projektinstruktioner: per-projekt kontext för AI:n. R04.18
-- **Status:** in progress (2.1–2.6 och 2.8–2.10, 2.12 klara och grindade)
+- **Status:** in progress (2.1–2.6, 2.8–2.10, 2.12 och 2.15 klara och grindade)
 
 ### Fas 3: Revision och granskning
 
@@ -198,6 +198,13 @@ kontrollistan när faserna är klara.
 - [ ] Kanalprofiler, eftersom mått, blöd och metadataregler skiljer sig. R05
 
 ## Att åtgärda senare (rapporterat av Alex, ej gjort)
+
+- [ ] **Teckensnittsväljaren visar menyrubriken i stället för typsnittet.** Sett i skärmdump
+      2026-10-07: rutan visar "—— ⭐ Popular Writing Fonts ——" tills man väljer ett typsnitt.
+      `populate_fonts` lägger rubrikerna först i listan, och ingen väljer den aktuella skriften
+      vid start — index står kvar på rubriken. Fixen är att ställa in den aktuella familjen
+      efter `populate_fonts` (eller att göra rubrikerna ovalbara).
+
 
 - [ ] **Rökprovet kraschar ibland i städningen (signal 11) efter grön resultatrad.** Sett 2 gånger
       2026-10-07 (gate35 och gate39), aldrig tidigare i någon gate-logg. Alla 376 kontroller är

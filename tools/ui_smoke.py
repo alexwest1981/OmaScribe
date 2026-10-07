@@ -1292,6 +1292,37 @@ def main() -> int:
     check(win.stack.currentIndex() == 1, "och vägen tillbaka går till manuset")
     win._deactivate_project()
 
+    print("\n27. Tunga meningar markeras (fas 2.15)")
+
+    canvas = win.editor.canvas
+    tung = ("Kort mening. Den här meningen är avsiktligt tung och innehåller betydligt fler "
+            "ord än tjugo stycken, vilket är precis vad LIX reagerar på. Kort igen.")
+    canvas.setPlainText(tung)
+    for _ in range(3):
+        app.processEvents()
+    texten = canvas.toPlainText()
+    layout = canvas.document().firstBlock().layout()
+
+    win.editor.set_readability_marks(False)
+    for _ in range(2):
+        app.processEvents()
+    check(len(layout.formats()) == 0, "inga markeringar när läget är av")
+    win.editor.set_readability_marks(True)
+    for _ in range(3):
+        app.processEvents()
+    check(len(layout.formats()) == 1,
+          f"och den tunga meningen markeras ({len(layout.formats())} format)")
+    check(canvas.toPlainText() == texten,
+          "markeringen rör inte texten — inget hamnar i scenfilen")
+    win.editor.set_readability_marks(False)
+    for _ in range(3):
+        app.processEvents()
+    check(len(layout.formats()) == 0, "och markeringen försvinner när läget slås av")
+    check(win.config.get("readability_marks") in (True, False),
+          f"valet sparas i configen ({win.config.get('readability_marks')})")
+    canvas.document().setModified(False)
+    win.is_modified = False
+
     # Arken: ett ark per sida med ett mellanrum där ytan syns, och texten delad
     # mellan rader. Mätt i en riktig rendering, med temats färger.
     from PyQt6.QtCore import QPointF as QtPunkt, QRect as QtRect

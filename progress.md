@@ -215,3 +215,20 @@
   stämmer — egna ordmål per utkast är ett fält i projektdialogen den dag de saknas.
 - Mätt i provet: filtret ger 1 rad av 3 och rätt räkning, alla utkast visar dem igen,
   utkastnumret skrivs till modellen, och ett skrivet 99 stannar på 9.
+
+### Fas 2.15: tunga meningar markeras i texten
+
+- **Status:** complete, grindad (386 rökprov + 54 renhetsprov, plus läsbarhetens eget självprov).
+- LIX fanns i `core/document_stats.py` och visades som en siffra i panelen, men ingenstans i
+  texten — rådet gick inte att agera på. Nu markerar `ReadabilityHighlighter` tunga meningar
+  med en prickad understrykning. Formen bär betydelsen (en färgblind författare ser den), och
+  markeringen är en *vy*-format som kommentarerna: texten rörs inte och inget hamnar i filen.
+- Enheten är meningen, inte ordet: det är orden per mening LIX drivs av, så markeringen visar
+  precis det rådet gäller. Tröskeln är 20 ord.
+- `sentence_ranges(text, max_words)` är ren och har eget självprov (5 kontroller), och grinden
+  kör `core.document_stats`.
+- Mätt i provet: noll format när läget är av, ett när det är på, noll igen när det slås av —
+  och texten är tecken för tecken oförändrad. Sett i skärmdump: de två långa meningarna bär
+  den prickade linjen, de korta gör det inte.
+- Skärmdumpen avslöjade en gammal skönhetsfläck som nu står i listan: teckensnittsväljaren visar
+  menyrubriken "—— ⭐ Popular Writing Fonts ——" i stället för typsnittet tills man väljer ett.

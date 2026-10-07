@@ -709,5 +709,7 @@
   "grid_col_revision": "Draft",
   "grid_draft": "Draft:",
   "grid_draft_all": "All",
-  "grid_count_draft": "{n} of {total} scenes in draft {draft}"
+  "grid_count_draft": "{n} of {total} scenes in draft {draft}",
+  "menu_view_readability": "Mark heavy sentences",
+  "readability_on": "Heavy sentences are marked — shorten where you can"
 }

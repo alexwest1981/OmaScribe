@@ -19,16 +19,12 @@ from core import directives, richtext, print_style
 from core.doc_manager import DEFAULT_PAGE_SETTINGS
 from ui.chrome import set_tracking
 
-# Papprets mått. Referensen har 750px bred sida; A4 är 1:√2, alltså 750 × 1060.
-# Ramens inre marginal är papprets marginal, och den synliga sidan inuti pappret
-# är det som sidmärkena räknar — därför räknas CANVAS_PAGE_PX fram ur dem i
-# stället för att skrivas som ett eget tal någon annanstans.
-PAGE_WIDTH_PX = 750
-PAGE_MARGIN_X = 52
-PAGE_MARGIN_TOP = 34
-PAGE_MARGIN_BOTTOM = 42
-PAGE_HEIGHT_PX = 1060
-CANVAS_PAGE_PX = PAGE_HEIGHT_PX - PAGE_MARGIN_TOP - PAGE_MARGIN_BOTTOM
+# Papprets mått och ark-kolumnen bor i ui/paged_paper.py; namnen importeras hit
+# så att den som redan läser dem härifrån (och proven) fortsätter att hitta dem.
+from ui.paged_paper import (                     # noqa: E402
+    CANVAS_PAGE_PX, PAGE_HEIGHT_PX, PAGE_MARGIN_BOTTOM, PAGE_MARGIN_TOP,
+    PAGE_MARGIN_X, PAGE_WIDTH_PX, PagedPaper,
+)
 
 
 class WikiLinkHighlighter(QSyntaxHighlighter):
@@ -101,7 +97,6 @@ class DocumentCanvas(QTextEdit):
 
         # Sidlayout och sidnummer
         self.page_settings = DEFAULT_PAGE_SETTINGS.copy()
-        self.paged_view_enabled = True
 
         # Wikilänkar: färgning av länkar + förslag när man skriver [[
         self.highlighter = WikiLinkHighlighter(self.document())
@@ -374,130 +369,39 @@ class DocumentCanvas(QTextEdit):
             cursor.endEditBlock()
         self.setTextCursor(cursor)
 
-    # ---------------------------------------------------------------- Siduppdelning & Sidnummer
-    #
-    # Pappret är en sammanhängande yta och texten flödar fritt över den (som i
-    # en vanlig editor), så en sida ritas som ett märke vid papprets innermått:
-    # sidnumret i foten och — mellan två ark — en synlig brytning. Brytningen
-    # tonar över texten i stället för att dölja den: orden som korsar den är
-    # kvar och läsbara, men det syns att arket tar slut och nästa börjar.
-    PAGE_SEAM_PX = 9            # brytningens halva höjd
-    SEAM_ALPHA_TEXT = 100       # över textkolumnen (texten ska synas igenom)
-    SEAM_ALPHA_MARGIN = 235     # i sidmarginalen (där finns ingen text)
+    # ------------------------------------------------------------- skrollning
+    def scrollContentsBy(self, dx, dy):
+        """Editorn står alltid på sitt arks första rad.
 
-    def _page_geometry(self):
-        """(antal sidor, sidhöjd, skrolläge, viewportens bredd, höjd) eller None."""
-        doc = self.document()
-        vp = self.viewport()
-        if doc is None or vp is None:
-            return None
-        page_h = self.PAGE_HEIGHT_PX
-        count = max(1, int(math.ceil(doc.size().height() / float(page_h))))
-        sb = self.verticalScrollBar()
-        return count, page_h, (sb.value() if sb is not None else 0), vp.width(), vp.height()
-
-    def paintEvent(self, e):
-        super().paintEvent(e)
-
-        # Sidnummer och arkens brytningar ritas ovanpå texten
-        if not self.paged_view_enabled:
-            return
-        geo = self._page_geometry()
-        if geo is None:
-            return
-        count, page_h, scroll_y, vp_w, _vp_h = geo
-
-        painter = QPainter(self.viewport())
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
-        try:
-            for i in range(count):
-                page_bottom_y = int((i + 1) * page_h - scroll_y)
-                self._paint_page_number(painter, i, count, page_bottom_y, vp_w)
-                if i < count - 1:
-                    self._paint_page_seam(painter, page_bottom_y, vp_w)
-        finally:
-            painter.end()
-
-    def _paint_page_seam(self, painter: QPainter, y: int, vp_w: int) -> None:
-        """Brytningen mellan två ark: ett grått band över hela pappret, tydligt
-        i sidmarginalerna (där ingen text finns) och tonat över textkolumnen."""
-        h = self.PAGE_SEAM_PX
-        kolumn = max(1, int(self.document().documentMargin()))
-        band = (
-            (0, kolumn, self.SEAM_ALPHA_MARGIN),
-            (kolumn, vp_w - 2 * kolumn, self.SEAM_ALPHA_TEXT),
-            (vp_w - kolumn, kolumn, self.SEAM_ALPHA_MARGIN),
-        )
-        for x, w, alpha in band:
-            if w <= 0:
-                continue
-            ton = QLinearGradient(0.0, float(y - h), 0.0, float(y + h))
-            genomskinlig = QColor(print_style.PAPER_TINT_STRONG)
-            genomskinlig.setAlpha(0)
-            mitt = QColor(print_style.PAPER_RULE)
-            mitt.setAlpha(alpha)
-            ton.setColorAt(0.0, genomskinlig)
-            ton.setColorAt(0.5, mitt)
-            ton.setColorAt(1.0, genomskinlig)
-            painter.fillRect(QRectF(float(x), float(y - h), float(w), float(2 * h)), QBrush(ton))
-
-        # Arkets kant: en tunn linje över pappret
-        kant = QColor(print_style.PAPER_RULE)
-        kant.setAlpha(140)
-        painter.setPen(QPen(kant, 1.0))
-        painter.drawLine(0, y, vp_w, y)
-
-    def _paint_page_number(self, painter: QPainter, i: int, count: int,
-                           page_bottom_y: int, vp_w: int) -> None:
-        """Sidnumret vid arkets slut, som en bricka i papprets sidmarginal.
-
-        Texten flödar fritt över pappret, så det finns ingen tom fot att sätta
-        siffran i — därför ligger den i marginalen, där ingen text finns. Ett
-        långt format ("Sida 38 av 39") får inte plats där och kortas då till
-        siffran; inställningen gäller oförändrat för utskrift och export.
+        Qt skrollar själv för att visa markören (också när markören sätts
+        programmatiskt), vilket skulle flytta texten inne i arket. Varje sådan
+        skrollning rättas direkt av pappret i stället.
         """
-        if not self.page_settings.get("page_numbering", True):
+        super().scrollContentsBy(dx, dy)
+        papper = self.parentWidget()
+        if getattr(self, "_rattar_skroll", False) or not hasattr(papper, "_sync_scroll"):
             return
-        page_num = i + 1
-        if bool(self.page_settings.get("skip_first_page", False)) and i == 0:
+        self._rattar_skroll = True
+        try:
+            papper._sync_scroll()
+        finally:
+            self._rattar_skroll = False
+
+    def wheelEvent(self, e):
+        """Hjulet över texten ska skrolla pappret, inte det enskilda arket."""
+        papper = self.parentWidget()
+        if hasattr(papper, "wheelEvent"):
+            papper.wheelEvent(e)
             return
+        super().wheelEvent(e)
 
-        fmt_type = self.page_settings.get("page_number_format", "page_of_total")
-        if fmt_type == "number":
-            page_str = str(page_num)
-        elif fmt_type == "hyphen":
-            page_str = f"— {page_num} —"
-        elif fmt_type == "slash":
-            page_str = f"{page_num} / {count}"
-        else:
-            page_str = _("pdf_page_n_of_total", n=page_num, total=count)
-
-        num_pos = str(self.page_settings.get("page_number_pos", "bottom-center"))
-        if num_pos in ("bottom-alternating", "top-alternating"):
-            höger = (page_num % 2 == 1)
-        elif "left" in num_pos:
-            höger = False
-        else:
-            höger = True          # center/right: högermarginalen (där är närmast)
-
-        font = QFont("sans-serif", 9)
-        painter.setFont(font)
-        marginal = max(20.0, float(self.document().documentMargin()))
-        for kand in (page_str, str(page_num)):
-            bredd = QFontMetricsF(font).horizontalAdvance(kand) + 12.0
-            if bredd <= marginal - 4.0:
-                page_str = kand
-                break
-        y = float(page_bottom_y - 26)
-        x = (vp_w - bredd - 2.0) if höger else 2.0
-
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QBrush(QColor(print_style.PAPER_TINT)))
-        painter.drawRoundedRect(QRectF(x, y, bredd, 18.0), 9.0, 9.0)
-        painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.setPen(QColor(print_style.PAPER_MUTED))
-        painter.drawText(QRectF(x, y, bredd, 18.0), Qt.AlignmentFlag.AlignCenter, page_str)
+    def ensureCursorVisible(self):
+        """Ytan skrollar inte själv — arken äger skrollningen, så be pappret."""
+        papper = self.parentWidget()
+        if hasattr(papper, "ensure_cursor_visible"):
+            papper.ensure_cursor_visible()
+            return
+        super().ensureCursorVisible()
 
     # ---------------------------------------------------------------- markeringar
 
@@ -793,23 +697,12 @@ class EditorView(QWidget):
         meta_hall.addStretch(1)
         stage_layout.addLayout(meta_hall, 0)
 
-        # Page Container (Simulating A4 paper)
-        self.page_frame = QFrame()
-        self.page_frame.setObjectName("PageFrame")
-        # A4 tar A4-plats: bredden är fast, den krymper inte med fönstret —
-        # blir fönstret smalare får ytan skrolla i stället.
-        self.page_frame.setFixedWidth(PAGE_WIDTH_PX)
-        self.page_frame.setMinimumHeight(PAGE_HEIGHT_PX)
-        self.page_frame.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
-
-        page_layout = QVBoxLayout(self.page_frame)
-        # Referensens inre marginal är 70px upp och 88px i sidled. Dokumentet
-        # har redan 36px egen marginal, så ramen lägger till resten.
-        page_layout.setContentsMargins(PAGE_MARGIN_X, PAGE_MARGIN_TOP,
-                                       PAGE_MARGIN_X, PAGE_MARGIN_BOTTOM)
-
-        self.canvas = DocumentCanvas(self.page_frame)
-        page_layout.addWidget(self.canvas)
+        # Pappret: ett ark per sida, med editorn i det ark markören står i.
+        # `page_frame` behålls som namn — appen och proven känner igen det.
+        self.canvas = DocumentCanvas()
+        self.page_frame = PagedPaper(self.canvas, theme_mgr)
+        self.paper = self.page_frame
+        self.paper.scroll_area = self.scroll_area
 
         sida_hall = QHBoxLayout()
         sida_hall.setContentsMargins(0, 0, 0, 0)
@@ -842,6 +735,7 @@ class EditorView(QWidget):
 
     def set_page_settings(self, settings: dict):
         self.canvas.set_page_settings(settings)
+        self.paper.set_page_settings(settings)
 
     def apply_theme(self):
         c = self.theme_mgr.current
@@ -850,19 +744,23 @@ class EditorView(QWidget):
         # Själva pappret är alltid vitt med svart text — appens tema får färga
         # ramen omkring, aldrig arket. Då ser dokumentet likadant ut på skärmen
         # som i PDF:en, och ingen temafärg kan smitta en export.
-        self.page_frame.setStyleSheet(f"""
-            #PageFrame {{
-                background-color: {paper['canvas_bg']};
-                border: 0;
-            }}
-        """)
+        self.paper.apply_theme()
+        # Editorn är arket, inte ett inmatningsfält: ingen kant och ingen blå
+        # fokusring mitt på pappret (den app-vida stilen ger alla QTextEdit en).
         self.canvas.setStyleSheet(f"""
-            background-color: {paper['canvas_bg']};
-            color: {paper['text_color']};
-            selection-background-color: {c['accent']};
-            selection-color: #ffffff;
-            font-size: 13pt;
-            line-height: 1.5;
+            QTextEdit, QTextEdit:focus {{
+                background-color: {paper['canvas_bg']};
+                color: {paper['text_color']};
+                border: 0;
+                border-radius: 0;
+                padding: 0;
+            }}
+            QTextEdit {{
+                selection-background-color: {c['accent']};
+                selection-color: #ffffff;
+                font-size: 13pt;
+                line-height: 1.5;
+            }}
         """)
         pal = self.canvas.palette()
         pal.setColor(QPalette.ColorRole.Base, QColor(paper["canvas_bg"]))

@@ -1031,44 +1031,75 @@ def main() -> int:
     check(not win.topbar.btn_undo.icon().isNull(), "Ångra i topbaren har en ikon")
     check(win.topbar.btn_file.icon().isNull() is False, "och dokumentknappen med")
 
-    # Arkets slut: brytningen ritas vid papprets innermått, mätt i en riktig
-    # rendering. Egen yta med temats färger (fönstret i rökprovet har ingen
-    # utlagd geometri) — falsifierbart: ingenting ritas när sidvisningen är av.
+    # Arken: ett ark per sida med ett mellanrum där ytan syns, och texten delad
+    # mellan rader. Mätt i en riktig rendering, med temats färger.
+    from PyQt6.QtCore import QPointF as QtPunkt, QRect as QtRect
     from ui.editor_view import DocumentCanvas
-    from PyQt6.QtCore import QRect as QtRect
+    from ui.paged_paper import PagedPaper, PAGE_WIDTH_PX, PAGE_HEIGHT_PX
     theme_mgr.apply_theme_to_app(app)
-    ark = DocumentCanvas()
-    ark.resize(646, 1200)
+
+    ark_canvas = DocumentCanvas()
+    ark = PagedPaper(ark_canvas, theme_mgr)
+    ark.resize(PAGE_WIDTH_PX, PAGE_HEIGHT_PX)
     ark.show()
     mening = "En mening med några ord, så att raden blir lagom lång. "
-    for stycken in (60, 240):                       # säkert över två sidor
-        ark.setHtml("<p>" + mening * stycken + "</p>")
-        for _ in range(3):
-            app.processEvents()
-        if ark.document().size().height() > ark.PAGE_HEIGHT_PX + 60:
-            break
-    brytningsrad = 150                              # mitten av den avlånga bilden
+    ark_canvas.setHtml("<p>" + mening * 240 + "</p>")
+    ark.refresh()
+    for _ in range(3):
+        app.processEvents()
 
-    def gråa_i_marginalen(bild, rad: int) -> int:
-        """Gråa pixlar i papprets vänstermarginal (x < textkolumnens kant, så
-        bokstäverna aldrig räknas in). -1 om raden ligger utanför bilden."""
-        if not (0 <= rad < bild.height()):
-            return -1
-        return sum(1 for x in range(4, 30) if bild.pixelColor(x, rad).lightness() < 250)
+    check(len(ark.pages) >= 2, f"lång text ger flera ark ({len(ark.pages)} stycken)")
+    check(ark.total_height() >= 2 * PAGE_HEIGHT_PX,
+          f"och pappret blir högre än ett ark ({ark.total_height()})")
 
-    rutan = QtRect(0, ark.PAGE_HEIGHT_PX - brytningsrad, ark.width(), 300)
-    bild = ark.grab(rutan).toImage()
-    vid = gråa_i_marginalen(bild, brytningsrad)
-    ovan = gråa_i_marginalen(bild, brytningsrad - 60)
-    check(vid > 0 and ovan == 0,
-          f"arkets slut syns som en brytning i papprets marginal ({vid} gråa px, {ovan} ovanför)")
+    # Texten delas vid radslut: varje ark rymmer bara sin egen text
+    delad = ark._page_height(0) <= CANVAS_PAGE_PX and len(ark.pages) > 1
+    inga_korsande = all(ark.pages[i] < ark.pages[i + 1] for i in range(len(ark.pages) - 1))
+    check(delad and inga_korsande, "texten delas vid radslut mellan arken")
 
-    ark.paged_view_enabled = False
+    # Mellanrummet mellan två ark visar ytan runt pappret, inte papper
+    bild = ark.grab().toImage()
+    yta = QColor(theme_mgr.tokens()["window_bg"]).name()
+    mellan = QtRect(0, int(ark.sheet_rect(0).bottom()) + 6, ark.width(), 1)
+    inne_i_arket = QtRect(0, int(ark.sheet_rect(0).y()) + 200, ark.width(), 1)
+    if mellan.y() + 8 < bild.height():
+        glapp = bild.pixelColor(300, mellan.y() + 4).name()
+        papper = bild.pixelColor(300, inne_i_arket.y()).name()
+        check(glapp == yta and papper != yta,
+              f"mellanrummet visar ytan ({glapp}) och arket är papper ({papper})")
+    else:
+        check(False, "mellanrummet hamnade utanför bilden")
+
+    # Editorn sitter i det aktiva arkets innermått
+    ruta = ark.content_rect(ark.active)
+    geo = ark_canvas.geometry()
+    check(abs(geo.x() - ruta.x()) <= 1 and abs(geo.y() - ruta.y()) <= 1,
+          f"editorn ligger i det aktiva arkets innermått ({geo.x()},{geo.y()})")
+    check(geo.height() <= CANVAS_PAGE_PX,
+          f"och bara så högt som arkets text ({geo.height()})")
+
+    # Klick i ett annat ark flyttar markören och editorn dit
+    ark.place_cursor(1, QtPunkt(300.0, ark.content_rect(1).y() + 40.0))
     for _ in range(2):
         app.processEvents()
-    utan = gråa_i_marginalen(ark.grab(rutan).toImage(), brytningsrad)
-    ark.paged_view_enabled = True
-    check(utan == 0, "och ingenting ritas när sidvisningen är avstängd")
+    ark.canvas.setFocus()
+    check(ark.active == 1, "klick i ark 2 gör det till det aktiva arket")
+    check(abs(ark_canvas.geometry().y() - ark.content_rect(1).y()) <= 1,
+          "och editorn flyttar in i ark 2")
+    check(ark_canvas.verticalScrollBar().value() == int(ark.pages[1]),
+          "med texten från arkets första rad")
+
+    # Arkets fot: sidnumret står där, i tomrummet under texten
+    ark.set_page_settings({"page_numbering": True, "page_number_format": "page_of_total",
+                           "page_number_pos": "bottom-center"})
+    ark.refresh()
+    for _ in range(2):
+        app.processEvents()
+    fot = ark.grab(QtRect(0, int(ark.sheet_rect(0).bottom()) - PAGE_MARGIN_BOTTOM,
+                          ark.width(), PAGE_MARGIN_BOTTOM)).toImage()
+    mörka = sum(1 for x in range(0, fot.width(), 2) for y in range(0, fot.height(), 2)
+                if fot.pixelColor(x, y).lightness() < 200)
+    check(mörka > 0, f"sidnumret ritas i arkets fot ({mörka} mörka punkter)")
 
     print("\n" + "=" * 66)
     if failures:

@@ -195,6 +195,18 @@ kontrollistan när faserna är klara.
 - [ ] Tillgänglighetsmetadata kan anges (accessMode, accessibilityFeature, accessibilityHazard). R05
 - [ ] Kanalprofiler, eftersom mått, blöd och metadataregler skiljer sig. R05
 
+## Att åtgärda senare (rapporterat av Alex, ej gjort)
+
+- [ ] **Teckensnittsväljarens meny spränger hela fönstret.** Rapporterat 2026-10-07 med skärmdump:
+      popupen ligger mitt på skärmen, från toppbaren ned till statusfältet, med två stora tomma
+      fält högst upp och en blå knapp med bara en ikon längst ned; statusfältets text klipps
+      ("…ord idag"). Koden: `core/font_manager.py` `FontSelectorComboBox.__init__` —
+      `setView(QListView(self))`, `setMaxVisibleItems(14)`, `FontItemDelegate` som ritar varje rad
+      i sitt eget typsnitt. Grannmenyn `combo_size` (`ui/toolbar.py`) har samma `setView` men ingen
+      delegat och uppför sig. Mät före ändring: `list_view.sizeHint()`, delegatens `sizeHint()` per
+      rad, popupens `geometry()` efter `showPopup()` — `setMaxVisibleItems` räknar rader, och en hög
+      rad gör 14 rader högre än skärmen.
+
 ## Designkrav (fallgropar som styr bygget)
 
 - [ ] Visa källpassager; låt aldrig AI-genererade fakta bli kanon automatiskt. R04

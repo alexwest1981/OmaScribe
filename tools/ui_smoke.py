@@ -666,6 +666,78 @@ def main() -> int:
     win._deactivate_project()
     check(win.codex is None, "codex stängs när projektet lämnas")
 
+    print("\n18. Redigering i läsvyn (R01.9)")
+    import os as _os
+    from PyQt6.QtGui import QTextCursor
+    from core.project import SCENE as SCEN
+    mapp = Path(tempfile.mkdtemp(prefix="lasvy-")) / "Läsboken"
+    lbok = NyBok.create(mapp, "Läsboken", template="enkel")
+    kap = lbok.children(None)[0]
+    s1 = lbok.children(kap.id)[0]
+    lbok.write(s1.id, "<p>Alfa beta.</p>")
+    s2 = lbok.add_node(SCEN, "Scen två", parent=kap.id)
+    lbok.write(s2.id, "<p>Gamma delta.</p>")
+    win._activate_project(lbok)
+    win.binder.select_node(s1.id)
+    check(win.active_canvas is win.editor.canvas,
+          "utan läsvyn skriver kommandona i editorn")
+
+    tider = {n.id: _os.path.getmtime(lbok.path_of(n)) for n in (s1, s2)}
+    win._toggle_scrivenings()
+    check(win.active_canvas is win.scrivenings.pane,
+          "med läsvyn uppe tar kommandona läsvyn")
+    check(not win.toolbar.isEnabled(), "verktygsraden är avstängd i läsvyn")
+    check(not win.act_ins_image.isEnabled(), "och infogningar likaså")
+    check(not win.scrivenings.pane.isReadOnly(), "men texten går att skriva i")
+    check(win.stack.currentWidget() is win.scrivenings,
+          "och läsvyn är den vy som visas")
+    check(win.scrivenings.pane.focusPolicy() != QtNS.FocusPolicy.NoFocus,
+          "skrivytan kan ta fokus")
+
+    # en läsning utan ändringar rör ingen fil
+    win._close_scrivenings()
+    check(_os.path.getmtime(lbok.path_of(s2)) == tider[s2.id],
+          "en läsning utan ändringar rör inte scenerna")
+    check(lbok.read(s2.id) == "<p>Gamma delta.</p>",
+          f"och texten står kvar orörd ({lbok.read(s2.id)!r})")
+    check(win.toolbar.isEnabled(), "och verktygsraden kommer tillbaka")
+
+    # skriv i en scen, stäng vyn, texten skall ligga i rätt fil
+    win._toggle_scrivenings()
+    pane = win.scrivenings.pane
+    sista = None
+    for block in win.scrivenings._iter_marked(s1.id):
+        sista = block
+    cursor = QTextCursor(sista)
+    cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)
+    cursor.insertText(" Ett tillägg.")
+    check("Ett tillägg." in pane.toPlainText(), "texten står i vyn")
+    check("Ett tillägg." not in lbok.read(s1.id), "men inte i filen än")
+    win._close_scrivenings()
+    check("Ett tillägg." in lbok.read(s1.id), "tillägget hamnar i scenen jag skrev i")
+    check("Gamma delta." in lbok.read(s2.id) and "Ett tillägg." not in lbok.read(s2.id),
+          "och grannscenen är orörd")
+    check(lbok.words(s1.id) == 4, f"ordantalet räknas om ({lbok.words(s1.id)})")
+    check("4" in win.binder._item_for(s1.id).text(),
+          f"och syns i trädet ({win.binder._item_for(s1.id).text()!r})")
+
+    # Ångra och klipp-och-klistra följer den yta som har fokus
+    win._toggle_scrivenings()
+    pane = win.scrivenings.pane
+    cursor = pane.textCursor()
+    cursor.movePosition(QTextCursor.MoveOperation.End)
+    cursor.insertText(" XYZ")
+    check("XYZ" in pane.toPlainText(), "ny text i vyn")
+    win.act_undo.trigger()
+    check("XYZ" not in pane.toPlainText(), "Ångra tar bort den igen")
+    check("XYZ" not in win.editor.document.toPlainText(), "och rör inte editorns text")
+    win.act_select_all.trigger()
+    check(pane.textCursor().hasSelection(), "Markera allt markerar läsvyns text")
+    win._close_scrivenings()
+    check(not win.editor.document.toPlainText().startswith("Alfa beta. Ett tillägg."),
+          "stängningen lämnar tillbaka till editorn")
+    win._deactivate_project()
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

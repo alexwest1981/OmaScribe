@@ -273,13 +273,13 @@ class MainWindow(QMainWindow):
 
         # Edit Menu
         self.menu_edit = mb.addMenu(_("menu_edit"))
-        self.act_undo = self._add_action(self.menu_edit, _("menu_edit_undo"), self.editor.canvas.undo, "Ctrl+Z")
-        self.act_redo = self._add_action(self.menu_edit, _("menu_edit_redo"), self.editor.canvas.redo, "Ctrl+Y")
+        self.act_undo = self._add_action(self.menu_edit, _("menu_edit_undo"), lambda: self.active_canvas.undo(), "Ctrl+Z")
+        self.act_redo = self._add_action(self.menu_edit, _("menu_edit_redo"), lambda: self.active_canvas.redo(), "Ctrl+Y")
         self.menu_edit.addSeparator()
-        self.act_cut = self._add_action(self.menu_edit, _("menu_edit_cut"), self.editor.canvas.cut, "Ctrl+X")
-        self.act_copy = self._add_action(self.menu_edit, _("menu_edit_copy"), self.editor.canvas.copy, "Ctrl+C")
-        self.act_paste = self._add_action(self.menu_edit, _("menu_edit_paste"), self.editor.canvas.paste, "Ctrl+V")
-        self.act_select_all = self._add_action(self.menu_edit, _("menu_edit_select_all"), self.editor.canvas.selectAll, "Ctrl+A")
+        self.act_cut = self._add_action(self.menu_edit, _("menu_edit_cut"), lambda: self.active_canvas.cut(), "Ctrl+X")
+        self.act_copy = self._add_action(self.menu_edit, _("menu_edit_copy"), lambda: self.active_canvas.copy(), "Ctrl+C")
+        self.act_paste = self._add_action(self.menu_edit, _("menu_edit_paste"), lambda: self.active_canvas.paste(), "Ctrl+V")
+        self.act_select_all = self._add_action(self.menu_edit, _("menu_edit_select_all"), lambda: self.active_canvas.selectAll(), "Ctrl+A")
 
         # View Menu
         self.menu_view = mb.addMenu(_("menu_view"))
@@ -395,6 +395,28 @@ class MainWindow(QMainWindow):
         self.status_bar.setVisible(False)
         self.setWindowTitle(_("app_name"))
 
+    @property
+    def active_canvas(self):
+        """Skrivytan som tar emot kommandon: läsvyn om den är öppen, annars editorn.
+
+        Det som bara finns i editorn (verktygsraden, infogningar, direktiv) är i
+        stället avstängt så länge läsvyn är uppe — se _sync_reading_mode. Ett
+        halvt läge som formaterar fel scen vore värre än inget (R01.9).
+        """
+        if self.stack.currentIndex() == getattr(self, "_scrivenings_index", -1):
+            return self.scrivenings.pane
+        return self.editor.canvas
+
+    def _sync_reading_mode(self, reading: bool) -> None:
+        """Stänger av det som hör till editorn medan läsvyn är uppe."""
+        if self.toolbar is not None:
+            self.toolbar.setEnabled(not reading)
+        for name in ("act_ins_page_break", "act_ins_image", "act_ins_chart",
+                     "act_ins_table", "act_ins_template", "act_ins_divider"):
+            action = getattr(self, name, None)
+            if action is not None:
+                action.setEnabled(not reading)
+
     def show_editor_screen(self):
         self.stack.setCurrentIndex(1)
         self.toolbar.setVisible(True)
@@ -430,12 +452,13 @@ class MainWindow(QMainWindow):
             self.act_lang_en.setChecked(curr == "en")
 
     def _zoom_in(self):
-        self.editor.canvas.zoomIn(1)
+        self.active_canvas.zoomIn(1)
 
     def _zoom_out(self):
-        self.editor.canvas.zoomOut(1)
+        self.active_canvas.zoomOut(1)
 
     def _zoom_reset(self):
+        # Typsnittet är dokumentets standard, inte vyens: därför editorn.
         font = self.editor.canvas.font()
         font.setPointSize(self.config.get("default_font_size", 12))
         self.editor.canvas.setFont(font)
@@ -783,6 +806,7 @@ class MainWindow(QMainWindow):
     def _deactivate_project(self):
         """Lämnar projektläget. Projektet ligger kvar på disk."""
         if self.project is not None:
+            self._flush_scrivenings()
             self._flush_scene(quiet=True)
         self._close_codex()
         self.project = None
@@ -792,6 +816,7 @@ class MainWindow(QMainWindow):
         self.scene_inspector.set_scene(None, None)
         self.act_view_scrivenings.setEnabled(False)
         if self.stack.currentIndex() == getattr(self, "_scrivenings_index", -1):
+            self._sync_reading_mode(False)
             self.show_editor_screen()
 
     def _flush_scene(self, quiet: bool = False) -> bool:
@@ -816,7 +841,14 @@ class MainWindow(QMainWindow):
             return False
 
     def _load_scene(self, node_id):
-        if self.project is None or node_id == self.active_scene_id:
+        if self.project is None:
+            return
+        if self.stack.currentIndex() == getattr(self, "_scrivenings_index", -1):
+            # En scen väljs medan läsvyn står uppe: texten skrivs tillbaka först,
+            # annars skriver vyn över det som just valdes.
+            self._flush_scrivenings()
+            self.show_editor_screen()
+        if node_id == self.active_scene_id:
             return
         if not self._flush_scene(quiet=True):
             return
@@ -853,6 +885,11 @@ class MainWindow(QMainWindow):
         den i stället, så det syns att texten är borta och inte går att spara.
         """
         self._save_project_manifest()
+        if self.stack.currentIndex() == getattr(self, "_scrivenings_index", -1):
+            # Läsvyn kan inte stå kvar över en ändrad struktur: dess stycken pekar
+            # på scener som kan ha flyttat eller försvunnit.
+            self._close_scrivenings()
+            return
         if self.project is None or not self.active_scene_id:
             return
         try:
@@ -914,12 +951,35 @@ class MainWindow(QMainWindow):
         self._flush_scene(quiet=True)          # scenen i editorn sparas först
         self.scrivenings.set_content(self.project, nodes, heading=heading)
         self.stack.setCurrentIndex(self._scrivenings_index)
+        self._sync_reading_mode(True)
+        self.scrivenings.pane.setFocus()
         self._update_stats()
         self._update_window_title()
+
+    def _flush_scrivenings(self) -> int:
+        """Skriver läsvyns text tillbaka till scenerna, en fil per scen.
+
+        Bara de scener som ändrats skrivs, så en läsning utan ändringar rör inte
+        en enda fil. Returnerar antalet skrivna scener.
+        """
+        if self.project is None or not self.scrivenings.shown_nodes():
+            return 0
+        changed = self.scrivenings.changed_content()
+        for node_id, html in changed.items():
+            try:
+                self.project.write(node_id, html)
+            except (KeyError, ValueError) as exc:
+                print(f"[projekt] kunde inte skriva scenen: {exc}")
+        if changed:
+            self.scrivenings.mark_saved()
+            self.binder.refresh_labels()
+        return len(changed)
 
     def _close_scrivenings(self):
         if self.stack.currentIndex() != self._scrivenings_index:
             return
+        self._flush_scrivenings()
+        self._sync_reading_mode(False)
         self.show_editor_screen()
         if self.active_scene_id:
             self._load_scene(self.active_scene_id)

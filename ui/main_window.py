@@ -290,6 +290,10 @@ class MainWindow(QMainWindow):
         self.act_view_scrivenings = self._add_action(
             self.menu_view, _("menu_view_scrivenings"), self._toggle_scrivenings, "Ctrl+Shift+L")
         self.act_view_scrivenings.setEnabled(False)     # bara i projektläge
+        self.act_view_variants = self._add_action(
+            self.menu_view, "🔀 " + _("menu_view_variants"), self.open_variants_dialog,
+            "Ctrl+Alt+V")
+        self.act_view_variants.setEnabled(False)        # bara i projektläge
         self.menu_view.addSeparator()
         self.act_zoom_in = self._add_action(self.menu_view, _("menu_view_zoom_in"), self._zoom_in, "Ctrl++")
         self.act_zoom_out = self._add_action(self.menu_view, _("menu_view_zoom_out"), self._zoom_out, "Ctrl+-")
@@ -776,6 +780,7 @@ class MainWindow(QMainWindow):
         self.binder.set_project(project)
         self.binder.setVisible(True)
         self.act_view_scrivenings.setEnabled(True)
+        self.act_view_variants.setEnabled(True)
         broken = project.validate()
         if broken:
             QMessageBox.warning(self, _("project_broken_title"),
@@ -821,6 +826,7 @@ class MainWindow(QMainWindow):
         self.scene_inspector.set_scene(None, None)
         self._refresh_comment_marks()
         self.act_view_scrivenings.setEnabled(False)
+        self.act_view_variants.setEnabled(False)
         # Editorn stod med projektets sista scen. Texten ligger redan på disk
         # (ovan), så den får inte lämna kvar ett "osparat dokument" utan väg —
         # då frågar stängningen om att spara en scenfil som redan är sparad.
@@ -1012,6 +1018,27 @@ class MainWindow(QMainWindow):
             markering.format.setBackground(colour)
             selections.append(markering)
         canvas.setExtraSelections(selections)
+
+    def open_variants_dialog(self):
+        """Manusvarianter: namngivna ordningar av scenerna (R01.14)."""
+        from ui.variants_dialog import VariantsDialog
+
+        if self.project is None:
+            return None
+        kalla = self._scrivenings_content()[0] or self.project.manuscript()
+        dialog = VariantsDialog(self.project, nodes=kalla, parent=self)
+        dialog.changed.connect(self._on_variant_changed)
+        self._variants_dialog = dialog            # hålls vid liv medan den är öppen
+        dialog.exec()
+        self._variants_dialog = None
+        return dialog
+
+    def _on_variant_changed(self):
+        """Varianten ändrades: spara, och visa den nya ordningen i trädet."""
+        if self.project is None:
+            return
+        self._save_project_manifest()
+        self.binder.refresh(select_id=self.active_scene_id)
 
     # ---------------------------------------------------------------- läsvyn
 

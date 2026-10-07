@@ -822,6 +822,74 @@ def main() -> int:
     check(win.editor.document.toPlainText() == "", "och editorn är tom")
     check(win.current_filepath is None, "och ingen filväg hänger kvar")
 
+    print("\n20. Manusvarianter (R01.14)")
+    from core.project import Project as VarBok
+    from ui.variants_dialog import VariantsDialog
+    mapp = Path(tempfile.mkdtemp(prefix="variant-")) / "Variantboken"
+    vbok = VarBok.create(mapp, "Variantboken", template="enkel")
+    vkap = vbok.children(None)[0]
+    v1 = vbok.children(vkap.id)[0]
+    vbok.write(v1.id, "<p>Ett.</p>")
+    v2 = vbok.add_node(SCEN, "Scen två", parent=vkap.id)
+    vbok.write(v2.id, "<p>Två.</p>")
+    win._activate_project(vbok)
+    check(win.act_view_variants.isEnabled(), "varianter går att öppna i projektläge")
+
+    dlg = VariantsDialog(vbok, nodes=vbok.children(vkap.id), parent=win)
+    dlg.changed.connect(win._on_variant_changed)
+    check(dlg.lst_variants.count() == 0, "inga varianter än")
+    check(dlg.lbl_status.text() != "", f"och panelen säger det ({dlg.lbl_status.text()!r})")
+
+    dlg.new_variant("Omvänd")
+    check(len(vbok.variants) == 1, "en variant skapas")
+    check(dlg.lst_variants.count() == 1, "och listas")
+    check(dlg.lst_nodes.count() == 2, f"med kapitlets två scener ({dlg.lst_nodes.count()})")
+    check([dlg.lst_nodes.item(r).text() for r in range(2)] == [v1.title, v2.title],
+          f"i manusets ordning ({[dlg.lst_nodes.item(r).text() for r in range(2)]})")
+    check("Omvänd" in dlg.lst_variants.item(0).text(), "och med sitt namn")
+    check("VarBok" not in dlg.lst_variants.item(0).text(), "bara namnet, inte klassen")
+
+    # flytta scenen i varianten
+    dlg.lst_nodes.setCurrentRow(1)
+    check(dlg.move_node(-1) is True, "scenen flyttas upp i varianten")
+    check(dlg.lst_nodes.item(0).text() == v2.title,
+          f"och ligger först i listan ({dlg.lst_nodes.item(0).text()!r})")
+    check([n.id for n in vbok.children(vkap.id)] == [v1.id, v2.id],
+          "medan manuset står still")
+    check("ligger i annan ordning" in dlg.lbl_status.text(),
+          f"jämförelsen pekar ut det ({dlg.lbl_status.text()!r})")
+    check(VarBok.load(mapp).variants[0]["nodes"] == [v2.id, v1.id],
+          "och varianten ligger på disk")
+
+    # lägg variantens ordning på manuset
+    check(dlg.apply_variant() >= 1, "varianten läggs på manuset")
+    check([n.id for n in vbok.children(vkap.id)] == [v2.id, v1.id],
+          f"och kapitlet byter ordning ({[n.title for n in vbok.children(vkap.id)]})")
+    check([n.id for n in vbok.manuscript()] == [v2.id, v1.id],
+          "och manuset med")
+    check([n.title for n in vbok.manuscript()][0] == v2.title,
+          "så det syns i läsvyn och exporten också")
+    check(dlg.lbl_status.text() != "", "och statusraden säger vad som hände")
+    check("flyttades" in dlg.lbl_status.text(),
+          f"att ordningen lades på ({dlg.lbl_status.text()!r})")
+
+    # vad trädet visar efteråt (samma väg som fönstret tar)
+    win.binder.refresh()
+    rader = [i.text() for i in win.binder._iter_items() if i.data(QtNS.ItemDataRole.UserRole)]
+    scener = [t for t in rader if t.startswith("📄")]
+    check(len(scener) == 2 and v2.title in scener[0] and v1.title in scener[1],
+          f"trädet visar variantens ordning ({rader})")
+
+    # en variant kan tas bort igen
+    dlg.lst_variants.setCurrentRow(0)
+    check(dlg.delete_variant() is True, "varianten kan tas bort")
+    check(dlg.lst_variants.count() == 0, "och försvinner ur listan")
+    check(VarBok.load(mapp).variants == [], "och från disk")
+    dlg.deleteLater()
+    win._deactivate_project()
+    check(not win.act_view_variants.isEnabled(),
+          "och varianter stängs av utanför projektläge")
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

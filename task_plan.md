@@ -73,8 +73,8 @@ Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.4, 1.6, 1.8–1.10 klara)
 - [x] **1.11** Anteckningar och kommentarer per scen (knyter ihop med valvet). R01.12
 - [x] **1.12** Projektmallar: Roman, Fackbok, novell — binderstruktur + statusvärden, separat från dokumentmallarna. R01.13, R03.8
 - [x] **1.13** Scener och scenkopplingar: scen som enhet med sammanfattning, POV och kopplade entiteter. R04.2
-- [ ] **1.14** Manusvarianter och alternativa strukturer. R01.14 — *låg*
-- **Status:** pending
+- [x] **1.14** Manusvarianter och alternativa strukturer. R01.14 — *bara ordningen förgernas (namngiven ordning + lägg på manuset); innehållsligt grenade utkast väntar på snapshots per scen (3.1), som rapporten själv rekommenderar först*
+- **Status:** klar — alla punkter 1.1–1.14 avslutade
 
 ### Fas 2: Författarlagret
 

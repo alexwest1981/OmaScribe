@@ -602,5 +602,22 @@
   "comment_new_title": "New comment",
   "comment_new_label": "What needs doing here?",
   "comment_no_selection": "Select a passage first — the comment hangs on what you select.",
-  "comment_quote_gone": "That passage is no longer in the scene."
+  "comment_quote_gone": "That passage is no longer in the scene.",
+  "variants_title": "Manuscript variants",
+  "variants_hint": "A variant is a named ordering of the scenes. The content is the same — only the order differs. \"Apply\" makes the variant's order the manuscript's.",
+  "variants_new": "New variant",
+  "variants_new_label": "What should the variant be called?",
+  "variants_default_name": "Variant {count}",
+  "variants_row": "{name} ({count} scenes)",
+  "variants_delete": "Delete variant",
+  "variants_replace": "Replace…",
+  "variants_apply": "Apply to manuscript",
+  "variants_gone": "(the scene no longer exists)",
+  "variants_none": "No variant selected.",
+  "variants_same": "The variant follows the manuscript order.",
+  "variants_moved": "{count} scenes are in a different order",
+  "variants_outside": "{count} scenes are not in the manuscript",
+  "variants_missing": "{count} scenes are missing from the variant",
+  "variants_applied": "{count} scenes were moved in the manuscript.",
+  "menu_view_variants": "Manuscript variants"
 }

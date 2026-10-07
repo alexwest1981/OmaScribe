@@ -228,6 +228,7 @@ class Project:
         self.settings: dict = dict(DEFAULT_SETTINGS)
         self.nodes: list[ProjectNode] = []
         self.collections: list[Collection] = []
+        self.variants: list[dict] = []      # namngivna ordningar av scener (R01.14)
         self.links: list[dict] = []               # [{"scene": id, "material": id}]
         self._words: dict[str, int] = {}          # cache per nod-id
 
@@ -269,6 +270,12 @@ class Project:
         project.settings = {**DEFAULT_SETTINGS, **(data.get("settings") or {})}
         project.nodes = [ProjectNode.from_dict(d) for d in data.get("nodes", [])]
         project.collections = [Collection.from_dict(d) for d in data.get("collections", [])]
+        project.variants = [
+            {"id": str(v.get("id")), "name": str(v.get("name", "")),
+             "nodes": [str(n) for n in (v.get("nodes") or [])]}
+            for v in (data.get("variants") or [])
+            if v.get("id")
+        ]
         project.links = [
             {"scene": str(l.get("scene")), "material": str(l.get("material"))}
             for l in (data.get("links") or [])
@@ -283,6 +290,7 @@ class Project:
             "settings": self.settings,
             "nodes": [n.to_dict() for n in self.nodes],
             "collections": [c.to_dict() for c in self.collections],
+            "variants": [dict(v) for v in self.variants],
             "links": [dict(l) for l in self.links],
         }
         self.root.mkdir(parents=True, exist_ok=True)
@@ -654,6 +662,140 @@ class Project:
         """(nod, kommentar) för alla ogiltiga kommentarer i projektet."""
         return [(node, comment) for node in self.walk()
                 for comment in node.comments if not comment.get("resolved")]
+
+    # ---------------------------------------------------------- varianterna
+
+    def add_variant(self, name: str, nodes=None) -> dict:
+        """En variant: en namngiven ordning av scener (R01.14, steg 1).
+
+        Bara ordningen förgernas — innehållet ligger kvar i scenens egen fil, så
+        en variant kan inte tappa text eller råka skriva över något annat. Ett
+        innehållsligt grenat manus kräver snapshots per scen (fas 3.1).
+        """
+        kalla = list(self.manuscript() if nodes is None else nodes)
+        variant = {
+            "id": uuid.uuid4().hex[:8],
+            "name": (name or "").strip() or f"Variant {len(self.variants) + 1}",
+            "nodes": [n.id for n in kalla if n.is_writable],
+        }
+        self.variants.append(variant)
+        return variant
+
+    def variant(self, variant_id: str):
+        for variant in self.variants:
+            if variant["id"] == variant_id:
+                return variant
+        return None
+
+    def delete_variant(self, variant_id: str) -> bool:
+        variant = self.variant(variant_id)
+        if variant is None:
+            return False
+        self.variants.remove(variant)
+        return True
+
+    def set_variant_order(self, variant_id: str, node_ids) -> bool:
+        """Sätter variantens ordning. Okända eller icke skrivbara noder avvisas."""
+        variant = self.variant(variant_id)
+        if variant is None:
+            return False
+        rena = []
+        for node_id in node_ids:
+            try:
+                node = self.by_id(node_id)
+            except KeyError:
+                return False
+            if not node.is_writable or node_id in rena:
+                return False
+            rena.append(node_id)
+        variant["nodes"] = rena
+        return True
+
+    def move_in_variant(self, variant_id: str, node_id: str, delta: int) -> bool:
+        """Flyttar en scen ett steg framåt eller bakåt i varianten (steg 2)."""
+        variant = self.variant(variant_id)
+        if variant is None or node_id not in variant["nodes"]:
+            return False
+        index = variant["nodes"].index(node_id)
+        ny = max(0, min(index + delta, len(variant["nodes"]) - 1))
+        if ny == index:
+            return False
+        variant["nodes"].pop(index)
+        variant["nodes"].insert(ny, node_id)
+        return True
+
+    def replace_in_variant(self, variant_id: str, index: int, node_id: str) -> bool:
+        """Byter ut scenen på en plats i varianten (steg 2)."""
+        variant = self.variant(variant_id)
+        if variant is None or not (0 <= index < len(variant["nodes"])):
+            return False
+        try:
+            node = self.by_id(node_id)
+        except KeyError:
+            return False
+        if not node.is_writable:
+            return False
+        if node_id in variant["nodes"]:
+            variant["nodes"].remove(node_id)
+        variant["nodes"][min(index, len(variant["nodes"]) - 1)] = node_id
+        return True
+
+    def variant_nodes(self, variant_id: str) -> list:
+        """Variantens scener i dess ordning. Borttagna scener hoppas över."""
+        variant = self.variant(variant_id)
+        if variant is None:
+            return []
+        ut = []
+        for node_id in variant["nodes"]:
+            try:
+                ut.append(self.by_id(node_id))
+            except KeyError:
+                continue
+        return ut
+
+    def variant_diff(self, variant_id: str) -> dict:
+        """Jämför varianten med manusets ordning (steg 3).
+
+        flyttade: scener som ligger på en annan plats än i manuset.
+        utanför:  scener i varianten som inte längre är med i manuset.
+        saknas:   scener i manuset som inte finns i varianten.
+        """
+        variant = self.variant(variant_id)
+        if variant is None:
+            return {"moved": [], "outside": [], "missing": []}
+        manus = [n.id for n in self.manuscript()]
+        i_variant = list(variant["nodes"])
+        moved = [nid for nid in i_variant if nid in manus
+                 and manus.index(nid) != i_variant.index(nid)]
+        return {
+            "moved": moved,
+            "outside": [nid for nid in i_variant if nid not in manus],
+            "missing": [nid for nid in manus if nid not in i_variant],
+        }
+
+    def apply_variant(self, variant_id: str) -> int:
+        """Lägger variantens ordning på manuset (steg 4). Antal flyttade scener.
+
+        Hierarkin rörs inte: bara ordningen inom varje förälder ändras, så en
+        scen kan inte hamna i fel kapitel av en variant. Det går att ångra genom
+        att lägga tillbaka den gamla ordningen — eller lägga en variant till.
+        """
+        variant = self.variant(variant_id)
+        if variant is None:
+            return 0
+        ordning = {nid: index for index, nid in enumerate(variant["nodes"])}
+        moved = 0
+        for parent_id in {n.parent for n in self.manuscript()}:
+            syskon = self.children(parent_id)
+            # Scener utanför varianten behåller sin inbördes ordning sist.
+            sorterade = sorted(
+                syskon,
+                key=lambda n: (ordning.get(n.id, len(ordning) + n.order), n.order))
+            for index, node in enumerate(sorterade):
+                if node.order != index:
+                    node.order = index
+                    moved += 1
+        return moved
 
     @property
     def codex_path(self) -> Path:
@@ -1043,6 +1185,90 @@ def _self_check() -> int:
         check([c["id"] for c in lagad.comments_for(scene.id)] == ["x2"],
               f"en kommentar utan citat faller bort ({lagad.comments_for(scene.id)})")
         check(lagad.validate() == [], "och projektet är fortfarande giltigt")
+
+        # manusvarianter: en namngiven ordning av scener (R01.14)
+        book.move_node(second.id, chapter.id, 1)        # två scener i samma kapitel
+        manus_fore = [n.id for n in book.manuscript()]
+        check(len(manus_fore) == 2, f"två scener att ordna ({manus_fore})")
+        variant = book.add_variant("Omvänd")
+        check(variant["nodes"] == manus_fore,
+              f"varianten börjar som manuset ({variant['nodes']})")
+        check(book.variant(variant["id"]) is variant, "och går att slå upp")
+        check(book.variant_diff(variant["id"]) == {"moved": [], "outside": [], "missing": []},
+              "en färsk variant skiljer sig inte från manuset")
+
+        sist, forst = manus_fore[1], manus_fore[0]
+        check(book.move_in_variant(variant["id"], sist, -1) is True,
+              "en scen kan flyttas i varianten")
+        check(book.variant(variant["id"])["nodes"] == [sist, forst],
+              f"och ordningen ändras ({book.variant(variant['id'])['nodes']})")
+        check(book.move_in_variant(variant["id"], sist, -1) is False,
+              "den som ligger först går inte att flytta framåt")
+        check(book.move_in_variant(variant["id"], "finns-inte", 1) is False,
+              "och en scen utanför varianten rörs inte")
+        check(book.move_in_variant(variant["id"], sist, 5) is True,
+              "en flytt förbi slutet stannar sist")
+        check(book.variant(variant["id"])["nodes"] == [forst, sist],
+              f"och ordningen är den begärda ({book.variant(variant['id'])['nodes']})")
+        book.set_variant_order(variant["id"], [sist, forst])   # tillbaka till omvänd
+        check([n.id for n in book.manuscript()] == manus_fore,
+              "manuset är orört så länge varianten bara är en variant")
+
+        diff = book.variant_diff(variant["id"])
+        check(sorted(diff["moved"]) == sorted([sist, forst]),
+              f"jämförelsen pekar ut de flyttade ({diff})")
+        check(diff["missing"] == [] and diff["outside"] == [], "och inget saknas")
+
+        # en scen som tagits bort ligger kvar i varianten, som 'utanför'
+        tillfallig = book.add_node(SCENE, "Tillfällig", parent=chapter.id)
+        book.set_variant_order(variant["id"], [tillfallig.id, sist, forst])
+        book.delete_node(tillfallig.id)
+        diff = book.variant_diff(variant["id"])
+        check(diff["outside"] == [tillfallig.id],
+              f"en borttagen scen märks som utanför ({diff})")
+        check(book.variant_nodes(variant["id"]) == [book.by_id(sist), book.by_id(forst)],
+              "och hoppas över när varianten läses")
+        book.set_variant_order(variant["id"], [sist, forst])
+
+        # variantens ordning kan läggas tillbaka på manuset (steg 4)
+        check(book.apply_variant(variant["id"]) >= 1, "varianten läggs på manuset")
+        check([n.id for n in book.manuscript()] == [sist, forst],
+              f"och manuset får variantens ordning ({[n.title for n in book.manuscript()]})")
+        check(book.variant_diff(variant["id"])["moved"] == [],
+              "efteråt skiljer sig varianten inte från manuset")
+
+        # och tillbaka igen, med en variant av den gamla ordningen
+        tillbaka = book.add_variant("Tillbaka", [book.by_id(n) for n in manus_fore])
+        book.apply_variant(tillbaka["id"])
+        check([n.id for n in book.manuscript()] == manus_fore, "ordningen går att lägga tillbaka")
+
+        # en variant tar bara emot scener — inte behållare, dubbletter eller okända
+        check(book.set_variant_order(variant["id"], [chapter.id]) is False,
+              "en behållare kan inte stå i en variant")
+        check(book.set_variant_order(variant["id"], [forst, forst]) is False,
+              "och inte samma scen två gånger")
+        check(book.set_variant_order(variant["id"], ["finns-inte"]) is False, "okänt id avvisas")
+        check(book.set_variant_order(variant["id"], [forst]) is True,
+              "en riktig ordning tas emot")
+        check(book.replace_in_variant(variant["id"], 0, sist) is True,
+              "en scen kan bytas ut på en plats")
+        check(book.variant(variant["id"])["nodes"] == [sist],
+              f"och då står den där ({book.variant(variant['id'])['nodes']})")
+
+        # rundtur till disk
+        book.save()
+        med_variant = Project.load(root)
+        check([v["name"] for v in med_variant.variants] == ["Omvänd", "Tillbaka"],
+              f"varianterna följer med till disk ({[v['name'] for v in med_variant.variants]})")
+        check(med_variant.variant(variant["id"])["nodes"] == [sist],
+              "med sin ordning i behåll")
+        check(med_variant.delete_variant(variant["id"]) is True, "en variant kan tas bort")
+        check(len(med_variant.variants) == 1, "och försvinner")
+        check(med_variant.delete_variant("finns-inte") is False, "okänt id ger False")
+
+        # ställ tillbaka fixturen: second hörde till Kapitel 2
+        book.move_node(second.id, new_chapter.id)
+        check(second.parent == new_chapter.id, "fixturen är tillbaka där den var")
 
         # borttagning tar barnen med sig och filen försvinner
         scene_file = book.path_of(book.by_id(scene.id))

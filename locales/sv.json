@@ -602,5 +602,22 @@
   "comment_new_title": "Ny kommentar",
   "comment_new_label": "Vad skall göras här?",
   "comment_no_selection": "Markera ett textställe först — kommentaren hänger på det du markerar.",
-  "comment_quote_gone": "Textstället finns inte kvar i scenen."
+  "comment_quote_gone": "Textstället finns inte kvar i scenen.",
+  "variants_title": "Manusvarianter",
+  "variants_hint": "En variant är en namngiven ordning av scenerna. Innehållet är detsamma — bara ordningen skiljer. \"Lägg på\" gör variantens ordning till manusets.",
+  "variants_new": "Ny variant",
+  "variants_new_label": "Vad skall varianten heta?",
+  "variants_default_name": "Variant {count}",
+  "variants_row": "{name} ({count} scener)",
+  "variants_delete": "Ta bort varianten",
+  "variants_replace": "Byt ut…",
+  "variants_apply": "Lägg på manuset",
+  "variants_gone": "(scenen finns inte längre)",
+  "variants_none": "Ingen variant vald.",
+  "variants_same": "Varianten följer manusets ordning.",
+  "variants_moved": "{count} scener ligger i annan ordning",
+  "variants_outside": "{count} scener finns inte i manuset",
+  "variants_missing": "{count} scener saknas i varianten",
+  "variants_applied": "{count} scener flyttades i manuset.",
+  "menu_view_variants": "Manusvarianter"
 }

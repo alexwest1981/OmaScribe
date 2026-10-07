@@ -136,17 +136,23 @@ class SnapshotStore:
         self._atomic_write(Path(destination), text.encode("utf-8"))
         return destination
 
-    def diff(self, snapshot_id: str) -> str:
+    def diff(self, snapshot_id: str, fromfile: str = "", tofile: str = "") -> str:
         item = self._find(snapshot_id)
         try:
             current = Path(item.source).read_text(encoding="utf-8")
         except FileNotFoundError:
             current = ""
         # difflib ger en läsbar unified diff direkt i stdlib, med färre rader än DMP-konvertering.
+        # Sista raden i en scenfil har inget radslut, och utan en pålagd radbrytning
+        # klistrar difflib ihop slutraden med motpartens första rad — då syns
+        # ändringen som en enda rad med både minus och plus i sig.
+        def _rader(text: str) -> list:
+            return (text + "\n" if text and not text.endswith("\n") else text).splitlines(keepends=True)
+
         return "".join(difflib.unified_diff(
-            self.read(snapshot_id).splitlines(keepends=True),
-            current.splitlines(keepends=True),
-            fromfile=f"snapshot/{snapshot_id}", tofile=item.source,
+            _rader(self.read(snapshot_id)),
+            _rader(current),
+            fromfile=fromfile or f"snapshot/{snapshot_id}", tofile=tofile or item.source,
         ))
 
     def prune(self, source: str, keep: int = 50) -> int:

@@ -745,5 +745,20 @@
   "overview_links": "Länkar utan anteckning",
   "overview_links_ok": "alla länkar leder någonstans",
   "overview_instructions": "Projektets instruktioner till AI:n",
-  "overview_draft": "Utkast {n}"
+  "overview_draft": "Utkast {n}",
+  "menu_file_history": "Versionshistorik…",
+  "history_title": "Versionshistorik",
+  "history_points": "Punkter",
+  "history_diff": "Skillnad mot texten nu",
+  "history_new": "Spara en punkt nu",
+  "history_restore": "Återställ",
+  "history_automatic": "automatisk",
+  "history_manual": "sparad för hand",
+  "history_before_restore": "före återställning",
+  "history_empty": "Inga punkter än — spara en.",
+  "history_no_diff": "Ingen skillnad mot texten nu.",
+  "history_count": "{n} punkter",
+  "history_saved_point": "Punkten är sparad",
+  "history_restored": "Texten är återställd",
+  "history_needs_scene": "Öppna en scen först"
 }

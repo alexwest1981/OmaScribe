@@ -611,6 +611,57 @@ class Project:
 
     # ---------------------------------------------------------- kommentarerna
 
+    # ------------------------------------------------------- ögonblicksbilder
+    def snapshots(self):
+        """Projektets ögonblicksbilder, skapade på plats i projektet (R01.6).
+
+        Lagret skapas först när det behövs — ett projekt utan historik ska inte
+        ha en mapp för den.
+        """
+        if getattr(self, "_snapshot_store", None) is None:
+            from core.snapshots import SnapshotStore
+            self._snapshot_store = SnapshotStore(os.path.join(self.root, SNAPSHOT_DIR))
+        return self._snapshot_store
+
+    def scene_path(self, node_id: str):
+        """Scenens fil på disk, eller None om den inte har någon."""
+        try:
+            return self.path_of(self.by_id(node_id))
+        except KeyError:
+            return None
+
+    def snapshot_scene(self, node_id: str, label: str = ""):
+        """Kopia av scenens fil som den ser ut nu. Identisk kopia hoppas över.
+
+        Den automatiska punkten tas när en scen öppnas: då finns texten som den
+        såg ut när man lämnade den, och raden "vad ändrade jag sist" går att
+        svara på. Skulle texten vara oförändrad blir det ingen ny punkt — annars
+        fylls historiken av kopior av samma mening.
+        """
+        path = self.scene_path(node_id)
+        if path is None or not path.exists():
+            return None
+        store = self.snapshots()
+        senaste = store.list(str(path))
+        if senaste:
+            import hashlib
+            if senaste[0].sha256 == hashlib.sha256(path.read_bytes()).hexdigest():
+                return None
+        return store.create(str(path), label=label)
+
+    def restore_snapshot(self, node_id: str, snapshot_id: str, label: str = "") -> str:
+        """Lägger tillbaka en ögonblicksbild i scenen och returnerar texten.
+
+        Den nuvarande texten sparas som en egen punkt först: en återställning är
+        ett ingrepp i texten, och den ska gå att ångra med samma knapp som allt
+        annat i historiken.
+        """
+        store = self.snapshots()
+        text = store.read(snapshot_id)
+        self.snapshot_scene(node_id, label=label)   # etiketten kommer från anroparen
+        self.write(node_id, text)
+        return text
+
     def add_comment(self, node_id: str, quote: str, text: str) -> dict:
         """Fäster en kommentar vid ett textställe (R01.12).
 

@@ -1515,6 +1515,56 @@ def main() -> int:
     check(len(oppnade) == 1, "och menyvalet öppnar översikten")
     oppnade[0].close()
 
+    print("\n31. Versionshistorik per scen (fas 3.1 och 3.6)")
+
+    from ui.snapshot_dialog import HistoryDialog
+    from core.i18n import _ as tr
+
+    forsta_text = "<p>Hon gick in i källaren och lade nyckeln på bordet.</p>"
+    andra_text = "<p>Hon gick nerför trappan och lade mässingsnyckeln på bordet.</p>"
+    ovningsbok.write(ovningsscen.id, forsta_text)
+    punkt = ovningsbok.snapshot_scene(ovningsscen.id, label="före ändringen")
+    check(punkt is not None, "en punkt sparas för scenen")
+    check(ovningsbok.snapshot_scene(ovningsscen.id) is None,
+          "och en oförändrad text ger ingen ny punkt — historiken fylls inte av kopior")
+
+    ovningsbok.write(ovningsscen.id, andra_text)
+    skillnad = ovningsbok.snapshots().diff(punkt.id)
+    rader = skillnad.splitlines()
+    bort = [r for r in rader if r.startswith("-") and not r.startswith("---")]
+    till = [r for r in rader if r.startswith("+") and not r.startswith("+++")]
+    check(len(bort) == 1 and "källaren" in bort[0],
+          f"diffen visar den gamla raden med minustecken ({bort[:1]})")
+    check(len(till) == 1 and "trappan" in till[0],
+          f"och den nya med plustecken ({till[:1]})")
+
+    ruta = HistoryDialog(ovningsbok.snapshots(), str(ovningsbok.scene_path(ovningsscen.id)), win)
+    check(ruta.lst_points.count() >= 1, f"historiken listar punkterna ({ruta.lst_points.count()})")
+    visad = ruta.visning.toPlainText()
+    check("trappan" in visad, "och rutan visar skillnaden mot texten nu")
+    check("före ändringen" in visad and "snapshot/" not in visad,
+          f"med en rubrik som går att läsa, inte punktens id "
+          f"({[r for r in visad.splitlines() if r.startswith('---')][:1]})")
+    check(os.path.basename(str(ovningsbok.scene_path(ovningsscen.id))) in visad.splitlines()[1],
+          "och scenens filnamn i stället för hela sökvägen")
+    check(ruta.btn_restore.isEnabled(), "med en väg tillbaka")
+
+    # återställningen: texten tillbaka, och texten före den sparad som egen punkt
+    antal_fore = ruta.lst_points.count()
+    win._restore_snapshot(punkt.id)
+    check(ovningsbok.read(ovningsscen.id) == forsta_text,
+          "texten är återställd till punkten")
+    check("källaren" in win.editor.document.toPlainText(),
+          "och den ligger i editorn, inte bara på disk")
+    punkter = ovningsbok.snapshots().list(str(ovningsbok.scene_path(ovningsscen.id)))
+    check(len(punkter) > antal_fore, f"och texten som låg där först är sparad som egen punkt "
+                                     f"({antal_fore} -> {len(punkter)})")
+    check(punkter[0].label == tr("history_before_restore"),
+          f"med etiketten 'före återställning' ({punkter[0].label!r})")
+    ruta.close()
+    win.editor.document.setModified(False)
+    win.is_modified = False
+
     # Arken: ett ark per sida med ett mellanrum där ytan syns, och texten delad
     # mellan rader. Mätt i en riktig rendering, med temats färger.
     from PyQt6.QtCore import QPointF as QtPunkt, QRect as QtRect

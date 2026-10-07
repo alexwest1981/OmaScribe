@@ -745,5 +745,20 @@
   "overview_links": "Links with no note",
   "overview_links_ok": "every link leads somewhere",
   "overview_instructions": "Project instructions for the AI",
-  "overview_draft": "Draft {n}"
+  "overview_draft": "Draft {n}",
+  "menu_file_history": "Version history…",
+  "history_title": "Version history",
+  "history_points": "Points",
+  "history_diff": "Difference from the text now",
+  "history_new": "Save a point now",
+  "history_restore": "Restore",
+  "history_automatic": "automatic",
+  "history_manual": "saved by hand",
+  "history_before_restore": "before restore",
+  "history_empty": "No points yet — save one.",
+  "history_no_diff": "No difference from the text now.",
+  "history_count": "{n} points",
+  "history_saved_point": "The point is saved",
+  "history_restored": "The text is restored",
+  "history_needs_scene": "Open a scene first"
 }

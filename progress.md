@@ -286,3 +286,27 @@
   Mätt: en ny knapprad ger Ok/Stäng/Avbryt på svenska, OK/Close/Cancel på engelska, och tillbaka.
   Samma mätning avslöjade att AI-övningarnas språk läste `i18n.language` som inte finns (föll
   tyst tillbaka på svenska) — rätt attribut är `i18n.current_lang`.
+
+### Fas 3.1 + 3.6: versionshistorik per scen — och två buggar som bara syntes när den användes
+
+- **Status:** complete, grindad (436 rökprov + 54 renhetsprov + snapshots egna 8, GRÖNT).
+- `core/snapshots.py` fanns och var grindad, men **oanvänd**: ingen UI, ingen väg in, inga
+  automatiska punkter. Nu är den inkopplad via projektet (`.snapshots/` i projektet, precis som
+  `SNAPSHOT_DIR` var tänkt) och nås med Arkiv → Versionshistorik (Ctrl+Shift+H): punkterna till
+  vänster, unified diff mot texten på disk till höger, och en väg tillbaka.
+- En punkt tas automatiskt när en scen öppnas — "så såg den ut när jag lämnade den" — men bara om
+  texten skiljer sig från den senaste punkten. En oförändrad scen ger ingen ny punkt (provat).
+- En återställning sparar texten som låg där först som en egen punkt, så ingreppet går att ångra
+  med samma knapp. Provat: texten är identisk med punkten efteråt, den ligger i editorn (inte bara
+  på disk), och antalet punkter ökar med etiketten "före återställning".
+- Skärmdumpen gav läsbara rubriker i stället för `snapshot/<uuid>` och full sökväg, och listan
+  visar etikett och tid i stället för byte-storlek.
+- **Två buggar hittade på vägen, båda i användning (inte i teorin):**
+  1. En scenfil har inget radslut på sista raden, och `difflib` klistrade då ihop slutraden med
+     motpartens första rad — ändringen såg ut som *en* rad med både minus och plus i sig. Fixat i
+     `SnapshotStore.diff`: en saknad radbrytning läggs på innan jämförelsen. Det gällde varje scen.
+  2. `QPlainTextEdit` har ingen `ExtraSelection` — den klassen hör till `QTextEdit`. Radtonerna
+     kraschade rutan direkt; nu används rätt klass.
+- **Medvetet val:** diffen jämför **filerna som de är**, alltså HTML. `<p>`-taggarna syns därför i
+  vyn. Att skala bort dem skulle göra vyn snyggare men bryta garantin att det man ser är exakt det
+  man återställer. Hellre taggar än en vänlig lögn.

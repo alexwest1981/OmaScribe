@@ -35,6 +35,7 @@ from ui.codex_panel import CodexPanel
 from ui.plot_grid import PlotGrid
 from ui.exercise_dialog import ExerciseDialog
 from ui.overview_dialog import OverviewDialog
+from ui.snapshot_dialog import HistoryDialog
 from core.font_manager import install_dropdown_style
 from ui.scrivenings import ScriveningsView
 from core.project import Project
@@ -344,6 +345,8 @@ class MainWindow(QMainWindow):
                                                  self._edit_ai_instructions)
         self.act_overview = self._add_action(self.menu_file, "📊 " + _("menu_file_overview"),
                                              self._open_overview, "Ctrl+Shift+O")
+        self.act_history = self._add_action(self.menu_file, "🕘 " + _("menu_file_history"),
+                                            self._open_history, "Ctrl+Shift+H")
         self.act_open = self._add_action(self.menu_file, _("menu_file_open"), self.file_open, "Ctrl+O")
         self.menu_file.addSeparator()
         self.act_new_project = self._add_action(self.menu_file, "📚 " + _("menu_file_new_project"), self.new_project)
@@ -1082,6 +1085,10 @@ class MainWindow(QMainWindow):
             self.show_editor_screen()
         if node_id == self.active_scene_id:
             return
+        # "Så såg scenen ut när jag lämnade den" — tas innan texten rörs, och
+        # bara om den skiljer sig från den senaste punkten (annars blir historiken
+        # en trave kopior av samma mening).
+        self.project.snapshot_scene(node_id)
         if not self._flush_scene(quiet=True):
             return
         try:
@@ -1089,6 +1096,11 @@ class MainWindow(QMainWindow):
             html = self.project.read(node_id)
         except KeyError:
             return
+        self._show_scene_html(node_id, html)
+
+    def _show_scene_html(self, node_id: str, html: str) -> None:
+        """Lägger en scens text i editorn — samma väg vid öppning och återställning."""
+        node = self.project.by_id(node_id)
         self.active_scene_id = node_id
         self.editor.document.setHtml(html)
         path = self.project.path_of(node)
@@ -1142,6 +1154,38 @@ class MainWindow(QMainWindow):
         self._save_project_manifest()
         self.scene_inspector.set_scene(self.project, self.project.by_id(node.id))
         self.status_bar.showMessage(_("exercise_saved"), 5000)
+
+    def _open_history(self) -> None:
+        """Scenens punkter, skillnaden mot texten nu, och vägen tillbaka (R02.4).
+
+        Öppnas historiken med osparade ändringar sparas de först: annars jämförs
+        punkterna mot en text på disk som är äldre än den man ser.
+        """
+        if self.project is None or not self.active_scene_id:
+            self.status_bar.showMessage(_("history_needs_scene"), 5000)
+            return
+        path = self.project.scene_path(self.active_scene_id)
+        if path is None:
+            self.status_bar.showMessage(_("history_needs_scene"), 5000)
+            return
+        self._flush_scene(quiet=True)
+        dialog = HistoryDialog(self.project.snapshots(), str(path), self)
+        dialog.restore_requested.connect(self._restore_snapshot)
+        dialog.exec()
+
+    def _restore_snapshot(self, snapshot_id: str) -> None:
+        """Lägger tillbaka punkten — och sparar texten som låg där först.
+
+        En återställning är ett ingrepp i texten, och ska gå att ångra med samma
+        knapp som allt annat i historiken.
+        """
+        node_id = self.active_scene_id
+        if not node_id:
+            return
+        self._flush_scene(quiet=True)
+        self.project.restore_snapshot(node_id, snapshot_id, label=_("history_before_restore"))
+        self._show_scene_html(node_id, self.project.read(node_id))
+        self.status_bar.showMessage(_("history_restored"), 5000)
 
     def _install_qt_translations(self) -> None:
         """Qts egna standardknappar på rätt språk (OK, Avbryt, Stäng).
@@ -1991,6 +2035,7 @@ class MainWindow(QMainWindow):
         self.act_new_template.setText("🎨 " + _("menu_file_new_template"))
         self.act_instructions.setText("📌 " + _("menu_file_instructions"))
         self.act_overview.setText("📊 " + _("menu_file_overview"))
+        self.act_history.setText("🕘 " + _("menu_file_history"))
         self.act_open.setText(_("menu_file_open"))
         self.menu_recent.setTitle(_("menu_file_recent"))
         self.act_save.setText(_("menu_file_save"))

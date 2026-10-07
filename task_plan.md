@@ -14,8 +14,9 @@ taget (`ui/main_window.py:663`). Se `findings.md`.
 
 ## Next Step
 
-Fas 3 (revision och granskning): spårade ändringar, kommentarer och jämförelse —
-2.7, 2.11 och 2.13 är kvar i fas 2 och markerade låg
+Fas 3 punkt 3.3 (kommentarer i marginalen med tråd och "löst" — modellen finns, trådarna
+saknas) och 3.2 (spårade ändringar som operationer med acceptera/avvisa). 2.7, 2.11 och
+2.13 är kvar i fas 2 och markerade låg
 (tidslinje och plot-tavla) som är nästa större punkt. Rutnätet i 2.9 bygger på
 scenmodellen och på att scenens status redan finns.
 
@@ -118,12 +119,20 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 
 ### Fas 3: Revision och granskning
 
-- [ ] **3.1** Snapshots per scen: oföränderlig kopia + tidsstämpel + etikett, jämför och återställ. R01.6, R02.4
+- [x] **3.1** Snapshots per scen: modellen fanns (oföränderlig kopia + tidsstämpel + etikett +
+      `diff()` + `restore()`), men **ingen UI och ingen väg in** — lagret var byggt och oanvänt. Nu:
+      Arkiv → Versionshistorik (Ctrl+Shift+H) visar scenens punkter, skillnaden mot texten som
+      ligger på disk nu, och en väg tillbaka. En punkt tas automatiskt **när en scen öppnas** (så
+      texten finns som den såg ut när man lämnade den), och bara om den skiljer sig från den
+      senaste — annars fylls historiken av kopior av samma mening. R01.6, R02.4
 - [ ] **3.2** Spårade ändringar: revisioner som operationer (ankare, gammal/ny text, typ, författare, tid), acceptera/avvisa enskilt. R02.1
 - [ ] **3.3** Kommentarer i marginalen med tråd och "löst". R02.2
 - [ ] **3.4** Jämför dokument och slå ihop versioner. R02.3
 - [ ] **3.5** Jämförelse av formatering, separat från textdiff. R02.15
-- [ ] **3.6** Versionshistorik och återställning i ett samlat flöde. R02.4
+- [x] **3.6** Versionshistorik och återställning i ett samlat flöde: historiken öppnas med
+      osparade ändringar, och de sparas först — annars jämförs punkterna mot en text på disk som är
+      äldre än den man ser. En återställning sparar texten som låg där **först** som en egen punkt
+      ("före återställning"), så ingreppet går att ångra med samma knapp som allt annat. R02.4
 - [ ] **3.7** AI-kommentarer i marginalen i stället för överskrivning. R04.14
 - [ ] **3.8** Acceptans per stycke för AI-förslag, som egna undo-steg. R04.15
 - **Status:** pending

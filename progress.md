@@ -167,3 +167,24 @@
   dör före sina widgetar och ger signal 11 i städningen (appen får äga den), och rökprovet får inte
   öppna menyn — offscreen-plattformen kraschar ibland i städningen efter en visad popup, så provet
   mäter mekanismen (stilfrågan, skrollisten, radhöjden) i stället.
+
+### Fas 2.9: plot-tavlan
+
+- **Status:** complete, grindad (371 rökprov + 54 renhetsprov, GRÖNT).
+- `ui/plot_grid.py` (ny): manuset som tabell — en rad per scen med del/kapitel, tråd
+  (etiketter), POV, status, när i berättelsen, ord och ordmål. Redigerbar direkt i
+  tabellen; status genom en meny med projektets egna statusar. Klick på titeln öppnar
+  scenen (dubbelklick i de andra kolumnerna ändrar dem — titeln är därför inte redigerbar,
+  ett klick skall inte kunna bli både öppna och ändra).
+- Sorteringen är hela poängen: manusordning, tidslinje (scenens egen tid, tom tid sist),
+  POV eller status. Modellen fick fältet `when`.
+- Tavlan ligger som en egen sida i stacken, inte som flik i sidopanelen: åtta kolumner är
+  ~790 px och panelen är 370 (mätt: tabellen blir 1184 px bred i ett 1250 px fönster, alla
+  kolumner synliga). Vägen dit och tillbaka går genom Visa-menyn; verktygsraden göms medan
+  tavlan är uppe och kommer tillbaka med manuset (den vägen var låst först — `show_editor_screen`
+  visar raden men låser inte upp den, så `_sync_reading_mode(False)` måste med).
+- Mätt i provet: 3 rader × 8 kolumner, tidslinjen ger dag 1, dag 3, tom sist, en ändring i
+  tabellen skriver till modellen och till manifestet, klick öppnar rätt scen, och vägen
+  tillbaka ger manuset och formateringsraden tillbaka. Två kontroller bit-testade.
+- Medvetet inte gjort: en grafisk tidslinje. Texten i `when` sorterad i tid är tidslinjen
+  en ensam författare läser; en ritad tidslinje är en egen vy den dag någon saknar den.

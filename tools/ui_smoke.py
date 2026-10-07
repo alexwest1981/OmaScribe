@@ -1194,6 +1194,55 @@ def main() -> int:
 
     win._deactivate_project()
 
+    print("\n25. Plot-tavlan (scenöversikt, trådar och tidslinje)")
+
+    import json as _json
+    from core.project import SCENE
+    tavlan_mapp = out / "tavlan"
+    tavlan_mapp.mkdir()
+    tavlabok = Bok.create(tavlan_mapp, "Tavlan", template="roman")
+    win._activate_project(tavlabok)
+    while len(tavlabok.manuscript()) < 3:
+        tavlabok.add_node(SCENE, f"Scen {len(tavlabok.manuscript()) + 1}", None)
+    rader = tavlabok.manuscript()
+    tavlabok.set_meta(rader[0].id, labels=["huvudtråd"], pov="Anna", status="utkast", when="dag 3")
+    tavlabok.set_meta(rader[1].id, labels=["sidotråd"], pov="Bo", status="klar", when="dag 1")
+
+    win._toggle_plot_grid()
+    tavla = win.plot_grid
+    check(win.stack.currentIndex() == win._plot_grid_index,
+          "plot-tavlan är en egen sida i stacken, inte en flik i sidopanelen")
+    check(tavla.table.rowCount() == 3 and tavla.table.columnCount() == 8,
+          f"en rad per scen och åtta kolumner "
+          f"({tavla.table.rowCount()} × {tavla.table.columnCount()})")
+    check(win.toolbar.isHidden(),
+          "och formateringsraden hör till manuset, inte till tabellen")
+
+    tavla.combo_sort.setCurrentIndex(tavla.combo_sort.findData("timeline"))
+    tider = [tavla.table.item(r, 5).text() for r in range(tavla.table.rowCount())]
+    check(tider == ["dag 1", "dag 3", ""],
+          f"tidslinjen sorterar på scenens egen tid, tom tid sist ({tider})")
+    tavla.combo_sort.setCurrentIndex(0)
+    check(tavla.table.item(0, 0).text() == rader[0].title,
+          "och manusordningen är tillbaka")
+
+    tavla.table.item(0, 2).setText("ny tråd")
+    check(tavlabok.by_id(rader[0].id).labels == ["ny tråd"],
+          "en ändring i tabellen skrivs till modellen")
+    manifest = _json.loads((tavlan_mapp / "project.json").read_text(encoding="utf-8"))
+    sparad = [n for n in manifest["nodes"] if n["id"] == rader[0].id][0]
+    check(sparad.get("when") == "dag 3" and sparad.get("labels") == ["ny tråd"],
+          f"och manifestet sparas med tid och tråd ({sparad.get('when')}, {sparad.get('labels')})")
+
+    öppnade = []
+    tavla.scene_selected.connect(öppnade.append)
+    tavla._on_cell_clicked(0, 0)
+    check(öppnade == [rader[0].id], f"klick på scenens titel öppnar scenen ({öppnade})")
+    win._toggle_plot_grid()
+    check(win.stack.currentIndex() == 1 and win.toolbar.isEnabled() and not win.toolbar.isHidden(),
+          "och vägen tillbaka ger manuset och formateringsraden tillbaka")
+    win._deactivate_project()
+
     # Arken: ett ark per sida med ett mellanrum där ytan syns, och texten delad
     # mellan rader. Mätt i en riktig rendering, med temats färger.
     from PyQt6.QtCore import QPointF as QtPunkt, QRect as QtRect

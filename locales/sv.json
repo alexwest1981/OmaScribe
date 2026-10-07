@@ -686,5 +686,22 @@
   "codex_delete_title": "Ta bort entiteten",
   "codex_delete_ask": "Ta bort {name}? Scenerna och manuset påverkas inte.",
   "codex_save_failed": "Kunde inte spara: {error}",
-  "entity_dialog_edit": "Redigera entitet"
+  "entity_dialog_edit": "Redigera entitet",
+  "binder_tab_grid": "Tavla",
+  "grid_col_scene": "Scen",
+  "grid_col_part": "Del/kapitel",
+  "grid_col_thread": "Tråd",
+  "grid_col_pov": "POV",
+  "grid_col_status": "Status",
+  "grid_col_when": "När",
+  "grid_col_words": "Ord",
+  "grid_col_target": "Mål",
+  "grid_sort": "Sortera:",
+  "grid_sort_manuscript": "Manusordning",
+  "grid_sort_timeline": "Tidslinje",
+  "grid_sort_pov": "POV",
+  "grid_sort_status": "Status",
+  "grid_count": "{n} scener",
+  "menu_view_grid": "Plot-tavla",
+  "grid_no_project": "Öppna ett projekt först — tavlan visar dess scener"
 }

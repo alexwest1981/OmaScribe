@@ -14,14 +14,14 @@ taget (`ui/main_window.py:663`). Se `findings.md`.
 
 ## Next Step
 
-Fas 2.9 (tidslinje och plot-tavla)
+Fas 2.10 (taggar, samlingar och anteckningar knutna till scen)
 (tidslinje och plot-tavla) som är nästa större punkt. Rutnätet i 2.9 bygger på
 scenmodellen och på att scenens status redan finns.
 
 ## Current Phase
 
-Fas 2 — Författarlagret (2.1–2.6 och 2.8 klara: skrivloggen, kvot, historik,
-sprintar, skrivmaskinsläget, story biblen).
+Fas 2 — Författarlagret (2.1–2.6, 2.8 och 2.9 klara: skrivloggen, kvot,
+historik, sprintar, skrivmaskinsläget, story biblen, plot-tavlan).
 Fas 0, 0b och 1 är klara. Sedan dess: appskalet följer v0-referensen, och
 pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 
@@ -88,7 +88,7 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 - [x] **2.6** Skrivmaskinsläge utöver befintligt helskärmsläge: `PagedPaper.center_cursor()` håller markörens rad mitt i fönstret medan man skriver, kopplat till markörens rörelse i `ui/editor_view.py`. Läget slås på i Visa-menyn och kommer ihåg sig i configen. Maxbredden var redan satt — arket är A4 (750 px) och texten kan inte bli bredare. Nära dokumentets slut kan ingen centrering ske (det finns ingen text att skrolla förbi), precis som i Word. R03.6
 - [ ] **2.7** Pauspåminnelser och ergonomi, valbart. R03.7 — *låg*
 - [x] **2.8** Karaktärsblad och story bible i projektet: `ui/codex_panel.py` visar projektets codex (codex.sqlite i projektmappen) med sökning och typfilter, och ett blad per entitet — namn, alias, vem det är (sparas med kort fördröjning medan man skriver), relationer till andra i boken, scenerna den är kopplad till (klick öppnar scenen) och hur ofta namnet nämns i manuset. Ny/redigera/ta bort, koppla loss scen, lägg till och ta bort relation. `core.storybible` fick `remove_relation`; dialogrutan förifylls vid redigering. R03.9
-- [ ] **2.9** Tidslinje, plot-tavla och scenöversikt (Plot Grid-modellen). R03.10
+- [x] **2.9** Tidslinje, plot-tavla och scenöversikt: `ui/plot_grid.py` visar manuset som en tabell — en rad per scen med del/kapitel, tråd (etiketter), POV, status, när i berättelsen den händer, ord och ordmål. Redigerbar direkt i tabellen (status genom en meny med projektets egna statusar), ett klick på titeln öppnar scenen, och sorteringen är poängen: manusordning, **tidslinje** (scenens egen tid, tom tid sist), POV eller status — Dabbles huvudtråd och sidotrådar sida vid sida, utan att lämna projektet. Modellen fick fältet `when` (sparas i manifestet). Tavlan är en egen sida i stacken och inte en flik i sidopanelen: åtta kolumner är ~790 px och panelen är 370. *Medvetet inte gjort:* en grafisk tidslinje (band med markörer) — texten i `when` sorterad i tid är tidslinjen en ensam författare läser, och en ritad tidslinje är en egen vy den dag någon saknar den. R03.10
 - [ ] **2.10** Taggar, samlingar och anteckningar knutna till scen. R03.11
 - [ ] **2.11** Namn- och ordförrådsgenerator. R03.12 — *låg*
 - [ ] **2.12** Revisionsläge och mål per utkast (utkast 1/2/3). R03.13
@@ -97,7 +97,7 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 - [ ] **2.15** Läsbarhetsanalys och stilråd i texten (LIX finns, markeringar saknas). R03.17
 - [ ] **2.16** Projektöversikt och anteckningar (valvet som projektlager, taggar/properties). R03.18
 - [ ] **2.17** Projektinstruktioner: per-projekt kontext för AI:n. R04.18
-- **Status:** in progress (2.1–2.6 och 2.8 klara och grindade)
+- **Status:** in progress (2.1–2.6, 2.8 och 2.9 klara och grindade)
 
 ### Fas 3: Revision och granskning
 

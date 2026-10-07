@@ -31,6 +31,7 @@ from ui.chrome import LeftRail, TopBar
 from ui.scene_inspector import SceneInspector
 from ui.writing_log_panel import WritingLogPanel
 from ui.codex_panel import CodexPanel
+from ui.plot_grid import PlotGrid
 from ui.scrivenings import ScriveningsView
 from core.project import Project
 from ui.chart_dialog import ChartDialog
@@ -202,6 +203,15 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.scrivenings)
         self._scrivenings_index = self.stack.indexOf(self.scrivenings)
 
+        # Plot-tavlan (fas 2.9): en rad per scen med tråd, POV, status och tid.
+        # Egen sida i stacken, inte en flik i sidopanelen — åtta kolumner är
+        # ~790 px och panelen är 370, så tabellen behöver bredden.
+        self.plot_grid = PlotGrid(self)
+        self.plot_grid.scene_selected.connect(self._open_node)
+        self.plot_grid.structure_changed.connect(self._on_structure_changed)
+        self.stack.addWidget(self.plot_grid)
+        self._plot_grid_index = self.stack.indexOf(self.plot_grid)
+
         # Appskalet: topbaren läggs i fönstrets menyplats (då hamnar den över
         # verktygsraden, som referensen), och railen + stacken blir innehållet.
         self.topbar = TopBar(self.theme_mgr, self)
@@ -360,6 +370,8 @@ class MainWindow(QMainWindow):
         self.act_view_focus = self._add_action(self.menu_view, _("menu_view_focus_mode"), self._toggle_focus_mode, "F11")
         self.act_view_typewriter = self._add_action(
             self.menu_view, _("menu_view_typewriter"), self._toggle_typewriter)
+        self.act_view_grid = self._add_action(
+            self.menu_view, _("menu_view_grid"), self._toggle_plot_grid)
         self.act_view_typewriter.setCheckable(True)
         self.act_view_typewriter.setChecked(bool(self.config.get("typewriter_mode", False)))
         self.act_view_scrivenings = self._add_action(
@@ -758,6 +770,22 @@ class MainWindow(QMainWindow):
         self.sidebar.setVisible(vis)
         self.config.set("show_ai_sidebar", vis)
 
+    def _toggle_plot_grid(self) -> None:
+        """Växlar mellan manuset och plot-tavlan (samma projekt, annan vy)."""
+        if self.stack.currentIndex() == getattr(self, "_plot_grid_index", -1):
+            self._sync_reading_mode(False)     # verktygsraden hör till manuset
+            self.show_editor_screen()          # tillbaka till manuset
+            return
+        if self.project is None:
+            self.status_bar.showMessage(_("grid_no_project"), 4000)
+            return
+        self.plot_grid.refresh()
+        self.stack.setCurrentIndex(self._plot_grid_index)
+        self._sync_reading_mode(True)
+        if self.toolbar is not None:
+            self.toolbar.setVisible(False)     # formatering hör till manuset
+        self._update_window_title()
+
     def _toggle_typewriter(self) -> None:
         """Skrivmaskinsläge: markörens rad står stilla mitt i fönstret."""
         på = not self.editor.typewriter
@@ -916,6 +944,8 @@ class MainWindow(QMainWindow):
         self._open_codex(project)
         self.binder.set_project(project)
         self.writing_log.set_project(project)
+        self.plot_grid.set_statuses(project.settings.get("statuses", []))
+        self.plot_grid.set_project(project)
         self.binder.setVisible(True)
         self.act_view_scrivenings.setEnabled(True)
         self.act_view_variants.setEnabled(True)
@@ -963,6 +993,7 @@ class MainWindow(QMainWindow):
         self.active_scene_id = None
         self.binder.set_project(None)
         self.writing_log.set_project(None)
+        self.plot_grid.set_project(None)
         self.binder.setVisible(False)
         self.scene_inspector.set_scene(None, None)
         self._refresh_comment_marks()
@@ -1829,6 +1860,7 @@ class MainWindow(QMainWindow):
         self.menu_view.setTitle(_("menu_view"))
         self.act_view_sidebar.setText(_("menu_view_ai_sidebar"))
         self.act_view_focus.setText(_("menu_view_focus_mode"))
+        self.act_view_grid.setText(_("menu_view_grid"))
         self.act_zoom_in.setText(_("menu_view_zoom_in"))
         self.act_zoom_out.setText(_("menu_view_zoom_out"))
         self.act_zoom_reset.setText(_("menu_view_zoom_reset"))

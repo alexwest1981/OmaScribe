@@ -103,6 +103,7 @@ class ProjectNode:
     pov: str = ""
     file: str | None = None            # relativ sökväg, bara för SCENE/NOTE
     revision: int = 1                  # utkast 1, 2, 3 (R03.13)
+    when: str = ""                     # när i berättelsen scenen händer (tidslinjen)
 
     def to_dict(self) -> dict:
         d = {
@@ -119,6 +120,7 @@ class ProjectNode:
             "target_words": self.target_words,
             "pov": self.pov,
             "revision": self.revision,
+            "when": self.when,
         }
         if self.file:
             d["file"] = self.file
@@ -150,6 +152,7 @@ class ProjectNode:
             pov=d.get("pov", ""),
             file=d.get("file"),
             revision=int(d.get("revision", 1)),
+            when=d.get("when", ""),
         )
 
     @property

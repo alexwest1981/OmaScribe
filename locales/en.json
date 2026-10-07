@@ -686,5 +686,22 @@
   "codex_delete_title": "Delete the entity",
   "codex_delete_ask": "Delete {name}? The scenes and the manuscript are untouched.",
   "codex_save_failed": "Could not save: {error}",
-  "entity_dialog_edit": "Edit entity"
+  "entity_dialog_edit": "Edit entity",
+  "binder_tab_grid": "Grid",
+  "grid_col_scene": "Scene",
+  "grid_col_part": "Part/chapter",
+  "grid_col_thread": "Thread",
+  "grid_col_pov": "POV",
+  "grid_col_status": "Status",
+  "grid_col_when": "When",
+  "grid_col_words": "Words",
+  "grid_col_target": "Target",
+  "grid_sort": "Sort:",
+  "grid_sort_manuscript": "Manuscript order",
+  "grid_sort_timeline": "Timeline",
+  "grid_sort_pov": "POV",
+  "grid_sort_status": "Status",
+  "grid_count": "{n} scenes",
+  "menu_view_grid": "Plot grid",
+  "grid_no_project": "Open a project first — the grid shows its scenes"
 }

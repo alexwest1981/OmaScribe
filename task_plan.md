@@ -14,9 +14,10 @@ taget (`ui/main_window.py:663`). Se `findings.md`.
 
 ## Next Step
 
-Fas 3 punkt 3.3 (kommentarer i marginalen med tråd och "löst" — modellen finns, trådarna
-saknas) och 3.2 (spårade ändringar som operationer med acceptera/avvisa). 2.7, 2.11 och
-2.13 är kvar i fas 2 och markerade låg
+Fas 3 punkt 3.2 (spårade ändringar som operationer med acceptera/avvisa) — den tunga
+biten — och därefter 3.4/3.5 (jämförelse av dokument och formatering) samt 3.7/3.8
+(AI-kommentarer i marginalen och acceptans per stycke). 2.7, 2.11 och 2.13 är kvar i
+fas 2 och markerade låg
 (tidslinje och plot-tavla) som är nästa större punkt. Rutnätet i 2.9 bygger på
 scenmodellen och på att scenens status redan finns.
 
@@ -126,7 +127,13 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       texten finns som den såg ut när man lämnade den), och bara om den skiljer sig från den
       senaste — annars fylls historiken av kopior av samma mening. R01.6, R02.4
 - [ ] **3.2** Spårade ändringar: revisioner som operationer (ankare, gammal/ny text, typ, författare, tid), acceptera/avvisa enskilt. R02.1
-- [ ] **3.3** Kommentarer i marginalen med tråd och "löst". R02.2
+- [x] **3.3** Kommentarer i marginalen med tråd och "löst": kommentarerna, markeringarna i
+      texten, hoppa-till-citatet och **löst** fanns redan färdiga i scenpanelen (kontrollerat, inte
+      antaget). Det som saknades var **tråden**: `add_reply()` i projektet, en ↳-knapp i panelen och
+      svar som indragna rader direkt efter sin kommentar — med kommentarens id, så ett klick på ett
+      svar går till samma citat. Kommentarer som sparades innan trådar fanns får sin tomma lista av
+      `setdefault`, så gamla projekt öppnas som förut. Tråden hänger kvar under en löst kommentar.
+      R02.2
 - [ ] **3.4** Jämför dokument och slå ihop versioner. R02.3
 - [ ] **3.5** Jämförelse av formatering, separat från textdiff. R02.15
 - [x] **3.6** Versionshistorik och återställning i ett samlat flöde: historiken öppnas med
@@ -222,6 +229,13 @@ kontrollistan när faserna är klara.
 - [ ] Kanalprofiler, eftersom mått, blöd och metadataregler skiljer sig. R05
 
 ## Att åtgärda senare (rapporterat av Alex, ej gjort)
+
+- [ ] **Flikraden och etiketterna i sidopanelen klipps vid ~390 px bredd.** Sett i skärmdumpar
+      2026-10-07 (samma familj som flikklippningen): de fyra flikarna i panelen ("Anteckningar",
+      "Scen", "Skrivlogg", "Story bib") ryms inte, och etiketten för antalet öppna kommentarer
+      klipps till "1 kva…". Panelens bredd är satt för fyra flikar och etiketten ligger i en
+      formkolumn som är för smal. En egen layoutvända: kortare fliknamn eller ikoner med tooltip,
+      och etiketten på egen rad. Inget av detta hindrar arbetet — det ser bara trångt ut.
 
 - [ ] **Teckensnittsväljaren visar menyrubriken i stället för typsnittet.** Sett i skärmdump
       2026-10-07: rutan visar "—— ⭐ Popular Writing Fonts ——" tills man väljer ett typsnitt.

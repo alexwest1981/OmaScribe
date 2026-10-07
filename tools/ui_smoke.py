@@ -1565,6 +1565,74 @@ def main() -> int:
     win.editor.document.setModified(False)
     win.is_modified = False
 
+    print("\n32. Kommentarer med tråd (fas 3.3)")
+
+    from PyQt6.QtWidgets import QInputDialog
+    from PyQt6.QtCore import Qt
+
+    scenen = ovningsscen
+    text = "<p>Hon gick in i källaren och lade nyckeln på bordet.</p>"
+    ovningsbok.write(scenen.id, text)
+    win._show_scene_html(scenen.id, text)
+    kommentar = ovningsbok.add_comment(scenen.id, "lade nyckeln på bordet", "Vet hon om att Bo ser henne?")
+    check("replies" in kommentar and kommentar["replies"] == [],
+          "en ny kommentar har en tom tråd")
+    svar = ovningsbok.add_reply(scenen.id, kommentar["id"], "Nej, inte förrän i kapitel 9.")
+    check(svar is not None and len(ovningsbok.comment(scenen.id, kommentar["id"])["replies"]) == 1,
+          "och ett svar hamnar i tråden")
+    check(ovningsbok.add_reply(scenen.id, "finns-inte", "hej") is None,
+          "svar på en kommentar som inte finns ger inget")
+    check(ovningsbok.add_reply(scenen.id, kommentar["id"], "   ") is None,
+          "och ett tomt svar sparas inte")
+
+    # rutan: tråden hänger under sin kommentar
+    win.scene_inspector.set_scene(ovningsbok, ovningsbok.by_id(scenen.id))
+    rader = win.scene_inspector.lst_comments
+    topp = rader.item(0)
+    check(topp is not None and topp.text().startswith("💬"),
+          f"kommentaren står överst ({topp.text() if topp is not None else None!r})")
+    barn = rader.item(1)
+    check(rader.count() == 2 and barn is not None and barn.text().startswith("↳ ")
+          and "kapitel 9" in barn.text(),
+          f"och svaret står indraget direkt under den ({barn.text() if barn is not None else None!r})")
+    check(barn is not None and barn.data(Qt.ItemDataRole.UserRole) == kommentar["id"],
+          "med kommentarens id, så ett klick går till samma citat")
+
+    # rutan växer med antalet rader (kommentaren + tråden), och kapas högt
+    for _extra in range(3):
+        ovningsbok.add_reply(scenen.id, kommentar["id"], f"Ännu ett svar {_extra}.")
+    win.scene_inspector.set_scene(ovningsbok, ovningsbok.by_id(scenen.id))
+    rader = win.scene_inspector.lst_comments
+    check(rader.count() == 5, f"fem rader med tråden ({rader.count()})")
+    check(rader.maximumHeight() >= 28 + 22 * rader.count(),
+          f"och rutan växer så att tråden får plats ({rader.maximumHeight()} px)")
+    check(rader.maximumHeight() <= 260,
+          f"men inte mer än att panelen går att använda ({rader.maximumHeight()} px)")
+    for _bort in range(3):
+        ovningsbok.comment(scenen.id, kommentar["id"])["replies"].pop()
+    win.scene_inspector.set_scene(ovningsbok, ovningsbok.by_id(scenen.id))
+    rader = win.scene_inspector.lst_comments
+    topp = rader.item(0)                 # listan byggdes om: den gamla raden är död
+
+    # "löst" fanns redan — nu med tråd kvar under
+    win.scene_inspector.lst_comments.setCurrentItem(topp)
+    check(win.scene_inspector._toggle_resolved(), "kommentaren kan markeras som löst")
+    check(ovningsbok.comment(scenen.id, kommentar["id"])["resolved"], "och det står i modellen")
+    win.scene_inspector.set_scene(ovningsbok, ovningsbok.by_id(scenen.id))
+    lost_rad = win.scene_inspector.lst_comments.item(0)
+    check(lost_rad.text().startswith("✓") and win.scene_inspector.lst_comments.count() == 2,
+          "och tråden hänger kvar under den lösta kommentaren")
+    win.scene_inspector._toggle_resolved()
+    check(not ovningsbok.comment(scenen.id, kommentar["id"])["resolved"], "och den går att öppna igen")
+
+    # svarsvägen genom fönstret, med dialogrutan avbytt
+    riktig_dialog = QInputDialog.getMultiLineText
+    QInputDialog.getMultiLineText = staticmethod(lambda *a, **k: ("Ett svar till.", True))
+    check(win.ask_reply(scenen.id, kommentar["id"]), "svarsknappen lägger till ett svar")
+    QInputDialog.getMultiLineText = riktig_dialog
+    check(len(ovningsbok.comment(scenen.id, kommentar["id"])["replies"]) == 2,
+          "och det hamnar i samma tråd")
+
     # Arken: ett ark per sida med ett mellanrum där ytan syns, och texten delad
     # mellan rader. Mätt i en riktig rendering, med temats färger.
     from PyQt6.QtCore import QPointF as QtPunkt, QRect as QtRect

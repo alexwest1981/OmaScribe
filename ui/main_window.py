@@ -169,6 +169,7 @@ class MainWindow(QMainWindow):
         self.scene_inspector.open_node.connect(self._open_node)
         self.scene_inspector.comment_requested.connect(self.ask_new_comment)
         self.scene_inspector.comment_activated.connect(self.goto_comment)
+        self.scene_inspector.reply_requested.connect(self.ask_reply)
         self.sidebar.add_tab(self.scene_inspector, "sidebar_tab_scene")
 
         # Skrivloggen (fas 2.1–2.5): dagens ord, kvot mot deadline, historik,
@@ -1308,6 +1309,25 @@ class MainWindow(QMainWindow):
         if not accepted:
             return False
         return self.add_comment(quote, text) is not None
+
+    def ask_reply(self, node_id: str, comment_id: str) -> bool:
+        """↳: ett svar i tråden under en kommentar (R02.2)."""
+        if self.project is None:
+            return False
+        comment = self.project.comment(node_id, comment_id)
+        if comment is None:
+            return False
+        text, accepted = QInputDialog.getMultiLineText(
+            self, _("comment_reply_title"),
+            _("comment_reply_label", quote=comment["quote"][:60]))
+        if not accepted or not text.strip():
+            return False
+        if self.project.add_reply(node_id, comment_id, text) is None:
+            return False
+        if node_id == self.active_scene_id:
+            self.scene_inspector.set_scene(self.project, self.project.by_id(node_id))
+        self._save_project_manifest()
+        return True
 
     def add_comment(self, quote: str, text: str):
         """Fäster kommentaren på citatet och markerar stället i texten."""

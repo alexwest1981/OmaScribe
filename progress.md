@@ -310,3 +310,28 @@
 - **Medvetet val:** diffen jämför **filerna som de är**, alltså HTML. `<p>`-taggarna syns därför i
   vyn. Att skala bort dem skulle göra vyn snyggare men bryta garantin att det man ser är exakt det
   man återställer. Hellre taggar än en vänlig lögn.
+
+### Fas 3.3: kommentarer med tråd
+
+- **Status:** complete, grindad (449 rökprov + 54 renhetsprov, GRÖNT).
+- Först mätt vad som fanns: kommentarerna, markeringarna i texten, hoppa-till-citatet och
+  **löst** var redan färdiga i scenpanelen (`ui/scene_inspector.py`). Det som saknades var tråden.
+- `core/project.py`: `add_reply()` — tråden hänger på kommentaren, som hänger på sitt citat, så ett
+  svar behöver inget eget ankare och följer med när citatet flyttar sig. Nya kommentarer får
+  `replies: []`, och `setdefault` ger gamla kommentarer sin tomma lista, så sparade projekt öppnas
+  som förut.
+- `ui/scene_inspector.py`: en ↳-knapp och svar som indragna rader direkt efter sin kommentar, med
+  kommentarens id — ett klick på ett svar går till samma citat. Tråden hänger kvar under en löst
+  kommentar, och allt går att öppna igen.
+  `ponytail:` platt lista med ↳-rader i stället för ett QTreeWidget; byt till träd om trådarna blir
+  långa nog att fällas ihop.
+- En API-fälla på vägen: `QListWidgetItem` har ingen `addChild` (det är `QTreeWidgetItem`) — den
+  första varianten kraschade direkt. Provet hade fångat det; nu är raden rätt från början.
+- Mätt: tom tråd på nya kommentarer, svar hamnar i tråden, svar på okänd kommentar och tomma svar
+  avvisas, svar hamnar indraget under rätt kommentar med rätt id, löst/öppna-igen fungerar med
+  tråden kvar, och svarsknappen lägger till i samma tråd.
+
+- **Tråden avslöjade en egen regression:** kommentarsrutan hade 96 px som tak, vilket räckte för
+  en enda kommentar men klippte tråden. Taket följer nu antalet rader (28 + 22 per rad, kapat vid
+  260 px) — sett i skärmdump: 5 rader ger 138 px och inget klipps. Två gamla trångmål i panelen
+  (flikraden och etikettraden vid ~390 px) står i listan över det som skall åtgärdas senare.

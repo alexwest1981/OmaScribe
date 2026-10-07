@@ -677,9 +677,27 @@ class Project:
             "quote": quote,
             "text": (text or "").strip(),
             "resolved": False,
+            "replies": [],          # tråden under kommentaren (R02.2)
         }
         node.comments.append(comment)
         return comment
+
+    def add_reply(self, node_id: str, comment_id: str, text: str):
+        """Ett svar i tråden under en kommentar (R02.2).
+
+        Tråden hänger på kommentaren, och kommentaren hänger på sitt citat: ett
+        svar behöver därför inget eget ankare, och följer med när citatet flyttar
+        sig. Kommentarer som sparades innan trådar fanns får sin lista här.
+        """
+        comment = self.comment(node_id, comment_id)
+        if comment is None:
+            return None
+        text = (text or "").strip()
+        if not text:
+            return None
+        svar = {"id": uuid.uuid4().hex[:8], "text": text}
+        comment.setdefault("replies", []).append(svar)
+        return svar
 
     def comment(self, node_id: str, comment_id: str):
         for comment in self.by_id(node_id).comments:

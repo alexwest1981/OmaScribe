@@ -23,6 +23,7 @@ class SceneInspector(QWidget):
     open_node = pyqtSignal(str)          # öppna en nod (material) i editorn
     comment_requested = pyqtSignal()     # ny kommentar på det som är markerat
     comment_activated = pyqtSignal(str, str)   # (nod-id, kommentars-id) — gå dit
+    reply_requested = pyqtSignal(str, str)     # (nod-id, kommentars-id) — svara i tråden
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -154,7 +155,7 @@ class SceneInspector(QWidget):
         # Kommentarer fästa i texten (R01.12). Ankaret är citatet, så en
         # kommentar hittar tillbaka även när texten runtom har ändrats.
         self.lst_comments = QListWidget()
-        self.lst_comments.setMaximumHeight(96)
+        self.lst_comments.setMaximumHeight(96)     # utgångsläget; växer med trådarna
         self.lst_comments.setToolTip(_("scene_comments_hint"))
         self.lst_comments.itemClicked.connect(self._activate_comment)
         self.lst_comments.itemActivated.connect(self._activate_comment)
@@ -167,6 +168,11 @@ class SceneInspector(QWidget):
         self.btn_comment_new.setToolTip(_("scene_comment_new"))
         self.btn_comment_new.clicked.connect(self.comment_requested.emit)
         comment_row.addWidget(self.btn_comment_new)
+        self.btn_comment_reply = QToolButton()
+        self.btn_comment_reply.setText("↳")
+        self.btn_comment_reply.setToolTip(_("scene_comment_reply"))
+        self.btn_comment_reply.clicked.connect(self._reply_to_selected)
+        comment_row.addWidget(self.btn_comment_reply)
         self.btn_comment_resolve = QToolButton()
         self.btn_comment_resolve.setText("✓")
         self.btn_comment_resolve.setToolTip(_("scene_comment_resolve"))
@@ -414,7 +420,7 @@ class SceneInspector(QWidget):
         self.lst_comments.clear()
         has = self.project is not None and self.node is not None
         for knapp in (self.btn_comment_new, self.btn_comment_resolve,
-                      self.btn_comment_delete):
+                      self.btn_comment_delete, self.btn_comment_reply):
             knapp.setEnabled(has)
         self.lbl_comments.setText("")
         if not has:
@@ -430,6 +436,23 @@ class SceneInspector(QWidget):
             if comment["resolved"]:
                 item.setForeground(muted)
             self.lst_comments.addItem(item)
+            # Tråden ligger som indragna rader direkt efter sin kommentar, med
+            # kommentarens id: ett klick på ett svar går till samma citat, för det
+            # är där samtalet hör hemma.
+            # ponytail: platt lista med ↳-rader i stället för ett QTreeWidget — en
+            # listrad per svar räcker för en samtalsnot. Byt till träd om trådarna
+            # blir långa nog att fällas ihop.
+            for svar in comment.get("replies") or []:
+                rad = QListWidgetItem("↳ " + (svar.get("text") or ""))
+                rad.setData(Qt.ItemDataRole.UserRole, comment["id"])
+                rad.setToolTip(svar.get("text") or "")
+                if comment["resolved"]:
+                    rad.setForeground(muted)
+                self.lst_comments.addItem(rad)
+        # Rutan växer med trådarna och kapas högt: med en tråd under en kommentar
+        # räcker inte 96 px, och en kommentar som är avklippt går inte att läsa.
+        rader = self.lst_comments.count()
+        self.lst_comments.setMaximumHeight(max(96, min(260, 28 + rader * 22)))
         ogiltiga = len([c for c in comments if not c["resolved"]])
         if ogiltiga:
             self.lbl_comments.setText(_("scene_comments_open", count=ogiltiga))
@@ -443,6 +466,14 @@ class SceneInspector(QWidget):
         comment_id = item.data(Qt.ItemDataRole.UserRole)
         if comment_id and self.node is not None:
             self.comment_activated.emit(self.node.id, comment_id)
+
+    def _reply_to_selected(self) -> bool:
+        """Ber fönstret om svaret — rutan för texten hör dit, inte hit."""
+        comment_id = self._selected_comment_id()
+        if comment_id is None or self.node is None:
+            return False
+        self.reply_requested.emit(self.node.id, comment_id)
+        return True
 
     def _toggle_resolved(self) -> bool:
         """Markera som löst — eller tillbaka till arbetsnot."""

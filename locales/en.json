@@ -760,5 +760,8 @@
   "history_count": "{n} points",
   "history_saved_point": "The point is saved",
   "history_restored": "The text is restored",
-  "history_needs_scene": "Open a scene first"
+  "history_needs_scene": "Open a scene first",
+  "scene_comment_reply": "Reply in the thread",
+  "comment_reply_title": "Reply to the comment",
+  "comment_reply_label": "Reply to \"{quote}\":"
 }

@@ -760,5 +760,8 @@
   "history_count": "{n} punkter",
   "history_saved_point": "Punkten är sparad",
   "history_restored": "Texten är återställd",
-  "history_needs_scene": "Öppna en scen först"
+  "history_needs_scene": "Öppna en scen först",
+  "scene_comment_reply": "Svara i tråden",
+  "comment_reply_title": "Svara på kommentaren",
+  "comment_reply_label": "Svar på \"{quote}\":"
 }

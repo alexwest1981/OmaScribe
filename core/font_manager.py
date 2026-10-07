@@ -92,26 +92,18 @@ class DropdownStyle(QProxyStyle):
         return super().styleHint(hint, option, widget, data)
 
 
-_MENY_STIL = None
+def install_dropdown_style(app=None) -> bool:
+    """Sätter stilen en gång på applikationen, före widgetarna.
 
-
-def use_dropdown(combo: QComboBox) -> None:
-    """Ger combon en vanlig meny i stället för en popup över hela skärmen.
-
-    Stilen ägs av applikationen (förälder), inte av Python-variabeln: `setStyle`
-    tar inte över ägandet, och en stil som dör före sina widgetar kraschar i
-    städningen — mätt som signal 11 i rökprovet.
+    Applikationen äger stilen då, och ingen widget kan hålla en stil som dör före
+    sig — `setStyle` på en widget tar nämligen inte över ägandet. Anropas från
+    MainWindow innan gränssnittet byggs, så rökprovet går samma väg som appen.
     """
-    global _MENY_STIL
-    if _MENY_STIL is None:
-        _MENY_STIL = DropdownStyle(QApplication.style())
-        # QProxyStyle tar ingen förälder i konstruktorn (PyQt6), så appen får den
-        # i efterhand: setStyle tar inte över ägandet, och en stil som dör före
-        # sina widgetar kraschar i städningen — mätt som signal 11 i rökprovet.
-        app = QApplication.instance()
-        if app is not None:
-            _MENY_STIL.setParent(app)
-    combo.setStyle(_MENY_STIL)
+    app = app or QApplication.instance()
+    if app is None or isinstance(app.style(), DropdownStyle):
+        return False
+    app.setStyle(DropdownStyle())
+    return True
 
 
 class FontItemDelegate(QStyledItemDelegate):
@@ -192,7 +184,6 @@ class FontSelectorComboBox(QComboBox):
         self.setItemDelegate(FontItemDelegate(self))
         self.setFixedWidth(180)
         self.setMaxVisibleItems(14)
-        use_dropdown(self)
         # Skrollisten skall synas: 37 typsnitt i en meny med 14 rader går inte att
         # bläddra i om listen ser ut att vara slut.
         self.list_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)

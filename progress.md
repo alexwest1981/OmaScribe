@@ -188,3 +188,17 @@
   tillbaka ger manuset och formateringsraden tillbaka. Två kontroller bit-testade.
 - Medvetet inte gjort: en grafisk tidslinje. Texten i `when` sorterad i tid är tidslinjen
   en ensam författare läser; en ritad tidslinje är en egen vy den dag någon saknar den.
+
+### Fas 2.10: taggar, samlingar och anteckningar på scen
+
+- **Status:** complete, grindad (376 rökprov + 54 renhetsprov, GRÖNT).
+- Mätt först, byggt sedan: nästan allt fanns redan. Sceninspektören redigerar taggar
+  (`input_labels`), anteckning (`input_note`, med fördröjning) och status; `core/collections.py`
+  har frågespråket `status:`, `etikett:`, `pov:`, `text:`; statusfärgen sitter i trädet och
+  korktavlan. Det som saknades var sista steget i arbetsflödet ur forskningen — samlingen gick
+  att filtrera fram men inte att *arbeta igenom*.
+- Därför: en läs-knapp i samlingspanelen (`▶`) som öppnar samlingens scener i läsvyn, och
+  `_show_scrivenings(noder, rubrik)` utbruten så att hela manuset och en samling går samma väg.
+- Mätt i provet: en sparad sökning på `status:Utkast` ger 2 av 3 scener, scenens anteckning
+  ligger kvar, läsvyn visar exakt samlingens scener i manusets ordning, och vägen tillbaka går
+  till manuset.

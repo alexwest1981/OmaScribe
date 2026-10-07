@@ -50,6 +50,7 @@ class CollectionsPanel(QWidget):
 
     scene_selected = pyqtSignal(str)     # node_id
     changed = pyqtSignal()               # samlingarna ändrades, spara manifestet
+    read_requested = pyqtSignal(str)     # läs samlingen som en sammanhängande text
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -81,6 +82,7 @@ class CollectionsPanel(QWidget):
             ("★", "collections_toggle", self.toggle_active_scene),
             ("✏️", "collections_rename", self.rename_current),
             ("🗑", "collections_delete", self.delete_current),
+            ("▶", "collections_read", self.read_current),
         ):
             button = QToolButton()
             button.setText(icon)
@@ -250,6 +252,18 @@ class CollectionsPanel(QWidget):
         return inside
 
     # ---------------------------------------------------------------- signaler
+
+    def read_current(self) -> bool:
+        """Ber läsaren visa samlingens scener som en sammanhängande text.
+
+        Det är arbetsflödet ur forskningen: filtrera fram det som saknar
+        redigering och arbeta igenom dem i tur och ordning utan att lämna texten.
+        """
+        cid = self.current_collection_id()
+        if cid is None:
+            return False
+        self.read_requested.emit(cid)
+        return True
 
     def _on_clicked(self, item: QTreeWidgetItem, _column: int) -> None:
         if item.data(0, KIND_ROLE) == "scene":

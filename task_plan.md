@@ -14,14 +14,15 @@ taget (`ui/main_window.py:663`). Se `findings.md`.
 
 ## Next Step
 
-Fas 2.10 (taggar, samlingar och anteckningar knutna till scen)
+Fas 2.11 (namn- och ordförrådsgenerator) och 2.12 (revisionsläge)
 (tidslinje och plot-tavla) som är nästa större punkt. Rutnätet i 2.9 bygger på
 scenmodellen och på att scenens status redan finns.
 
 ## Current Phase
 
-Fas 2 — Författarlagret (2.1–2.6, 2.8 och 2.9 klara: skrivloggen, kvot,
-historik, sprintar, skrivmaskinsläget, story biblen, plot-tavlan).
+Fas 2 — Författarlagret (2.1–2.6, 2.8, 2.9 och 2.10 klara: skrivloggen, kvot,
+historik, sprintar, skrivmaskinsläget, story biblen, plot-tavlan,
+samlingen som läsvy).
 Fas 0, 0b och 1 är klara. Sedan dess: appskalet följer v0-referensen, och
 pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 
@@ -89,7 +90,7 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 - [ ] **2.7** Pauspåminnelser och ergonomi, valbart. R03.7 — *låg*
 - [x] **2.8** Karaktärsblad och story bible i projektet: `ui/codex_panel.py` visar projektets codex (codex.sqlite i projektmappen) med sökning och typfilter, och ett blad per entitet — namn, alias, vem det är (sparas med kort fördröjning medan man skriver), relationer till andra i boken, scenerna den är kopplad till (klick öppnar scenen) och hur ofta namnet nämns i manuset. Ny/redigera/ta bort, koppla loss scen, lägg till och ta bort relation. `core.storybible` fick `remove_relation`; dialogrutan förifylls vid redigering. R03.9
 - [x] **2.9** Tidslinje, plot-tavla och scenöversikt: `ui/plot_grid.py` visar manuset som en tabell — en rad per scen med del/kapitel, tråd (etiketter), POV, status, när i berättelsen den händer, ord och ordmål. Redigerbar direkt i tabellen (status genom en meny med projektets egna statusar), ett klick på titeln öppnar scenen, och sorteringen är poängen: manusordning, **tidslinje** (scenens egen tid, tom tid sist), POV eller status — Dabbles huvudtråd och sidotrådar sida vid sida, utan att lämna projektet. Modellen fick fältet `when` (sparas i manifestet). Tavlan är en egen sida i stacken och inte en flik i sidopanelen: åtta kolumner är ~790 px och panelen är 370. *Medvetet inte gjort:* en grafisk tidslinje (band med markörer) — texten i `when` sorterad i tid är tidslinjen en ensam författare läser, och en ritad tidslinje är en egen vy den dag någon saknar den. R03.10
-- [ ] **2.10** Taggar, samlingar och anteckningar knutna till scen. R03.11
+- [x] **2.10** Taggar, samlingar och anteckningar knutna till scen. Mestadels färdigt sedan tidigare —fas 1.5 (statusfärg), 1.9 (samlingar), 1.11 (scenanteckning) och 2.9 (tråd/etiketter i tavlan) hade redan byggt bitarna. Det som saknades var sista steget i arbetsflödet: samlingen gick att filtrera fram men inte att *arbeta igenom*. Nu har samlingspanelen en läs-knapp som öppnar samlingens scener i läsvyn (`▶`, "Läs samlingen som en text") — och `_show_scrivenings` är utbruten så att hela manuset och en samling går samma väg. R03.11
 - [ ] **2.11** Namn- och ordförrådsgenerator. R03.12 — *låg*
 - [ ] **2.12** Revisionsläge och mål per utkast (utkast 1/2/3). R03.13
 - [ ] **2.13** Blurb och synopsis som projektfält. R03.15 — *låg*
@@ -97,7 +98,7 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 - [ ] **2.15** Läsbarhetsanalys och stilråd i texten (LIX finns, markeringar saknas). R03.17
 - [ ] **2.16** Projektöversikt och anteckningar (valvet som projektlager, taggar/properties). R03.18
 - [ ] **2.17** Projektinstruktioner: per-projekt kontext för AI:n. R04.18
-- **Status:** in progress (2.1–2.6, 2.8 och 2.9 klara och grindade)
+- **Status:** in progress (2.1–2.6 och 2.8–2.10 klara och grindade)
 
 ### Fas 3: Revision och granskning
 
@@ -196,6 +197,14 @@ kontrollistan när faserna är klara.
 - [ ] Kanalprofiler, eftersom mått, blöd och metadataregler skiljer sig. R05
 
 ## Att åtgärda senare (rapporterat av Alex, ej gjort)
+
+- [ ] **Rökprovet kraschar ibland i städningen (signal 11) efter grön resultatrad.** Sett 2 gånger
+      2026-10-07 (gate35 och gate39), aldrig tidigare i någon gate-logg. Alla 376 kontroller är
+      gröna och krashen kommer *efter* sammanfattningen. Det troliga var stilen som lades på
+      widgeten (`use_dropdown`) — den ägs nu av applikationen (`install_dropdown_style()`) i stället
+      för av en widget, och 10 körningar i rad är gröna. Om det kommer tillbaka: kör rökprovet i en
+      slinga och läs sista raden, och misstänk Qt-objekt som dör före sina användare.
+
 
 - [x] **Teckensnittsväljarens meny sprängde hela fönstret.** Fixat 2026-10-07. Orsaken var
       stilmallens fyra regler för `QComboBox QAbstractItemView` (i `ui/theme_manager.py`): de får

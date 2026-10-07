@@ -12,7 +12,7 @@ from PyQt6.QtGui import (
 )
 from core.i18n import _, i18n
 from core import richtext, directives, print_style
-from core.font_manager import FontSelectorComboBox, use_dropdown
+from core.font_manager import FontSelectorComboBox
 from ui.table_dialog import TableDialog
 
 class FormattingToolBar(QToolBar):
@@ -117,7 +117,6 @@ class FormattingToolBar(QToolBar):
         self.combo_size.setView(QListView(self.combo_size))
         self.combo_size.setFixedWidth(68)
         self.combo_size.setMaxVisibleItems(12)
-        use_dropdown(self.combo_size)
         self.combo_size.view().setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         for sz in [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 72]:
             self.combo_size.addItem(str(sz), sz)

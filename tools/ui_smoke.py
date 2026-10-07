@@ -1243,6 +1243,39 @@ def main() -> int:
           "och vägen tillbaka ger manuset och formateringsraden tillbaka")
     win._deactivate_project()
 
+    print("\n26. Samlingen som läsvy (arbetsflödet i R03.11)")
+
+    samling_mapp = out / "samlingen"
+    samling_mapp.mkdir()
+    saml_bok = Bok.create(samling_mapp, "Samlingen", template="roman")
+    win._activate_project(saml_bok)
+    while len(saml_bok.manuscript()) < 3:
+        saml_bok.add_node(SCENE, f"Scen {len(saml_bok.manuscript()) + 1}", None)
+    saml_rader = saml_bok.manuscript()
+    for nod in saml_rader:
+        saml_bok.write(nod.id, f"<p>Text i {nod.title}.</p>")
+    saml_bok.set_meta(saml_rader[0].id, status="Utkast", labels=["huvudtråd"],
+                      note="Behöver ett nytt slut")
+    saml_bok.set_meta(saml_rader[1].id, status="Klar")
+    saml_bok.set_meta(saml_rader[2].id, status="Utkast")
+
+    samlingspanel = win.binder.collections
+    samling_id = samlingspanel.new_search("Saknar redigering", "status:Utkast")
+    träffar = [n.id for n in saml_bok.select_collection(samling_id)]
+    check(träffar == [saml_rader[0].id, saml_rader[2].id],
+          f"scenanteckning, tagg och status räcker för en sparad sökning ({len(träffar)} träffar)")
+    check(saml_bok.by_id(saml_rader[0].id).note == "Behöver ett nytt slut",
+          "och scenens egen anteckning ligger kvar på scenen")
+    check(samlingspanel.select_collection(samling_id) and samlingspanel.read_current(),
+          "samlingen kan läsas som en sammanhängande text")
+    check(win.stack.currentIndex() == win._scrivenings_index
+          and [n.id for n in win.scrivenings.shown_nodes()] == träffar,
+          f"läsvyn visar samlingens scener, i manusets ordning "
+          f"({[n.title for n in win.scrivenings.shown_nodes()]})")
+    win._close_scrivenings()
+    check(win.stack.currentIndex() == 1, "och vägen tillbaka går till manuset")
+    win._deactivate_project()
+
     # Arken: ett ark per sida med ett mellanrum där ytan syns, och texten delad
     # mellan rader. Mätt i en riktig rendering, med temats färger.
     from PyQt6.QtCore import QPointF as QtPunkt, QRect as QtRect

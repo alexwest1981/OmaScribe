@@ -703,5 +703,7 @@
   "grid_sort_status": "Status",
   "grid_count": "{n} scenes",
   "menu_view_grid": "Plot grid",
-  "grid_no_project": "Open a project first — the grid shows its scenes"
+  "grid_no_project": "Open a project first — the grid shows its scenes",
+  "collections_read": "Read the collection as one text",
+  "collections_read_empty": "The collection is empty — nothing to read"
 }

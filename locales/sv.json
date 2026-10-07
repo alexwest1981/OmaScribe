@@ -703,5 +703,7 @@
   "grid_sort_status": "Status",
   "grid_count": "{n} scener",
   "menu_view_grid": "Plot-tavla",
-  "grid_no_project": "Öppna ett projekt först — tavlan visar dess scener"
+  "grid_no_project": "Öppna ett projekt först — tavlan visar dess scener",
+  "collections_read": "Läs samlingen som en text",
+  "collections_read_empty": "Samlingen är tom — inget att läsa"
 }

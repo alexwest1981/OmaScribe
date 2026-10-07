@@ -32,6 +32,7 @@ from ui.scene_inspector import SceneInspector
 from ui.writing_log_panel import WritingLogPanel
 from ui.codex_panel import CodexPanel
 from ui.plot_grid import PlotGrid
+from core.font_manager import install_dropdown_style
 from ui.scrivenings import ScriveningsView
 from core.project import Project
 from ui.chart_dialog import ChartDialog
@@ -48,6 +49,10 @@ class MainWindow(QMainWindow):
         self.dictation = dictation_engine
         self.theme_mgr = theme_mgr
         self.config = config_mgr
+        # Vanliga menyer i stället för skärmhöga popuper: stilmallens QComboBox-
+        # regler får Qt att välja meny-läget, och stilen svarar nej på det. En gång
+        # här, före gränssnittet, så att applikationen äger stilen.
+        install_dropdown_style()
 
         self.current_filepath = None
         self.is_modified = False
@@ -187,6 +192,7 @@ class MainWindow(QMainWindow):
         self.binder = BinderPanel(self)
         self.binder.scene_selected.connect(self._load_scene)
         self.binder.structure_changed.connect(self._on_structure_changed)
+        self.binder.collections.read_requested.connect(self._read_collection)
         self.binder.setVisible(False)
         self.splitter.insertWidget(0, self.binder)
 
@@ -1242,6 +1248,10 @@ class MainWindow(QMainWindow):
         nodes, heading = self._scrivenings_content()
         if not nodes:
             return
+        self._show_scrivenings(nodes, heading)
+
+    def _show_scrivenings(self, nodes, heading: str = "") -> None:
+        """Visar noderna i läsvyn. Samma väg för hela manuset och för en samling."""
         self._flush_scene(quiet=True)          # scenen i editorn sparas först
         self.scrivenings.set_content(self.project, nodes, heading=heading)
         self.stack.setCurrentIndex(self._scrivenings_index)
@@ -1249,6 +1259,20 @@ class MainWindow(QMainWindow):
         self.scrivenings.pane.setFocus()
         self._update_stats()
         self._update_window_title()
+
+    def _read_collection(self, collection_id: str) -> None:
+        """Läsvyn över en samling: arbeta igenom scenerna i tur och ordning."""
+        if self.project is None:
+            return
+        try:
+            noder = self.project.select_collection(collection_id)
+            namn = self.project.collection(collection_id).name
+        except KeyError:
+            return
+        if not noder:
+            self.status_bar.showMessage(_("collections_read_empty"), 4000)
+            return
+        self._show_scrivenings(noder, heading=namn)
 
     def _flush_scrivenings(self) -> int:
         """Skriver läsvyns text tillbaka till scenerna, en fil per scen.

@@ -96,6 +96,7 @@ class ProjectNode:
     order: int = 0
     synopsis: str = ""
     note: str = ""                     # författarens egen anteckning om scenen (R01.12)
+    comments: list[dict] = field(default_factory=list)   # marginalkommentarer (R01.12)
     status: str = ""
     labels: list[str] = field(default_factory=list)
     target_words: int = 0
@@ -112,6 +113,7 @@ class ProjectNode:
             "order": self.order,
             "synopsis": self.synopsis,
             "note": self.note,
+            "comments": [dict(c) for c in self.comments],
             "status": self.status,
             "labels": list(self.labels),
             "target_words": self.target_words,
@@ -132,6 +134,16 @@ class ProjectNode:
             order=int(d.get("order", 0)),
             synopsis=d.get("synopsis", ""),
             note=d.get("note", ""),
+            comments=[
+                {
+                    "id": str(c.get("id") or uuid.uuid4().hex[:8]),
+                    "quote": str(c.get("quote", "")),
+                    "text": str(c.get("text", "")),
+                    "resolved": bool(c.get("resolved", False)),
+                }
+                for c in (d.get("comments") or [])
+                if isinstance(c, dict) and (c.get("quote") or "").strip()
+            ],
             status=d.get("status", ""),
             labels=list(d.get("labels") or []),
             target_words=int(d.get("target_words", 0)),
@@ -585,6 +597,64 @@ class Project:
         linked = {n.id for n in self.material_for(scene_id)}
         return [n for n in self.research() if n.is_writable and n.id not in linked]
 
+    # ---------------------------------------------------------- kommentarerna
+
+    def add_comment(self, node_id: str, quote: str, text: str) -> dict:
+        """Fäster en kommentar vid ett textställe (R01.12).
+
+        Ankaret är citatet, inte en position: texten flyttar sig när man skriver,
+        och ett citat går att hitta igen. Se _refresh_comment_marks i fönstret.
+        """
+        node = self.by_id(node_id)
+        quote = (quote or "").strip()
+        if not quote:
+            raise ValueError("en kommentar måste hänga på ett textställe")
+        comment = {
+            "id": uuid.uuid4().hex[:8],
+            "quote": quote,
+            "text": (text or "").strip(),
+            "resolved": False,
+        }
+        node.comments.append(comment)
+        return comment
+
+    def comment(self, node_id: str, comment_id: str):
+        for comment in self.by_id(node_id).comments:
+            if comment["id"] == comment_id:
+                return comment
+        return None
+
+    def comments_for(self, node_id: str, include_resolved: bool = True) -> list:
+        """Kommentarerna på en scen, ogiltiga först."""
+        try:
+            comments = list(self.by_id(node_id).comments)
+        except KeyError:
+            return []
+        if not include_resolved:
+            comments = [c for c in comments if not c.get("resolved")]
+        # ogiltiga först: de är de man letar efter
+        return sorted(comments, key=lambda c: bool(c.get("resolved")))
+
+    def resolve_comment(self, node_id: str, comment_id: str, resolved: bool = True) -> bool:
+        comment = self.comment(node_id, comment_id)
+        if comment is None:
+            return False
+        comment["resolved"] = bool(resolved)
+        return True
+
+    def delete_comment(self, node_id: str, comment_id: str) -> bool:
+        node = self.by_id(node_id)
+        for index, comment in enumerate(node.comments):
+            if comment["id"] == comment_id:
+                node.comments.pop(index)
+                return True
+        return False
+
+    def unresolved_comments(self) -> list:
+        """(nod, kommentar) för alla ogiltiga kommentarer i projektet."""
+        return [(node, comment) for node in self.walk()
+                for comment in node.comments if not comment.get("resolved")]
+
     @property
     def codex_path(self) -> Path:
         """Projektets codex ligger i projektmappen, så projektet är självständigt.
@@ -935,6 +1005,44 @@ def _self_check() -> int:
         med_anteckning = Project.load(root)
         check(med_anteckning.by_id(scene.id).note.startswith("Kolla kapitel 3"),
               "scenanteckningen följer med till disk")
+
+        # kommentarerna hänger på ett citat, inte på en position (R01.12)
+        kom = book.add_comment(scene.id, "Hon kommer hem.", "Bygg ut den här scenen.")
+        check(kom["id"] and not kom["resolved"], "en kommentar skapas ogiltig")
+        check(book.comments_for(scene.id) == [kom], "och ligger på scenen")
+        check(len(book.unresolved_comments()) == 1, "projektet räknar ogiltiga")
+        check(book.resolve_comment(scene.id, kom["id"]) is True, "den kan markeras löst")
+        check(book.unresolved_comments() == [], "och räknas då inte längre")
+        check(book.comments_for(scene.id) == [kom], "men ligger kvar på scenen")
+        check(book.resolve_comment(scene.id, kom["id"], False) is True,
+              "och gå tillbaka till ogiltig")
+        andra_kom = book.add_comment(scene.id, "Ja.", "Kort replik.")
+        check([c["id"] for c in book.comments_for(scene.id)] == [kom["id"], andra_kom["id"]],
+              f"ogiltiga kommentarer först ({book.comments_for(scene.id)})")
+        check(book.resolve_comment(scene.id, "finns-inte") is False, "okänt id ger False")
+        try:
+            book.add_comment(scene.id, "   ", "utan textställe")
+            check(False, "en kommentar utan citat skall vägras")
+        except ValueError:
+            check(True, "en kommentar utan citat vägras")
+        book.save()
+        igen = Project.load(root)
+        check(len(igen.comments_for(scene.id)) == 2, "kommentarerna följer med till disk")
+        check(igen.comment(scene.id, kom["id"])["text"] == "Bygg ut den här scenen.",
+              "med sin text i behåll")
+        check(igen.delete_comment(scene.id, kom["id"]) is True, "en kommentar kan tas bort")
+        check(len(igen.comments_for(scene.id)) == 1, "och då är den borta")
+        # ett trasigt manifest: kommentar utan citat faller bort i stället för att krascha
+        trasig = json.loads((root / MANIFEST).read_text(encoding="utf-8"))
+        for node in trasig["nodes"]:
+            if node["id"] == scene.id:
+                node["comments"] = [{"id": "x1", "quote": "", "text": "utan citat"},
+                                    {"id": "x2", "quote": "Ja.", "text": "med citat"}]
+        (root / MANIFEST).write_text(json.dumps(trasig), encoding="utf-8")
+        lagad = Project.load(root)
+        check([c["id"] for c in lagad.comments_for(scene.id)] == ["x2"],
+              f"en kommentar utan citat faller bort ({lagad.comments_for(scene.id)})")
+        check(lagad.validate() == [], "och projektet är fortfarande giltigt")
 
         # borttagning tar barnen med sig och filen försvinner
         scene_file = book.path_of(book.by_id(scene.id))

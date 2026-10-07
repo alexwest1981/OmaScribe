@@ -64,15 +64,15 @@ Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.4, 1.6, 1.8–1.10 klara)
 - [x] **1.2** En scen per textdokument, laddas i editorn vid val i trädet. R01.2
 - [x] **1.3** Korktavla och indexkort (`QListView` IconMode, titel + status + synopsis). R01.3
 - [x] **1.4** Synopsis och sammanfattning per scen, i inspector och på kortet. R01.4
-- [~] **1.5** Status och etiketter per scen, redigerbara värdelistor, färg + text. R01.5 — *text klar, färg kvar (statusar är fria strängar i projektet, färgen hör ihop med kortdelegaten)*
+- [x] **1.5** Status och etiketter per scen, redigerbara värdelistor, färg + text. R01.5
 - [x] **1.6** Dra-och-släpp och omordning i träd och kortvy, atomiskt. R01.11
-- [~] **1.7** Sammanhängande läsvy (Scrivenings): flera scener som ett manus. R01.9 — *läsningen klar; redigering i vyn kvar (kräver att verktygsraden och Edit-åtgärderna riktas mot den scen som har fokus — 28 anrop pekar på `editor.canvas`)*
+- [x] **1.7** Sammanhängande läsvy (Scrivenings): flera scener som ett manus. R01.9
 - [x] **1.8** Ordräkningsmål per scen, kapitel och projekt, summerat i hierarkin. R01.10
 - [x] **1.9** Samlingar: manuella grupper och sparade sökningar, utan att ändra binderordningen. R01.8
 - [x] **1.10** Researchmapp: källor, länkar och bilder skilda från manuset, uteslutna ur export. R01.7
-- [~] **1.11** Anteckningar och kommentarer per scen (knyter ihop med valvet). R01.12 — *scenanteckningen och valvkopplingen klara; kommentarer fästa i själva texten kvar (kräver ankare som håller vid redigering — eget steg)*
-- [ ] **1.12** Projektmallar: Roman, Fackbok, novell — binderstruktur + statusvärden, separat från dokumentmallarna. R01.13, R03.8
-- [ ] **1.13** Scener och scenkopplingar: scen som enhet med sammanfattning, POV och kopplade entiteter. R04.2
+- [x] **1.11** Anteckningar och kommentarer per scen (knyter ihop med valvet). R01.12
+- [x] **1.12** Projektmallar: Roman, Fackbok, novell — binderstruktur + statusvärden, separat från dokumentmallarna. R01.13, R03.8
+- [x] **1.13** Scener och scenkopplingar: scen som enhet med sammanfattning, POV och kopplade entiteter. R04.2
 - [ ] **1.14** Manusvarianter och alternativa strukturer. R01.14 — *låg*
 - **Status:** pending
 

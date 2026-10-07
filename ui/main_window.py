@@ -2,10 +2,10 @@ import os
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFileDialog,
     QMessageBox, QLabel, QSplitter, QStatusBar, QApplication,
-    QStackedWidget, QMenu, QDialog, QPushButton, QInputDialog
+    QStackedWidget, QMenu, QDialog, QPushButton, QInputDialog, QTextEdit
 )
 from PyQt6.QtCore import Qt, QTimer, QPoint, QMarginsF
-from PyQt6.QtGui import QAction, QKeySequence, QTextCursor, QPageLayout, QPageSize, QCursor
+from PyQt6.QtGui import QAction, QKeySequence, QPalette, QTextCursor, QPageLayout, QPageSize, QCursor
 from PyQt6.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
 
 from core.i18n import _, i18n
@@ -145,6 +145,8 @@ class MainWindow(QMainWindow):
         self.scene_inspector = SceneInspector(self)
         self.scene_inspector.meta_changed.connect(self._on_scene_meta_changed)
         self.scene_inspector.open_node.connect(self._open_node)
+        self.scene_inspector.comment_requested.connect(self.ask_new_comment)
+        self.scene_inspector.comment_activated.connect(self.goto_comment)
         self.sidebar.add_tab(self.scene_inspector, "sidebar_tab_scene")
 
         self.splitter.addWidget(self.sidebar)
@@ -315,6 +317,8 @@ class MainWindow(QMainWindow):
         self.act_ins_divider = self._add_action(self.menu_insert, "─ " + _("menu_insert_horizontal_rule"), self.toolbar._insert_divider)
         self.act_ins_page_break = self._add_action(self.menu_insert, "📄 " + _("menu_insert_page_break"), self.editor.canvas.insert_page_break, "Ctrl+Return")
         self.act_ins_template = self._add_action(self.menu_insert, "🎨 " + _("menu_insert_template"), self.open_template_dialog)
+        self.act_ins_comment = self._add_action(
+            self.menu_insert, "💬 " + _("menu_insert_comment"), self.ask_new_comment, "Ctrl+Alt+M")
         
         self.menu_ins_callout = self.menu_insert.addMenu("💡 " + _("tb_callout"))
         self.act_callout_info = self.menu_ins_callout.addAction(_("tb_callout_info"), lambda: self.toolbar._insert_callout("info"))
@@ -412,7 +416,8 @@ class MainWindow(QMainWindow):
         if self.toolbar is not None:
             self.toolbar.setEnabled(not reading)
         for name in ("act_ins_page_break", "act_ins_image", "act_ins_chart",
-                     "act_ins_table", "act_ins_template", "act_ins_divider"):
+                     "act_ins_table", "act_ins_template", "act_ins_divider",
+                     "act_ins_comment"):
             action = getattr(self, name, None)
             if action is not None:
                 action.setEnabled(not reading)
@@ -814,7 +819,15 @@ class MainWindow(QMainWindow):
         self.binder.set_project(None)
         self.binder.setVisible(False)
         self.scene_inspector.set_scene(None, None)
+        self._refresh_comment_marks()
         self.act_view_scrivenings.setEnabled(False)
+        # Editorn stod med projektets sista scen. Texten ligger redan på disk
+        # (ovan), så den får inte lämna kvar ett "osparat dokument" utan väg —
+        # då frågar stängningen om att spara en scenfil som redan är sparad.
+        self.editor.document.clear()
+        self.current_filepath = None
+        self.is_modified = False
+        self._update_window_title()
         if self.stack.currentIndex() == getattr(self, "_scrivenings_index", -1):
             self._sync_reading_mode(False)
             self.show_editor_screen()
@@ -828,6 +841,8 @@ class MainWindow(QMainWindow):
             self.scene_inspector.refresh_words()
             # Ordantalet i trädet ändras när texten når disk, inte medan man skriver.
             self.binder.refresh_labels()
+            # Citaten kan ha flyttat sig med texten: markeringarna byggs om.
+            self._refresh_comment_marks()
             return True
         except Exception as exc:                      # noqa: BLE001 — skall synas
             if quiet:
@@ -863,6 +878,7 @@ class MainWindow(QMainWindow):
         self.current_filepath = str(path) if path else None
         self.is_modified = False
         self.scene_inspector.set_scene(self.project, node)
+        self._refresh_comment_marks()
         self.notes_panel.set_current_document(self._current_note_title())
         self.notes_panel.set_current_file(self.current_filepath or "")
         self._update_window_title()
@@ -910,6 +926,8 @@ class MainWindow(QMainWindow):
             return
         self._save_project_manifest()
         self.binder.refresh(select_id=self.active_scene_id)
+        # En kommentar som markerats löst skall tappa sin markering i texten med.
+        self._refresh_comment_marks()
 
     def _open_node(self, node_id: str):
         """Öppna en nod i editorn — en scen, eller en researchanteckning."""
@@ -917,6 +935,83 @@ class MainWindow(QMainWindow):
             return
         self._close_scrivenings()
         self.binder.select_node(node_id)
+
+    # ------------------------------------------------------------ kommentarerna
+
+    def ask_new_comment(self) -> bool:
+        """💬: kommentera det som är markerat i texten (R01.12)."""
+        if self.project is None or not self.active_scene_id:
+            return False
+        quote = self.active_canvas.textCursor().selectedText().strip()
+        if not quote:
+            # Ingen modal ruta för det här: statusfältet säger vad som fattas.
+            self.status_bar.showMessage(_("comment_no_selection"), 6000)
+            return False
+        text, accepted = QInputDialog.getMultiLineText(
+            self, _("comment_new_title"), _("comment_new_label"))
+        if not accepted:
+            return False
+        return self.add_comment(quote, text) is not None
+
+    def add_comment(self, quote: str, text: str):
+        """Fäster kommentaren på citatet och markerar stället i texten."""
+        if self.project is None or not self.active_scene_id:
+            return None
+        try:
+            comment = self.project.add_comment(self.active_scene_id, quote, text)
+        except ValueError:
+            return None
+        self._save_project_manifest()
+        self.scene_inspector.set_scene(self.project, self.project.by_id(self.active_scene_id))
+        self._refresh_comment_marks()
+        return comment
+
+    def goto_comment(self, node_id: str, comment_id: str) -> bool:
+        """Gå till kommentarens textställe och markera det."""
+        if self.project is None:
+            return False
+        comment = self.project.comment(node_id, comment_id)
+        if comment is None:
+            return False
+        self._close_scrivenings()
+        if node_id != self.active_scene_id:
+            self.binder.select_node(node_id)
+        cursor = self.editor.document.find(comment["quote"])
+        if cursor.isNull():
+            self.status_bar.showMessage(_("comment_quote_gone"), 6000)
+            return False
+        self.editor.setTextCursor(cursor)
+        self.editor.canvas.ensureCursorVisible()
+        self.active_canvas.setFocus()
+        return True
+
+    def _refresh_comment_marks(self) -> None:
+        """Markerar kommentarernas ställen i texten — utan att röra dokumentet.
+
+        Extra selections är vyens egen markering: den syns i editorn men hamnar
+        aldrig i scenfilen, till skillnad från en char-format-markering. Priset är
+        att markeringen hittar citatet först när den byggs om (vid inläsning,
+        sparning och när kommentarerna ändras).
+        """
+        canvas = self.editor.canvas
+        if self.project is None or not self.active_scene_id:
+            canvas.setExtraSelections([])
+            return
+        doc = self.editor.document
+        colour = self.palette().color(QPalette.ColorRole.Highlight)
+        colour.setAlpha(70)
+        selections = []
+        for comment in self.project.comments_for(self.active_scene_id):
+            if comment.get("resolved"):
+                continue
+            cursor = doc.find(comment["quote"])
+            if cursor.isNull():
+                continue
+            markering = QTextEdit.ExtraSelection()
+            markering.cursor = cursor
+            markering.format.setBackground(colour)
+            selections.append(markering)
+        canvas.setExtraSelections(selections)
 
     # ---------------------------------------------------------------- läsvyn
 

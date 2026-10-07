@@ -738,6 +738,90 @@ def main() -> int:
           "stängningen lämnar tillbaka till editorn")
     win._deactivate_project()
 
+    print("\n19. Kommentarer fästa i texten (R01.12)")
+    from core.project import Project as KomBok
+    mapp = Path(tempfile.mkdtemp(prefix="kommentar-")) / "Komboken"
+    kbok = KomBok.create(mapp, "Komboken", template="enkel")
+    kscen = kbok.manuscript()[0]
+    win._activate_project(kbok)
+    win.binder.select_node(kscen.id)
+    win.editor.document.setHtml("<p>Hon kom hem sent. Dörren stod öppen.</p>")
+    win._flush_scene()
+    insp = win.scene_inspector
+    check(insp.lst_comments.count() == 0, "scenen har inga kommentarer än")
+    check(insp.btn_comment_new.isEnabled(), "💬 går att använda")
+
+    # utan markering händer inget — men det syns i statusfältet
+    cursor = win.editor.textCursor()
+    cursor.clearSelection()
+    win.editor.setTextCursor(cursor)
+    check(win.ask_new_comment() is False, "utan markering blir det ingen kommentar")
+    check(win.status_bar.currentMessage() != "", "och statusfältet säger varför")
+
+    # markera ett textställe och kommentera det
+    quote = "Dörren stod öppen."
+    cursor = win.editor.document.find(quote)
+    win.editor.setTextCursor(cursor)
+    check(win.editor.textCursor().selectedText() == quote,
+          f"stället är markerat ({win.editor.textCursor().selectedText()!r})")
+    fore = kbok.read(kscen.id)
+    kom = win.add_comment(quote, "Låt henne stänga den.")
+    check(kom is not None and kom["quote"] == quote, "kommentaren fäster på citatet")
+    check(kbok.read(kscen.id) == fore, "och rör inte en bokstav i scenfilen")
+    check(len(kbok.unresolved_comments()) == 1, "och räknas som kvar att göra")
+    check(insp.lst_comments.count() == 1, "och syns i panelen")
+    check("Låt henne stänga den." in insp.lst_comments.item(0).text(),
+          f"med sin text ({insp.lst_comments.item(0).text()!r})")
+    check(insp.lbl_comments.text() != "", f"panelen räknar de ogiltiga ({insp.lbl_comments.text()!r})")
+    check(KomBok.load(mapp).comments_for(kscen.id)[0]["quote"] == quote,
+          "och kommentaren ligger på disk")
+
+    # stället markeras i texten — utan att röra dokumentet
+    markeringar = win.editor.canvas.extraSelections()
+    check(len(markeringar) == 1, f"textstället markeras ({len(markeringar)})")
+    check(markeringar[0].cursor.selectedText() == quote,
+          f"och markeringen sitter på citatet ({markeringar[0].cursor.selectedText()!r})")
+    check(win.editor.document.toPlainText().count(quote) == 1,
+          "markeringen lägger inte till något i texten")
+
+    # navigera från panelen till textstället
+    win._load_scene(kscen.id)
+    win.goto_comment(kscen.id, kom["id"])
+    check(win.editor.textCursor().selectedText() == quote,
+          f"panelen tar mig till stället ({win.editor.textCursor().selectedText()!r})")
+
+    # ett ställe som inte finns kvar: kommentaren lever, men säger ifrån
+    win.editor.document.setPlainText("Helt annan text.")
+    win._flush_scene()
+    check(win.goto_comment(kscen.id, kom["id"]) is False, "ett borta citat ger inget hopp")
+    check(win.status_bar.currentMessage() != "", "men ett besked")
+    check(len(kbok.unresolved_comments()) == 1, "och kommentaren är kvar")
+
+    # markera som löst: markeringen försvinner, kommentaren stannar
+    insp.set_scene(kbok, kbok.by_id(kscen.id))
+    win.editor.document.setHtml("<p>Hon kom hem sent. Dörren stod öppen.</p>")
+    win._flush_scene()
+    insp.set_scene(kbok, kbok.by_id(kscen.id))
+    check(len(win.editor.canvas.extraSelections()) == 1, "markeringen är tillbaka")
+    check(insp._toggle_resolved() is True, "kommentaren kan markeras löst")
+    check(kbok.unresolved_comments() == [], "och räknas inte längre")
+    check(insp.lst_comments.count() == 1, "men raden ligger kvar i panelen")
+    check(len(win.editor.canvas.extraSelections()) == 0, "och markeringen i texten är borta")
+    check(KomBok.load(mapp).unresolved_comments() == [], "löst ligger på disk")
+
+    # och kan tas bort helt
+    insp.set_scene(kbok, kbok.by_id(kscen.id))
+    check(insp._delete_selected_comment() is True, "kommentaren kan tas bort")
+    check(insp.lst_comments.count() == 0, "och försvinner ur panelen")
+    check(KomBok.load(mapp).comments_for(kscen.id) == [], "och från disk")
+    win._deactivate_project()
+    # Att lämna projektet får inte lämna kvar ett "osparat dokument" utan väg:
+    # stängningen skulle då fråga om att spara en scenfil som redan är sparad.
+    check(win.is_modified is False and win.active_scene_id is None,
+          f"inget osparat dokument ligger kvar (modified={win.is_modified})")
+    check(win.editor.document.toPlainText() == "", "och editorn är tom")
+    check(win.current_filepath is None, "och ingen filväg hänger kvar")
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

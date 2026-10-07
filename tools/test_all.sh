@@ -16,6 +16,11 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 unset PYTHONPATH   # Hermes-skalet läcker sin egen python 3.14 hit annars
 
+# Grinden kör utan skärm. Utan det här ärver proven skrivbordets plattform
+# (QT_QPA_PLATFORM=wayland;xcb hos Alex) och ui_smoke öppnar riktiga fönster i
+# sessionen — och kan hänga på en modal ruta som ingen sitter framför.
+export QT_QPA_PLATFORM=offscreen
+
 PY="${OMASCRIBE_PY:-$HOME/Projects/OmaScribe/.venv/bin/python}"
 if [ ! -x "$PY" ]; then
   echo "GRINDEN KAN INTE KÖRA: $PY saknas (sätt OMASCRIBE_PY)"

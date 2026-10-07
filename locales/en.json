@@ -590,5 +590,17 @@
   "entity_type_place": "Place",
   "entity_type_object": "Object",
   "entity_type_faction": "Group",
-  "entity_type_other": "Other"
+  "entity_type_other": "Other",
+  "scene_comments": "Comments",
+  "scene_comments_hint": "Comments attached to a passage. Click a row to jump to it in the text.",
+  "scene_comment_new": "Comment on the selected text (Ctrl+Alt+M)",
+  "scene_comment_resolve": "Mark as resolved, or back to a working note",
+  "scene_comment_delete": "Delete the comment",
+  "scene_comment_tooltip": "«{quote}»\n{text}",
+  "scene_comments_open": "{count} left to deal with",
+  "menu_insert_comment": "Comment",
+  "comment_new_title": "New comment",
+  "comment_new_label": "What needs doing here?",
+  "comment_no_selection": "Select a passage first — the comment hangs on what you select.",
+  "comment_quote_gone": "That passage is no longer in the scene."
 }

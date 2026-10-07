@@ -590,5 +590,17 @@
   "entity_type_place": "Plats",
   "entity_type_object": "Föremål",
   "entity_type_faction": "Grupp",
-  "entity_type_other": "Annat"
+  "entity_type_other": "Annat",
+  "scene_comments": "Kommentarer",
+  "scene_comments_hint": "Kommentarer fästa vid ett textställe. Klicka på en rad för att gå dit i texten.",
+  "scene_comment_new": "Kommentera det som är markerat i texten (Ctrl+Alt+M)",
+  "scene_comment_resolve": "Markera som löst, eller tillbaka till arbetsnot",
+  "scene_comment_delete": "Ta bort kommentaren",
+  "scene_comment_tooltip": "«{quote}»\n{text}",
+  "scene_comments_open": "{count} kvar att ta hand om",
+  "menu_insert_comment": "Kommentar",
+  "comment_new_title": "Ny kommentar",
+  "comment_new_label": "Vad skall göras här?",
+  "comment_no_selection": "Markera ett textställe först — kommentaren hänger på det du markerar.",
+  "comment_quote_gone": "Textstället finns inte kvar i scenen."
 }

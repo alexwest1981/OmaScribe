@@ -228,6 +228,53 @@ def main() -> int:
     pal = print_style.paper_palette()
     check(pal.color(pal.ColorRole.Text).name() == "#000000", "papperspaletten ger svart text")
 
+    print("\n9. Projektläget: scenen hamnar i rätt fil")
+    # Fällan: ett projekt är många dokument. Provet öppnar ett projekt, skriver i
+    # scen ett, byter scen och skriver igen — och läser sedan filerna från disk.
+    # Bara då syns det om texten hamnade i fel scen eller försvann i bytet.
+    from core import project as project_mod
+    from core.project import Project as Bok
+    projektmapp = out / "provprojekt"
+    projektmapp.mkdir()
+    bok = Bok.create(projektmapp, "Provbok", template="roman")
+    win._activate_project(bok)
+    # Provet kör utan visat fönster, så isVisible() är alltid falsk. isHidden()
+    # mäter det koden faktiskt gör: setVisible(True/False) på panelen.
+    check(win.project is bok and not win.binder.isHidden(), "projektet öppnas och trädet syns")
+    check(win.windowTitle().startswith("Provbok"), f"fönstertiteln visar projektet ({win.windowTitle()})")
+
+    forsta = bok.manuscript()[0]
+    win.binder.add_node(project_mod.SCENE)        # samma väg som 📄-knappen
+    andra = bok.manuscript()[1]
+    check(andra.id != forsta.id and len(bok.manuscript()) == 2, "en ny scen skapas från panelen")
+    check(win.binder.current_node_id() == andra.id, "den nya scenen blir markerad")
+
+    win.binder.select_node(forsta.id)
+    win.editor.document.setHtml("<h1>Scen ett</h1><p>Alfa beta gamma.</p>")
+    win.is_modified = True
+    win.binder.select_node(andra.id)              # bytet skall spara den första
+    forsta_text = bok.path_of(forsta).read_text(encoding="utf-8")
+    check("Alfa beta gamma." in forsta_text, "texten hamnade i scen ett")
+    check("Scen ett" in win.editor.document.toPlainText() is False
+          or "Alfa beta gamma." not in win.editor.document.toPlainText(),
+          "editorn visar den nya scenen, inte den förra")
+    check(bok.words(forsta.id) == 5, f"ordräkningen följer med ({bok.words(forsta.id)})")
+
+    win.editor.document.setHtml("<h1>Scen två</h1><p>Delta epsilon.</p>")
+    win.is_modified = True
+    check(win.file_save() is True, "Spara i projektläget går igenom")
+    andra_text = bok.path_of(andra).read_text(encoding="utf-8")
+    check("Delta epsilon." in andra_text, "andra scenen sparades där den skulle")
+    check(not win.is_modified, "dokumentet är osparat-flagga borta efter Spara")
+
+    igen = Bok.load(projektmapp)                   # läs allt tillbaka från disk
+    check(igen.total_words() == bok.total_words() and igen.total_words() > 0,
+          f"projektet läses tillbaka med samma ordantal ({igen.total_words()})")
+    check(len(igen.walk()) == 4, f"trädet överlever rundturen ({len(igen.walk())})")
+
+    win._deactivate_project()
+    check(win.project is None and win.binder.isHidden(), "trädet göms när projektet stängs")
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

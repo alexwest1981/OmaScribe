@@ -24,6 +24,8 @@ from ui.ghostwriter_dialog import GhostwriterDialog
 from ui.graph_dialog import GraphDialog
 from ui.code_dialog import CodeDialog
 from ui.template_dialog import TemplateDialog
+from ui.binder_panel import BinderPanel
+from core.project import Project
 from ui.chart_dialog import ChartDialog
 from ui.image_dialog import ImageDialog
 from ui.page_setup_dialog import PageSetupDialog
@@ -137,8 +139,19 @@ class MainWindow(QMainWindow):
 
         self.splitter.addWidget(self.sidebar)
 
-        self.splitter.setStretchFactor(0, 1)
-        self.splitter.setStretchFactor(1, 0)
+        # Projektets träd. Ligger först i delaren men visas bara när ett projekt
+        # är öppet — ett enstaka dokument och ett projekt är två skilda lägen.
+        self.project = None
+        self.active_scene_id = None
+        self.binder = BinderPanel(self)
+        self.binder.scene_selected.connect(self._load_scene)
+        self.binder.structure_changed.connect(self._save_project_manifest)
+        self.binder.setVisible(False)
+        self.splitter.insertWidget(0, self.binder)
+
+        self.splitter.setStretchFactor(0, 0)   # projektvyn: så bred som den behöver
+        self.splitter.setStretchFactor(1, 1)   # editorn växer
+        self.splitter.setStretchFactor(2, 0)   # sidopanelen
         self.stack.addWidget(self.splitter)
 
         self.setCentralWidget(self.stack)
@@ -214,6 +227,11 @@ class MainWindow(QMainWindow):
         self.act_new = self._add_action(self.menu_file, _("menu_file_new"), self.file_new, "Ctrl+N")
         self.act_new_template = self._add_action(self.menu_file, "🎨 " + _("menu_file_new_template"), self.open_template_dialog, "Ctrl+Shift+T")
         self.act_open = self._add_action(self.menu_file, _("menu_file_open"), self.file_open, "Ctrl+O")
+        self.menu_file.addSeparator()
+        self.act_new_project = self._add_action(self.menu_file, "📚 " + _("menu_file_new_project"), self.new_project)
+        self.act_open_project = self._add_action(self.menu_file, "📚 " + _("menu_file_open_project"), self.open_project)
+        self.act_close_project = self._add_action(self.menu_file, _("menu_file_close_project"), self.close_project)
+        self.menu_file.addSeparator()
         
         # Recent Files submenu
         self.menu_recent = self.menu_file.addMenu(_("menu_file_recent"))
@@ -465,6 +483,17 @@ class MainWindow(QMainWindow):
         if self.stack.currentIndex() == 0:
             self.setWindowTitle(_("app_name"))
             return
+        if self.project is not None:
+            scene = ""
+            if self.active_scene_id:
+                try:
+                    scene = self.project.by_id(self.active_scene_id).title
+                except KeyError:
+                    scene = ""
+            mod_flag = " •" if self.is_modified else ""
+            parts = [self.project.title] + ([scene] if scene else [])
+            self.setWindowTitle(f"{' — '.join(parts)}{mod_flag} — {_('app_name')}")
+            return
         doc_name = os.path.basename(self.current_filepath) if self.current_filepath else _("untitled_document")
         mod_flag = " •" if self.is_modified else ""
         self.setWindowTitle(f"{doc_name}{mod_flag} — {_('app_name')}")
@@ -476,6 +505,13 @@ class MainWindow(QMainWindow):
             self.ai.review_document(text, lang=lang)
 
     def _on_autosave_timer_fired(self):
+        if self.project is not None:
+            if self.is_modified and self.config.get("autosave", True):
+                if self._flush_scene(quiet=True):
+                    self.project.save()
+                    self.is_modified = False
+                    self._update_window_title()
+            return
         if self.stack.currentIndex() == 1 and self.is_modified and self.current_filepath and self.config.get("autosave", True):
             try:
                 self._save_document(self.current_filepath)
@@ -625,10 +661,131 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------------------
     # File Operations & Printing
     # -------------------------------------------------------------------------
+    # ------------------------------------------------------------ projektet
+
+    def new_project(self):
+        """Skapar ett projekt: en mapp med manifest och en fil per scen."""
+        if self.stack.currentIndex() == 1 and not self._maybe_save_changes():
+            return
+        folder = QFileDialog.getExistingDirectory(self, _("menu_file_new_project"))
+        if not folder:
+            return
+        default = os.path.basename(folder.rstrip(os.sep)) or _("project_untitled")
+        title, accepted = QInputDialog.getText(
+            self, _("project_new_title"), _("project_new_label"), text=default
+        )
+        if not accepted or not title.strip():
+            return
+        try:
+            project = Project.create(folder, title.strip(), template="roman")
+        except FileExistsError:
+            QMessageBox.warning(self, _("project_new_title"),
+                                _("project_not_empty", path=folder))
+            return
+        except OSError as exc:
+            QMessageBox.critical(self, _("project_new_title"), str(exc))
+            return
+        self._activate_project(project)
+
+    def open_project(self):
+        if self.stack.currentIndex() == 1 and not self._maybe_save_changes():
+            return
+        folder = QFileDialog.getExistingDirectory(self, _("menu_file_open_project"))
+        if not folder:
+            return
+        try:
+            project = Project.load(folder)
+        except (OSError, ValueError) as exc:
+            QMessageBox.critical(self, _("project_open_error_title"),
+                                 _("project_open_error_text", error=exc))
+            return
+        self._activate_project(project)
+
+    def close_project(self):
+        if self.project is None:
+            return
+        self._deactivate_project()
+        self.show_start_screen()
+
+    def _activate_project(self, project):
+        self._deactivate_project()
+        self.project = project
+        self.binder.set_project(project)
+        self.binder.setVisible(True)
+        broken = project.validate()
+        if broken:
+            QMessageBox.warning(self, _("project_broken_title"),
+                                _("project_broken_text", problems="\n".join(broken[:5])))
+        self.show_editor_screen()
+        scenes = project.manuscript()
+        if scenes:
+            self.binder.select_node(scenes[0].id)
+            self._load_scene(scenes[0].id)
+        self._update_window_title()
+
+    def _deactivate_project(self):
+        """Lämnar projektläget. Projektet ligger kvar på disk."""
+        if self.project is not None:
+            self._flush_scene(quiet=True)
+        self.project = None
+        self.active_scene_id = None
+        self.binder.set_project(None)
+        self.binder.setVisible(False)
+
+    def _flush_scene(self, quiet: bool = False) -> bool:
+        """Skriver editorns text till den scen som är öppen."""
+        if self.project is None or not self.active_scene_id:
+            return True
+        try:
+            self.project.write(self.active_scene_id, self.editor.document.toHtml())
+            return True
+        except Exception as exc:                      # noqa: BLE001 — skall synas
+            if quiet:
+                # ponytail: städning under autosparning skall inte kasta en modal
+                # ruta i ansiktet på den som skriver. is_modified blir kvar, så
+                # statusfältet visar fortfarande att något är osparat, och felet
+                # hamnar i terminalen. En explicit Spara visar ruta.
+                print(f"[project] kunde inte spara scenen: {exc}")
+            else:
+                QMessageBox.critical(self, _("project_save_error_title"), str(exc))
+            return False
+
+    def _load_scene(self, node_id):
+        if self.project is None or node_id == self.active_scene_id:
+            return
+        if not self._flush_scene(quiet=True):
+            return
+        try:
+            node = self.project.by_id(node_id)
+            html = self.project.read(node_id)
+        except KeyError:
+            return
+        self.active_scene_id = node_id
+        self.editor.document.setHtml(html)
+        path = self.project.path_of(node)
+        self.current_filepath = str(path) if path else None
+        self.is_modified = False
+        self.notes_panel.set_current_document(self._current_note_title())
+        self.notes_panel.set_current_file(self.current_filepath or "")
+        self._update_window_title()
+        self._update_stats()
+        self.editor.canvas.setFocus()
+
+    def _save_project_manifest(self):
+        if self.project is None:
+            return
+        try:
+            self.project.save()
+        except Exception as exc:                      # noqa: BLE001
+            QMessageBox.critical(self, _("project_save_error_title"), str(exc))
+
     def file_new(self):
         if self.stack.currentIndex() == 1 and not self._maybe_save_changes():
             return
         self.editor.document.clear()
+        # Projektläget och ett enstaka dokument är ömsesidigt uteslutande: att
+        # hålla båda i luften samtidigt gör Spara tvetydigt.
+        self._deactivate_project()
         self.current_filepath = None
         self.is_modified = False
         self.notes_panel.set_current_document("")
@@ -656,6 +813,7 @@ class MainWindow(QMainWindow):
             self._update_recent_menu()
             self.start_screen.refresh_recents()
             return
+        self._deactivate_project()
         try:
             DocumentManager.load_file(filepath, self.editor.document)
             self.current_filepath = filepath
@@ -669,6 +827,15 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error Opening File", str(e))
 
     def file_save(self):
+        # I ett projekt betyder Spara "skriv scenen och manifestet" — ingen
+        # filväljare, ingen exportväg: scenens HTML sparas som den är.
+        if self.project is not None:
+            if not self._flush_scene():
+                return False
+            self.project.save()
+            self.is_modified = False
+            self._update_window_title()
+            return True
         if self.current_filepath:
             try:
                 self._save_document(self.current_filepath)
@@ -866,6 +1033,14 @@ class MainWindow(QMainWindow):
         return False
 
     def closeEvent(self, event):
+        if self.project is not None:
+            self._flush_scene(quiet=True)
+            try:
+                self.project.save()
+            except Exception as exc:                  # noqa: BLE001
+                print(f"[project] kunde inte spara manifestet: {exc}")
+            event.accept()
+            return
         if self.stack.currentIndex() == 0:
             event.accept()
             return

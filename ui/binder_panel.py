@@ -5,6 +5,8 @@ låter dig skapa, döpa, flytta och ta bort dem, och säger till när en scen v�
 så att editorn byter text. Den rör ingen text själv.
 """
 
+from html import escape
+
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QStandardItem, QStandardItemModel
 from PyQt6.QtWidgets import (
@@ -22,6 +24,13 @@ ICONS = {
     project_mod.SCENE: "📄",
     project_mod.NOTE: "📝",
 }
+
+
+def _tal(antal: int) -> str:
+    """1000 -> '1 000'. Svensk tusentalsgruppering, inte komma."""
+    return f"{antal:,}".replace(",", " ")
+
+
 # Vad knapparna skapar: mapptyp -> etikettnyckel
 ADD_KINDS = (
     (project_mod.SCENE, "binder_new_scene"),
@@ -171,7 +180,7 @@ class BinderPanel(QWidget):
         self.refresh()
         for widget in self.buttons:
             widget.setEnabled(project is not None)
-        self.lbl_title.setText(project.title if project else _("binder_title"))
+        self._refresh_header()
 
     def refresh(self, select_id: str | None = None) -> None:
         """Bygger om trädet ur modellen och behåller markeringen."""
@@ -183,7 +192,7 @@ class BinderPanel(QWidget):
 
         def add(parent_item, parent_id):
             for node in self.project.children(parent_id):
-                item = QStandardItem(f"{ICONS.get(node.type, '•')} {node.title}")
+                item = QStandardItem(self._label_for(node))
                 item.setData(node.id, Qt.ItemDataRole.UserRole)
                 if node.synopsis:
                     item.setToolTip(node.synopsis)
@@ -196,8 +205,51 @@ class BinderPanel(QWidget):
         add(None, None)
         self.tree.expandAll()
         self.corkboard.refresh()
+        self._refresh_header()
         if keep:
             self.select_node(keep)
+
+    def _label_for(self, node) -> str:
+        """Trädraden: ikon, titel och ord mot mål (summerat för behållare)."""
+        icon = ICONS.get(node.type, "•")
+        progress = self.project.node_progress(node.id)
+        if not progress["words"] and not progress["target"]:
+            return f"{icon} {node.title}"
+        if progress["target"]:
+            ord_text = f"{_tal(progress['words'])}/{_tal(progress['target'])}"
+        else:
+            ord_text = _tal(progress["words"])
+        return f"{icon} {node.title}   {ord_text}"
+
+    def refresh_labels(self) -> None:
+        """Uppdaterar bara texterna — ordtalen ändras när en scen sparas.
+
+        Trädet byggs inte om, så hopfällning, rullning och markering står kvar.
+        """
+        if self.project is None:
+            return
+        for item in self._iter_items():
+            node_id = item.data(Qt.ItemDataRole.UserRole)
+            try:
+                node = self.project.by_id(node_id)
+            except KeyError:
+                continue
+            item.setText(self._label_for(node))
+        self._refresh_header()
+
+    def _refresh_header(self) -> None:
+        if self.project is None:
+            self.lbl_title.setText(_("binder_title"))
+            return
+        progress = self.project.progress()
+        if progress["target"]:
+            detalj = _("binder_progress_of", words=_tal(progress["words"]),
+                       target=_tal(progress["target"]), percent=progress["percent"])
+        else:
+            detalj = _("binder_words", words=_tal(progress["words"]))
+        self.lbl_title.setText(
+            f"{escape(self.project.title)}<br>"
+            f"<span style='font-weight:400;'>{escape(detalj)}</span>")
 
     def current_node_id(self) -> str | None:
         indexes = self.tree.selectionModel().selectedIndexes()
@@ -370,4 +422,4 @@ class BinderPanel(QWidget):
         self.tabs.setTabText(1, _("binder_tab_cards"))
         for widget, key in self._tip_widgets:
             widget.setToolTip(_(key))
-        self.lbl_title.setText(self.project.title if self.project else _("binder_title"))
+        self._refresh_header()

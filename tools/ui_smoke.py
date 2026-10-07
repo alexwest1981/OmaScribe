@@ -412,6 +412,45 @@ def main() -> int:
     win._toggle_scrivenings()
     check(win.stack.currentIndex() == 1, "läsvyn öppnas inte utan projekt")
 
+    print("\n13. Ord och mål i trädet")
+    win._activate_project(bok)
+    binder = win.binder
+
+    def rad(node_id: str) -> str:
+        """Texten i trädraden för en nod — samma väg som ögat tar."""
+        return next((item.text() for item in binder._iter_items()
+                     if item.data(QtNS.ItemDataRole.UserRole) == node_id), "")
+
+    bok.settings["target_words"] = 100
+    binder.refresh(select_id=ett.id)
+    check("100" in binder.lbl_title.text() and "ord" in binder.lbl_title.text(),
+          f"huvudet visar projektets mål ({binder.lbl_title.text()!r})")
+    check("Provbok" in binder.lbl_title.text(), "och projektets namn")
+
+    win.scene_inspector.spin_target.setValue(50)       # scen ett
+    binder.refresh_labels()
+    check(f"{bok.words(ett.id)}/50" in rad(ett.id),
+          f"scenraden visar ord mot mål ({rad(ett.id)!r})")
+    check(f"{bok.words_in(kap.id)}/50" in rad(kap.id),
+          f"kapitelraden summerar scenerna ({rad(kap.id)!r})")
+    check(str(bok.words_in(bok.by_id(kap.parent).id)) in rad(bok.by_id(kap.parent).id),
+          f"delen summerar vidare nedåt ({rad(bok.by_id(kap.parent).id)!r})")
+
+    # ordtalet i raden skall följa med när texten sparas
+    binder.select_node(ett.id)
+    win.editor.document.setHtml("<p>ett två tre</p>")
+    win.is_modified = True
+    check(win.file_save() is True, "scenen sparas")
+    check(f"{bok.words(ett.id)}/50" in rad(ett.id),
+          f"raden uppdateras vid sparande ({rad(ett.id)!r})")
+
+    # utan projektmål visas bara ordtalet
+    bok.settings["target_words"] = 0
+    binder.refresh()
+    check("%" not in binder.lbl_title.text(), f"utan mål ingen procent ({binder.lbl_title.text()!r})")
+    check(bok.by_id(ett.id).target_words == 50, "scenens eget mål ligger kvar")
+    win._deactivate_project()
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

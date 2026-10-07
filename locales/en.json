@@ -530,5 +530,7 @@
   "scrivenings_info": "{heading} — {scenes} scenes, {words} words",
   "scrivenings_cut": "Showing {limit} scenes; {cut} more are left out.",
   "menu_view_scrivenings": "Continuous reading view",
-  "scrivenings_stats": "{words} words in the reading view"
+  "scrivenings_stats": "{words} words in the reading view",
+  "binder_progress_of": "{words} of {target} words ({percent} %)",
+  "binder_words": "{words} words"
 }

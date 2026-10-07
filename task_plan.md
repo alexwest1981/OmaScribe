@@ -21,7 +21,7 @@ projektmallar, 1.13 scenkopplingar. Kvar att slutföra i 1.5 (statusfärg) och
 
 ## Current Phase
 
-Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.4 och 1.6 klara)
+Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.4, 1.6 och 1.8 klara)
 
 ## Arbetsregler
 
@@ -67,7 +67,7 @@ Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.4 och 1.6 klara)
 - [~] **1.5** Status och etiketter per scen, redigerbara värdelistor, färg + text. R01.5 — *text klar, färg kvar (statusar är fria strängar i projektet, färgen hör ihop med kortdelegaten)*
 - [x] **1.6** Dra-och-släpp och omordning i träd och kortvy, atomiskt. R01.11
 - [~] **1.7** Sammanhängande läsvy (Scrivenings): flera scener som ett manus. R01.9 — *läsningen klar; redigering i vyn kvar (kräver att verktygsraden och Edit-åtgärderna riktas mot den scen som har fokus — 28 anrop pekar på `editor.canvas`)*
-- [~] **1.8** Ordräkningsmål per scen, kapitel och projekt, summerat i hierarkin. R01.10 — *mål och framsteg per scen klart, summeringen i trädet kvar*
+- [x] **1.8** Ordräkningsmål per scen, kapitel och projekt, summerat i hierarkin. R01.10
 - [ ] **1.9** Samlingar: manuella grupper och sparade sökningar, utan att ändra binderordningen. R01.8
 - [ ] **1.10** Researchmapp: källor, länkar och bilder skilda från manuset, uteslutna ur export. R01.7
 - [ ] **1.11** Anteckningar och kommentarer per scen (knyter ihop med valvet). R01.12

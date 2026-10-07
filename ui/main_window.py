@@ -772,6 +772,8 @@ class MainWindow(QMainWindow):
         try:
             self.project.write(self.active_scene_id, self.editor.document.toHtml())
             self.scene_inspector.refresh_words()
+            # Ordantalet i trädet ändras när texten når disk, inte medan man skriver.
+            self.binder.refresh_labels()
             return True
         except Exception as exc:                      # noqa: BLE001 — skall synas
             if quiet:

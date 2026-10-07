@@ -357,6 +357,34 @@ class Project:
             self._words[node_id] = count_words(self.read(node_id))
         return self._words[node_id]
 
+    def words_in(self, node_id: str) -> int:
+        """Ord i noden: scenens egna, eller summan av scenerna under en behållare."""
+        node = self.by_id(node_id)
+        if node.is_writable:
+            return self.words(node_id)
+        return sum(self.words(n.id) for n in self.walk(node_id)
+                   if n.is_writable and n.type == SCENE)
+
+    def target(self, node_id: str) -> int:
+        """Mål i ord: scenens eget mål, eller summan av barnens mål.
+
+        Ett kapitel har sällan ett eget mål — det är scenerna som har dem — så
+        summan är standard och ett eget värde på behållaren vinner om det finns.
+        """
+        node = self.by_id(node_id)
+        if node.is_writable or int(node.target_words or 0):
+            return int(node.target_words or 0)
+        return sum(self.target(n.id) for n in self.children(node_id))
+
+    def node_progress(self, node_id: str) -> dict:
+        """Ord, mål och andel för en nod — samma mått som projektets."""
+        words, target = self.words_in(node_id), self.target(node_id)
+        return {
+            "words": words,
+            "target": target,
+            "percent": round(words * 100 / target) if target else 0,
+        }
+
     def total_words(self) -> int:
         return sum(self.words(n.id) for n in self.manuscript())
 
@@ -550,6 +578,31 @@ def _self_check() -> int:
                       labels=["POV: Anna"], target_words=1200, pov="Anna")
         check(book.by_id(scene.id).synopsis == "Hon kommer hem.", "synopsis sparas")
         check("Utkast" in book.settings["statuses"], "nya statusvärden lärs in")
+
+        # ord och mål summerade i hierarkin (R01.10)
+        book.write(scene.id, "<p>ett två tre fyra fem sex sju</p>")
+        # En ny scen har sin rubrik som text i filen: "Scen 2" är två ord.
+        check(book.words(second.id) == 2, f"en ny scen bär sin rubrik ({book.words(second.id)})")
+        # Kapitel ett har bara scen ett (scen två flyttades till kapitel två ovan).
+        check(book.node_progress(chapter.id)["words"] == 7,
+              f"kapitlet summerar sina sceners ord ({book.node_progress(chapter.id)})")
+        check(book.node_progress(part.id)["words"] == 9,
+              f"delen summerar vidare nedåt i trädet ({book.node_progress(part.id)})")
+        check(book.node_progress(chapter.id)["target"] == 1200,
+              f"kapitlets mål är summan av scenernas ({book.node_progress(chapter.id)['target']})")
+        book.set_meta(second.id, target_words=300)
+        check(book.target(part.id) == 1500,
+              f"delens mål är summan av båda kapitlens ({book.target(part.id)})")
+        check(book.node_progress(chapter.id)["percent"] == 1,
+              f"procenten räknas mot målet ({book.node_progress(chapter.id)})")
+        book.set_meta(chapter.id, target_words=100)
+        check(book.target(chapter.id) == 100,
+              f"ett eget mål på behållaren vinner över summan ({book.target(chapter.id)})")
+        book.set_meta(chapter.id, target_words=0)
+        book.settings["target_words"] = book.total_words()
+        check(book.progress()["percent"] == 100,
+              f"projektet når 100 procent på sitt eget mål ({book.progress()})")
+        book.settings["target_words"] = 0
 
         # borttagning tar barnen med sig och filen försvinner
         scene_file = book.path_of(book.by_id(scene.id))

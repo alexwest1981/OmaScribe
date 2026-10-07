@@ -530,5 +530,7 @@
   "scrivenings_info": "{heading} — {scenes} scener, {words} ord",
   "scrivenings_cut": "Visar {limit} scener; {cut} till är inte med.",
   "menu_view_scrivenings": "Sammanhängande läsvy",
-  "scrivenings_stats": "{words} ord i läsvyn"
+  "scrivenings_stats": "{words} ord i läsvyn",
+  "binder_progress_of": "{words} av {target} ord ({percent} %)",
+  "binder_words": "{words} ord"
 }

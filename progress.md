@@ -43,14 +43,32 @@
   - spellcheck: körd mot **riktiga** LanguageTool-tjänsten. `teskt` i en text med emoji före gav
     offset 14:19 — rätt ord. Det var den verkliga risken (UTF-16 mot tecken).
 
+## Session: 2026-10-07 (pass 2 — fas 1 i mål)
+
+### Fas 1: Manusstruktur (1.1–1.14)
+
+- **Status:** complete — alla fjorton punkter avslutade, committade och pushade
+- Byggt i detta pass: koppling scen ↔ researchmaterial, scenanteckning, valvpanelens uppslag på
+  scenens rubrik (i stället för filnamnet `0001-scen-1`, som ingen skriver i en anteckning),
+  statusfärg i träd och korttavla (statusen står som text också — färgen bär aldrig betydelsen själv),
+  projektmallar roman/fackbok/novell/enkel i en egen dialog (ordmålet gick inte att nå förut),
+  scenens entiteter mot projektets codex, skrivning i läsvyn (texten tillbaka till rätt scenfil via
+  stycken märkta med sin scen), marginalkommentarer fästa på ett citat (ankaret är citatet, inte en
+  position), och manusvarianter (namngiven ordning som kan läggas på manuset).
+- Medvetna avgränsningar: innehållsligt grenade manusvarianter och trådade marginalkommentarer hör
+  till fas 3 (snapshots 3.1, kommentartrådar 3.3). Rapportens egen slutsats är att snapshots kommer först.
+- Files created: `ui/project_dialog.py`, `ui/entity_dialog.py`, `ui/variants_dialog.py`
+- Files modified: `core/project.py` (135 kontroller), `ui/scene_inspector.py`, `ui/binder_panel.py`,
+  `ui/corkboard.py`, `ui/scrivenings.py`, `ui/main_window.py`, `tools/test_all.sh`, `tools/ui_smoke.py`
+
 ## Test Results
 
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
-| Grinden | `bash tools/test_all.sh` | allt grönt | importkontroll 39 moduler, project 27, epub 10, snapshots 8, spellcheck 8, ui_smoke 41, print_purity 54 | GRÖNT |
-| Falsifiering av DOCX-provet | `_save_document` utan `page_settings` | rött | 1 av 41 föll, just det nya provet | bevisat |
-| Oberoende prov vecka 1 | `verify_w1.py` mot live-kassan | 20 gröna | 20 gröna, 0 röda | GRÖNT |
-| Språkkontroll live | text med emoji + `teskt` | offset på rätt ord | `[14:19] 'teskt' -> ['test', 'stekt', 'beskt', 'tyskt']` | GRÖNT |
+| Grinden | `bash tools/test_all.sh` | allt grönt | importkontroll 39 moduler, 12 modulprov (project 135, scrivenings 31), ui_smoke 262, print_purity 54 | GRÖNT |
+| Falsifiering: endast ändrade scener skrivs | `changed_content` returnerar allt | rött | 4 prov föll (en orörd läsning rör filerna) | bevisat |
+| Falsifiering: kommentarens ankare | `doc.find(quote)` pinnat till position 0 | rött | 1 prov föll ("markeringen sitter på citatet") | bevisat |
+| Grinden ostädad | `ui_smoke` via `test_all.sh` | grönt och avslutat | hängde på en modal ruta i `closeEvent` tills modalen togs bort | fann en riktig bugg |
 
 ## Error Log
 
@@ -59,13 +77,17 @@
 | pass 1 | `numpy._core._multiarray_umath` saknas | 1 | Hermes-skalets `PYTHONPATH` mot python 3.14 skuggade projektets paket. `unset PYTHONPATH`; grinden gör det själv. |
 | pass 1 | `move_node` dubblerade noden | 1 | `children()` räknade in noden före insättning. Filtreras bort först. Självprovet fann det. |
 | pass 1 | EPUB: `lang` hårdkodad | 1 | Mitt oberoende prov fann det. Språket följer nu metadata. |
+| pass 2 | Grinden öppnade riktiga fönster i sessionen och hängde | 1 | Skalets `QT_QPA_PLATFORM=wayland;xcb` ärvdes; `setdefault` i provet räcker inte. Grinden exporterar nu `QT_QPA_PLATFORM=offscreen`. |
+| pass 2 | `ui_smoke` grönt men hängde i teardown | 1 | `closeEvent → _maybe_save_changes` visade en modal: att lämna projektet lämnade sista scenen som osparat dokument utan väg. `_deactivate_project` tömmer nu bufferten. |
+| pass 2 | 13 orphaned ui_smoke-processer efter tool-timeouts | 1 | Konkurrerade om CPU och såg ut som nya hängningar. Döda med mönster som inte matchar egen kommandorad (`pkill -f "[u]i_smoke"`). |
+| pass 2 | `mnemosyne_task_progress` / `mnemosyne_remember` | 1 | `ImportError: cannot import name 'write_policy_operation' from 'mnemosyne.core.filters'` — pluginets version matchar inte. Antecknat, inte åtgärdat (miljö, inte projektet). |
 
 ## 5-Question Reboot Check
 
 | Question | Answer |
 |----------|--------|
-| Where am I? | Fas 0, punkt 0.6 (projektvyn i gränssnittet) |
-| Where am I going? | Fas 1–6 enligt `task_plan.md` |
+| Where am I? | Fas 1 klar (1.1–1.14, commit `fae80aa`), grinden grön (12 modulprov, ui_smoke 262, print_purity 54) |
+| Where am I going? | Fas 2 (författarlagret) eller fas 3.1 (snapshots per scen) enligt `task_plan.md` |
 | What's the goal? | Allt ett professionellt författarverktyg har, in i OmaScribe |
 | What have I learned? | Se `findings.md` |
-| What have I done? | Se ovan — fundament, grind, projektmodell, tre moduler |
+| What have I done? | Se ovan — fas 0 (fundament, grind, projektmodell) och fas 1 (manusstruktur 1.1–1.14) |

@@ -336,6 +336,8 @@ class MainWindow(QMainWindow):
         self.act_start_page = self._add_action(self.menu_file, _("menu_file_start_page"), self.show_start_screen, "Ctrl+H")
         self.act_new = self._add_action(self.menu_file, _("menu_file_new"), self.file_new, "Ctrl+N")
         self.act_new_template = self._add_action(self.menu_file, "🎨 " + _("menu_file_new_template"), self.open_template_dialog, "Ctrl+Shift+T")
+        self.act_instructions = self._add_action(self.menu_file, "📌 " + _("menu_file_instructions"),
+                                                 self._edit_ai_instructions)
         self.act_open = self._add_action(self.menu_file, _("menu_file_open"), self.file_open, "Ctrl+O")
         self.menu_file.addSeparator()
         self.act_new_project = self._add_action(self.menu_file, "📚 " + _("menu_file_new_project"), self.new_project)
@@ -969,6 +971,9 @@ class MainWindow(QMainWindow):
     def _activate_project(self, project):
         self._deactivate_project()
         self.project = project
+        # AI:n läser projektets instruktioner ur det projekt som är öppet just nu
+        self.ai.set_project_context(
+            lambda: (self.project.settings.get("ai_instructions", "") if self.project else ""))
         self._open_codex(project)
         self.binder.set_project(project)
         self.writing_log.set_project(project)
@@ -1131,6 +1136,27 @@ class MainWindow(QMainWindow):
         self._save_project_manifest()
         self.scene_inspector.set_scene(self.project, self.project.by_id(node.id))
         self.status_bar.showMessage(_("exercise_saved"), 5000)
+
+    def _edit_ai_instructions(self) -> None:
+        """Projektets egna instruktioner till AI:n (R03.18).
+
+        En rad i projektet, inte i appen: ton, tempus, namn och allt annat som
+        ska gälla för just den här boken. Instruktionerna läggs sist i
+        systemprompten, närmast uppgiften — och ett tomt fält ändrar ingenting.
+        """
+        if self.project is None:
+            self.status_bar.showMessage(_("instructions_needs_project"), 5000)
+            return
+        text, ok = QInputDialog.getMultiLineText(
+            self, _("instructions_title"), _("instructions_label"),
+            self.project.settings.get("ai_instructions", ""))
+        if ok:
+            self._set_ai_instructions(text)
+
+    def _set_ai_instructions(self, text: str) -> None:
+        self.project.settings["ai_instructions"] = (text or "").strip()
+        self._save_project_manifest()
+        self.status_bar.showMessage(_("instructions_saved"), 5000)
 
     def _save_project_manifest(self):
         if self.project is None:
@@ -1923,6 +1949,7 @@ class MainWindow(QMainWindow):
         self.act_start_page.setText(_("menu_file_start_page"))
         self.act_new.setText(_("menu_file_new"))
         self.act_new_template.setText("🎨 " + _("menu_file_new_template"))
+        self.act_instructions.setText("📌 " + _("menu_file_instructions"))
         self.act_open.setText(_("menu_file_open"))
         self.menu_recent.setTitle(_("menu_file_recent"))
         self.act_save.setText(_("menu_file_save"))

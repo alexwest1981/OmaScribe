@@ -723,5 +723,10 @@
   "exercise_failed": "Could not ask",
   "exercise_inserted": "Saved in the scene's note.",
   "exercise_saved": "The suggestion is in the scene's note",
-  "exercise_needs_scene": "Open a scene first — the exercise needs a context"
+  "exercise_needs_scene": "Open a scene first — the exercise needs a context",
+  "menu_file_instructions": "Project instructions for the AI…",
+  "instructions_title": "Project instructions",
+  "instructions_label": "What should the AI keep to in this book? (tone, tense, names, anything that must stay consistent)",
+  "instructions_saved": "Project instructions saved",
+  "instructions_needs_project": "Open a project first"
 }

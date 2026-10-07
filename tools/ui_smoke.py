@@ -11,6 +11,7 @@ Kör:  QT_QPA_PLATFORM=offscreen .venv/bin/python tools/ui_smoke.py
 import os
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -1398,6 +1399,43 @@ def main() -> int:
     win.ai.suggest = riktig_suggest
     canvas.document().setModified(False)
     win.is_modified = False
+
+    print("\n29. Projektets instruktioner till AI:n (fas 2.17)")
+
+    import core.ai_client as ai_mod
+
+    ovningsbok.settings["ai_instructions"] = "Håll tempus i preteritum. Hon heter alltid Märta."
+    prompt = win.ai._system_prompt("bas")
+    check("preteritum" in prompt, "projektets instruktioner följer med i systemprompten")
+    check(prompt.index("preteritum") > prompt.index("bas"),
+          "och de kommer sist, närmast uppgiften")
+
+    # hela vägen: frågan skickas med instruktionerna, utan nät
+    fangat_prompt = {}
+    riktig_chat = ai_mod.chat_completion
+    ai_mod.chat_completion = lambda endpoint, key, model, system, user, **kw: (
+        fangat_prompt.update(system=system, user=user)
+        or "1. Hon går in i rummet.\n2. Hon stannar på tröskeln.\n3. Hon ropar.")
+    win.ai.suggest("next", selection="Hon gick in.", chapter="Scen 1")
+    for _ in range(100):
+        app.processEvents()
+        if fangat_prompt:
+            break
+        time.sleep(0.02)
+    check("preteritum" in fangat_prompt.get("system", ""),
+          "och de följer med hela vägen ut i anropet")
+    check("Hon gick in." in fangat_prompt.get("user", ""),
+          "utan att tränga undan själva uppgiften")
+    ai_mod.chat_completion = riktig_chat
+
+    # spara-vägen
+    win._set_ai_instructions("  Bara den här raden.  ")
+    check(win.project.settings["ai_instructions"] == "Bara den här raden.",
+          "texten sparas trimmad i projektet")
+    win._set_ai_instructions("")
+    check(win.ai._system_prompt("bas") == "bas",
+          "och ett tomt fält ger systemprompten tillbaka orörd")
+    check(win.act_instructions is not None, "menyn har en väg till fältet")
 
     # Arken: ett ark per sida med ett mellanrum där ytan syns, och texten delad
     # mellan rader. Mätt i en riktig rendering, med temats färger.

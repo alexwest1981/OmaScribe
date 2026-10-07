@@ -250,3 +250,20 @@
   gamla kvar före, manuset är tecken för tecken oförändrat, och utan förslag stängs vägen att spara.
 - **Inte mätt:** själva AI-svaret. Grinden rör aldrig nätet — den kräver en nyckel och kostar
   pengar. Svaret från modellen går genom `parse_suggestions`, som är provad.
+
+### Fas 2.17: projektets instruktioner till AI:n
+
+- **Status:** complete, grindad (406 rökprov + 54 renhetsprov).
+- Projektet har ett fält för sina egna instruktioner — ton, tempus, namn, allt som ska vara lika
+  hela vägen — och texten läggs **sist** i systemprompten, närmast uppgiften. Ett tomt fält
+  lämnar prompten orörd.
+- Regeln bor på ett ställe: alla tre AI-vägarna (granskning, omskrivning, övningarna) går genom
+  `AIClient._system_prompt`. Fönstret sätter en *funktion* som hämtar det öppna projektets
+  instruktioner, i stället för att kopiera texten — byter man projekt följer reglerna med, och ett
+  stängt projekt ger tom text. En trasig källa får inte stoppa ett AI-anrop.
+- Menyväg: Arkiv → Projektinstruktioner (flerradigt fält).
+- Mätt i provet, utan nät: instruktionerna finns i systemprompten och ligger sist, de följer med
+  hela vägen ut i anropet (med `chat_completion` avbytt), uppgiften finns kvar i användarprompten,
+  texten sparas trimmad, och ett tomt fält ger prompten tillbaka orörd.
+- **Kvar av fas 2:** 2.16 projektöversikt, samt 2.7 (pauspåminnelser), 2.11 (namngenerator) och
+  2.13 (blurb/synopsis) som är markerade låg. Synopsis finns redan per scen.

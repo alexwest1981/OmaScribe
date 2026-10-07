@@ -14,8 +14,8 @@ taget (`ui/main_window.py:663`). Se `findings.md`.
 
 ## Next Step
 
-Fas 2.16 (projektöversikt) och 2.17 (projektinstruktioner till AI:n), därefter
-fas 3 (revision och granskning) — 2.7, 2.11 och 2.13 är kvar och markerade låg
+Fas 2.16 (projektöversikt), därefter fas 3 (revision och granskning) — 2.7, 2.11
+och 2.13 är kvar och markerade låg
 (tidslinje och plot-tavla) som är nästa större punkt. Rutnätet i 2.9 bygger på
 scenmodellen och på att scenens status redan finns.
 
@@ -23,7 +23,8 @@ scenmodellen och på att scenens status redan finns.
 
 Fas 2 — Författarlagret (2.1–2.6 och 2.8–2.10 klara: skrivloggen, kvot, historik,
 sprintar, skrivmaskinsläget, story biblen, plot-tavlan, samlingen som läsvy,
-revisionsläget (2.12), övningarna (2.14) och läsbarhetsmarkeringen (2.15)).
+revisionsläget (2.12), övningarna (2.14), läsbarhetsmarkeringen (2.15) och
+projektinstruktionerna (2.17)).
 Fas 0, 0b och 1 är klara. Sedan dess: appskalet följer v0-referensen, och
 pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 
@@ -98,8 +99,14 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 - [x] **2.14** Övningar mot skrivblock ("vad händer nu?"): forskningens arbetsflöde satt rakt av — välj en fråga, få tre förslag, granska, välj eller ignorera, och återgå till skrivandet. Fyra kategorier (Vad händer nu? / Dialog / Handling / Sinnesintryck, efter Sparks), `core/exercises.py` bygger frågan och tolkar svaret (rent, eget självprov på 11 kontroller), och `ui/exercise_dialog.py` visar svaren. Det valda förslaget hamnar i **scenens egen anteckning**, inte i manuset: förslagen är vägar in, inte färdig prosa — och anteckningen är samma sammanhang som AI:n läser nästa gång. Anropet går genom den befintliga AI-klienten, så ingen ny nyckel eller leverantör behövs. R03.16
 - [x] **2.15** Läsbarhetsanalys och stilråd i texten: LIX fanns i `core/document_stats.py` och visades i panelen, men ingenstans i texten. Nu finns `sentence_ranges(text, max_words=20)` (ren funktion, eget självprov) och `ReadabilityHighlighter` i editorn, som markerar tunga meningar med en **prickad understrykning** — formen bär betydelsen, färgen förstärker. Markeringen är en *vy*-format (som kommentarerna): texten rörs inte och inget hamnar i scenfilen. Slås på i Visa-menyn och kommer ihåg sig i configen. Valet av enhet är inte slumpat: meningen är det LIX drivs av, så markeringen visar precis det rådet gäller. R03.17
 - [ ] **2.16** Projektöversikt och anteckningar (valvet som projektlager, taggar/properties). R03.18
-- [ ] **2.17** Projektinstruktioner: per-projekt kontext för AI:n. R04.18
-- **Status:** in progress (2.1–2.6, 2.8–2.10, 2.12, 2.14 och 2.15 klara och grindade)
+- [x] **2.17** Projektinstruktioner till AI:n: projektet har ett fält (`settings["ai_instructions"]`)
+      som författaren fyller i — ton, tempus, namn, allt som ska vara lika hela vägen — och som
+      läggs **sist** i systemprompten, närmast uppgiften. Ett tomt fält lämnar prompten orörd, en
+      trasig källa eller ett stängt projekt stoppar inte anropet, och fönstret pekar AI:n på det
+      projekt som är öppet just nu i stället för att kopiera texten. Menyväg: Arkiv →
+      Projektinstruktioner. Alla tre AI-vägarna (granskning, omskrivning, övningar) går genom samma
+      `_system_prompt`, så regeln bor på ett ställe. R03.18
+- **Status:** in progress (2.1–2.6, 2.8–2.10, 2.12, 2.14, 2.15 och 2.17 klara och grindade)
 
 ### Fas 3: Revision och granskning
 

@@ -172,6 +172,7 @@ DEFAULT_SETTINGS = {
     "series": "",
     "genre": "",
     "audience": "",
+    "ai_instructions": "",      # författarens egna regler för den här boken (R03.18)
 }
 
 # Statusfärger är presentation: de följer ordningen i projektets statuslista, så

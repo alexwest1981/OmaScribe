@@ -723,5 +723,10 @@
   "exercise_failed": "Kunde inte fråga",
   "exercise_inserted": "Sparat i scenens anteckning.",
   "exercise_saved": "Förslaget ligger i scenens anteckning",
-  "exercise_needs_scene": "Öppna en scen först — övningen behöver ett sammanhang"
+  "exercise_needs_scene": "Öppna en scen först — övningen behöver ett sammanhang",
+  "menu_file_instructions": "Projektinstruktioner till AI:n…",
+  "instructions_title": "Projektets instruktioner",
+  "instructions_label": "Vad ska AI:n hålla sig till i den här boken? (ton, tempus, namn, sådant som ska vara lika hela vägen)",
+  "instructions_saved": "Projektets instruktioner sparade",
+  "instructions_needs_project": "Öppna ett projekt först"
 }

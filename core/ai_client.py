@@ -117,8 +117,34 @@ class AIClient(QObject):
     def __init__(self, config_mgr):
         super().__init__()
         self.config = config_mgr
+        self._project_context = None      # sätts av fönstret; en bok, inte appen
         self._active_workers = set()
         self._review_worker = None
+
+    def set_project_context(self, provider) -> None:
+        """Var projektets instruktioner hämtas (R03.18).
+
+        En funktion i stället för en kopia: fönstret byter projekt, och nästa
+        AI-anrop ska läsa det nya projektets regler utan att något kopplas om.
+        """
+        self._project_context = provider
+
+    def _system_prompt(self, base: str) -> str:
+        """Projektets egna instruktioner sist i systemprompten.
+
+        Sist, inte först: rollbeskrivningen är kort och modellen läser
+        instruktionerna närmast uppgiften. Är fältet tomt lämnas prompten orörd,
+        och en trasig källa får inte stoppa ett AI-anrop.
+        """
+        extra = ""
+        if callable(self._project_context):
+            try:
+                extra = (self._project_context() or "").strip()
+            except Exception:                        # noqa: BLE001
+                extra = ""
+        if not extra:
+            return base
+        return f"{base}\n\nProjektets instruktioner (följ dem):\n{extra}"
 
     def review_document(self, text, lang="en"):
         if not text or len(text.strip()) < 10:
@@ -141,7 +167,7 @@ class AIClient(QObject):
         lang_desc = "Swedish (Svenska)" if lang in ("sv", "svenska", "swedish") else "English"
         lang_note = "Respond in Swedish for the summary, tone, and suggestions' explanations." if lang in ("sv", "svenska", "swedish") else "Respond in English for the summary, tone, and suggestions' explanations."
 
-        sys_prompt = f"""You are an elite, professional editor and writing coach.
+        sys_prompt = self._system_prompt(f"""You are an elite, professional editor and writing coach.
 Analyze the following document written in {lang_desc}. {lang_note}
 Respond ONLY with a valid JSON object matching this schema:
 {{
@@ -158,7 +184,7 @@ Respond ONLY with a valid JSON object matching this schema:
   ]
 }}
 Do NOT wrap with markdown fences. Return raw JSON.
-"""
+""")
 
         endpoint = self.config.get("ai_endpoint", DEFAULT_AI_ENDPOINT)
         api_key = self.config.get("ai_key", "")
@@ -199,7 +225,7 @@ Do NOT wrap with markdown fences. Return raw JSON.
 
     def transform_text(self, selected_text, instruction, context_before="", context_after=""):
         self.ai_status_changed.emit("analyzing")
-        sys_prompt = "You are a precise writing assistant. Follow the user's instruction to rewrite or generate text. Return ONLY the replacement text without any conversational preamble or markdown codeblocks unless specifically requested."
+        sys_prompt = self._system_prompt("You are a precise writing assistant. Follow the user's instruction to rewrite or generate text. Return ONLY the replacement text without any conversational preamble or markdown codeblocks unless specifically requested.")
         
         user_prompt = f"""Context before: {context_before[-200:]}
 Target text to transform: {selected_text}
@@ -235,6 +261,7 @@ Instruction: {instruction}
 
         system, user = exercises.build_prompt(category_key, selection, scene_note,
                                               chapter, lang)
+        system = self._system_prompt(system)
         endpoint = self.config.get("ai_endpoint", DEFAULT_AI_ENDPOINT)
         api_key = self.config.get("ai_key", "")
         model = self.config.get("ai_model", DEFAULT_AI_MODEL)

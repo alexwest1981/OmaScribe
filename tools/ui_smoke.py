@@ -120,6 +120,28 @@ def main() -> int:
     check("Rubrik" in (out / "export.txt").read_text(encoding="utf-8"),
           "text-exporten innehåller dokumentets text")
 
+    print("\n6b. Sidinställningarna når exportvägen genom fönstret")
+    # Fällan: DOCX-exporten anropade save_file utan page_settings, så samma
+    # dokument blev rent i PDF men färgade kvar i Word. Provet går därför genom
+    # fönstrets egen väg och kräver att inställningen faktiskt biter.
+    import zipfile
+    fargad = out / "export-sidinstallning.docx"
+    sparat = dict(win.page_settings)
+    sparad_html = win.editor.document.toHtml()
+    try:
+        win.page_settings["clean_print"] = False
+        win.editor.document.setHtml('<p><span style="color:#c0392b">Färgad rad</span></p>')
+        win._save_document(str(fargad))
+        xml = zipfile.ZipFile(fargad).read("word/document.xml").decode("utf-8", "replace")
+        check("C0392B" in xml.upper(),
+              "page_settings når DOCX-exporten (färgen behölls när reningen är av)")
+    except Exception as exc:          # noqa: BLE001
+        check(False, f"DOCX via fönstret kunde inte kontrolleras: {exc}")
+    finally:
+        win.page_settings.clear()
+        win.page_settings.update(sparat)
+        win.editor.document.setHtml(sparad_html)
+
     print("\n7. Ingen text kläms ihop")
     # Fällan: en QPushButton räknar sin storlek ur sin egen text och struntar i
     # en layout inuti. Appens globala stilmall ger knappen min-height 22px +

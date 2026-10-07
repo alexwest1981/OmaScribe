@@ -389,16 +389,6 @@ class MainWindow(QMainWindow):
         if hasattr(self, "act_lang_en"):
             self.act_lang_en.setChecked(curr == "en")
 
-    def _toggle_focus_mode(self):
-        if self.isFullScreen():
-            self.showNormal()
-            self.toolbar.setVisible(True)
-            self.sidebar.setVisible(self.config.get("show_ai_sidebar", True))
-        else:
-            self.showFullScreen()
-            self.toolbar.setVisible(False)
-            self.sidebar.setVisible(False)
-
     def _zoom_in(self):
         self.editor.canvas.zoomIn(1)
 
@@ -488,7 +478,7 @@ class MainWindow(QMainWindow):
     def _on_autosave_timer_fired(self):
         if self.stack.currentIndex() == 1 and self.is_modified and self.current_filepath and self.config.get("autosave", True):
             try:
-                DocumentManager.save_file(self.current_filepath, self.editor.document)
+                self._save_document(self.current_filepath)
                 self.is_modified = False
                 self._update_window_title()
             except Exception as e:
@@ -542,17 +532,24 @@ class MainWindow(QMainWindow):
         self.config.set("show_ai_sidebar", vis)
 
     def _toggle_focus_mode(self):
+        """Distraktionsfritt läge: bort med allt utom texten, och tillbaka igen.
+
+        Enda definitionen — den låg tidigare i två kopior där den sista tyst
+        tog över, så sidopanelen slutade gömmas.
+        """
         if self.isFullScreen():
             self.showNormal()
+            self.menuBar().setVisible(True)
+            self.status_bar.setVisible(True)
             if self.stack.currentIndex() == 1:
                 self.toolbar.setVisible(True)
-                self.status_bar.setVisible(True)
-            self.menuBar().setVisible(True)
+                self.sidebar.setVisible(self.config.get("show_ai_sidebar", True))
         else:
             self.showFullScreen()
-            self.toolbar.setVisible(False)
             self.menuBar().setVisible(False)
             self.status_bar.setVisible(False)
+            self.toolbar.setVisible(False)
+            self.sidebar.setVisible(False)
 
     def _toggle_dictation(self):
         self.dictation.toggle_recording()
@@ -674,7 +671,7 @@ class MainWindow(QMainWindow):
     def file_save(self):
         if self.current_filepath:
             try:
-                DocumentManager.save_file(self.current_filepath, self.editor.document)
+                self._save_document(self.current_filepath)
                 self.is_modified = False
                 self._update_window_title()
                 return True
@@ -694,7 +691,7 @@ class MainWindow(QMainWindow):
         if fpath:
             fpath = self._ensure_extension(fpath, selected_filter, ".docx")
             try:
-                DocumentManager.save_file(fpath, self.editor.document)
+                self._save_document(fpath)
                 self.current_filepath = fpath
                 self.is_modified = False
                 self._update_window_title()
@@ -744,7 +741,7 @@ class MainWindow(QMainWindow):
         if fpath:
             fpath = self._ensure_extension(fpath, "*.pdf", ".pdf")
             try:
-                DocumentManager.save_file(fpath, doc, page_settings=self.page_settings)
+                self._save_document(fpath, doc)
                 QMessageBox.information(self, _("export_success_title"), _("export_success_text", path=fpath))
             except Exception as e:
                 QMessageBox.critical(self, _("export_error_title"), str(e))
@@ -804,7 +801,7 @@ class MainWindow(QMainWindow):
         if fpath:
             fpath = self._ensure_extension(fpath, "*.docx", ".docx")
             try:
-                DocumentManager.save_file(fpath, self.editor.document)
+                self._save_document(fpath)
                 QMessageBox.information(self, _("export_success_title"), _("export_success_text", path=fpath))
             except Exception as e:
                 QMessageBox.critical(self, _("export_error_title"), str(e))
@@ -819,7 +816,7 @@ class MainWindow(QMainWindow):
         if fpath:
             fpath = self._ensure_extension(fpath, "*.md", ".md")
             try:
-                DocumentManager.save_file(fpath, self.editor.document)
+                self._save_document(fpath)
                 QMessageBox.information(self, _("export_success_title"), _("export_success_text", path=fpath))
             except Exception as e:
                 QMessageBox.critical(self, _("export_error_title"), str(e))
@@ -834,10 +831,23 @@ class MainWindow(QMainWindow):
         if fpath:
             fpath = self._ensure_extension(fpath, "*.html", ".html")
             try:
-                DocumentManager.save_file(fpath, self.editor.document)
+                self._save_document(fpath)
                 QMessageBox.information(self, _("export_success_title"), _("export_success_text", path=fpath))
             except Exception as e:
                 QMessageBox.critical(self, _("export_error_title"), str(e))
+
+    def _save_document(self, filepath, text_document=None):
+        """Sparar eller exporterar med appens aktuella sidinställningar.
+
+        Utan page_settings faller save_file tillbaka på DEFAULT_PAGE_SETTINGS,
+        och då fick samma dokument olika rening och geometri beroende på väg —
+        DOCX-exporten tappade dem medan PDF-exporten hade dem.
+        """
+        DocumentManager.save_file(
+            filepath,
+            text_document if text_document is not None else self.editor.document,
+            page_settings=self.page_settings,
+        )
 
     def _maybe_save_changes(self):
         if not self.is_modified:

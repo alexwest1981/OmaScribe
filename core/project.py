@@ -34,6 +34,7 @@ MANIFEST = "project.json"
 MANUSCRIPT_DIR = "manuscript"
 RESEARCH_DIR = "research"
 SNAPSHOT_DIR = ".snapshots"
+CODEX_FILE = "codex.sqlite"        # projektets entiteter och scenkopplingar
 SCHEMA_VERSION = 1
 
 PART, CHAPTER, SCENE, NOTE, RESEARCH = "part", "chapter", "scene", "note", "research"
@@ -583,6 +584,14 @@ class Project:
         """Researchmaterial som ännu inte hör till scenen."""
         linked = {n.id for n in self.material_for(scene_id)}
         return [n for n in self.research() if n.is_writable and n.id not in linked]
+
+    @property
+    def codex_path(self) -> Path:
+        """Projektets codex ligger i projektmappen, så projektet är självständigt.
+
+        Skapas först när någon öppnar den — ett projekt utan entiteter har ingen fil.
+        """
+        return self.root / CODEX_FILE
 
     def status_color(self, status: str):
         """Färgen för en status, eller None. Härledd ur statuslistans ordning."""

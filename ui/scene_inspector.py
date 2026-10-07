@@ -6,12 +6,13 @@ Panelen äger ingen data. MainWindow skapar den, säger till vilken scen som är
 
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtWidgets import (
-    QComboBox, QFormLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget,
+    QComboBox, QDialog, QFormLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget,
     QListWidgetItem, QMenu, QPlainTextEdit, QSpinBox, QToolButton, QVBoxLayout,
     QWidget,
 )
 
 from core.i18n import _, i18n
+from core.project import html_to_text
 
 
 class SceneInspector(QWidget):
@@ -24,6 +25,7 @@ class SceneInspector(QWidget):
         super().__init__(parent)
         self.project = None
         self.node = None
+        self.codex = None                # projektets entiteter (core.storybible)
         self._loading = False            # hindrar att ifyllning ser ut som en ändring
 
         layout = QVBoxLayout(self)
@@ -121,6 +123,31 @@ class SceneInspector(QWidget):
         material_row.addWidget(self.lbl_material)
         form.addRow("", self._wrap(material_row))
 
+        # Entiteter: vilka som är med i scenen (R04.2). Kopplingen ligger i
+        # projektets codex (codex.sqlite), inte i manifestet.
+        self.lst_entities = QListWidget()
+        self.lst_entities.setMaximumHeight(72)
+        self.lst_entities.setToolTip(_("scene_entities_hint"))
+        form.addRow(_("scene_entities"), self.lst_entities)
+
+        entity_row = QHBoxLayout()
+        entity_row.setSpacing(2)
+        self.btn_entity_link = QToolButton()
+        self.btn_entity_link.setText("📎")
+        self.btn_entity_link.setToolTip(_("scene_entity_link"))
+        self.btn_entity_link.clicked.connect(self._show_entity_candidates)
+        entity_row.addWidget(self.btn_entity_link)
+        self.btn_entity_unlink = QToolButton()
+        self.btn_entity_unlink.setText("✂️")
+        self.btn_entity_unlink.setToolTip(_("scene_entity_unlink"))
+        self.btn_entity_unlink.clicked.connect(self._unlink_selected_entity)
+        entity_row.addWidget(self.btn_entity_unlink)
+        entity_row.addStretch(1)
+        self.lbl_entities = QLabel("")
+        self.lbl_entities.setStyleSheet("color: palette(mid);")
+        entity_row.addWidget(self.lbl_entities)
+        form.addRow("", self._wrap(entity_row))
+
         layout.addStretch(1)
 
         i18n.language_changed.connect(self.retranslate_ui)
@@ -154,6 +181,9 @@ class SceneInspector(QWidget):
                 self.input_labels.clear()
                 self.input_pov.clear()
                 self.lbl_words.setText("")
+                self.lst_material.clear()
+                self.lst_entities.clear()
+                self.lbl_entities.setText("")
                 return
             self.input_title.setText(node.title)
             self.input_synopsis.setPlainText(node.synopsis)
@@ -170,6 +200,7 @@ class SceneInspector(QWidget):
             self.spin_revision.setValue(int(node.revision or 1))
             self._update_words()
             self._refresh_material()
+            self._refresh_entities()
         finally:
             self._loading = False
 
@@ -247,6 +278,93 @@ class SceneInspector(QWidget):
         node_id = item.data(Qt.ItemDataRole.UserRole)
         if node_id:
             self.open_node.emit(node_id)
+
+    # ------------------------------------------------------------- entiteterna
+
+    def set_codex(self, codex) -> None:
+        """Projektets codex (core.storybible). Byts när projektet byts."""
+        self.codex = codex
+        self._refresh_entities()
+
+    def _refresh_entities(self) -> None:
+        """Entiteterna i scenen, och hur många som nämns utan att vara kopplade."""
+        self.lst_entities.clear()
+        has = self.codex is not None and self.project is not None and self.node is not None
+        self.btn_entity_link.setEnabled(has)
+        self.btn_entity_unlink.setEnabled(has)
+        self.lbl_entities.setText("")
+        if not has:
+            return
+        linked = self.codex.for_node(self.node.id)
+        for entity in linked:
+            item = QListWidgetItem(f"{entity.name} · {_(f'entity_type_{entity.type}')}")
+            item.setData(Qt.ItemDataRole.UserRole, entity.id)
+            item.setToolTip(entity.summary or entity.name)
+            self.lst_entities.addItem(item)
+        namnda = self._mentioned_unlinked()
+        if namnda:
+            self.lbl_entities.setText(_("scene_entities_mentioned", count=len(namnda)))
+
+    def _mentioned_unlinked(self) -> list:
+        """Entiteter som nämns i scenens text men inte är kopplade till den."""
+        if not self.node.is_writable:
+            return []
+        text = html_to_text(self.project.read(self.node.id))
+        linked = {e.id for e in self.codex.for_node(self.node.id)}
+        return [e for e in self.codex.mentions(text) if e.id not in linked]
+
+    def _show_entity_candidates(self) -> None:
+        """📎: koppla en entitet som finns i codex, eller skapa en ny."""
+        if self.codex is None or self.node is None:
+            return
+        linked = {e.id for e in self.codex.for_node(self.node.id)}
+        menu = QMenu(self)
+        namnda = {e.id for e in self._mentioned_unlinked()}
+        for entity in self.codex.entities():
+            if entity.id in linked:
+                continue
+            text = f"{entity.name} · {_(f'entity_type_{entity.type}')}"
+            if entity.id in namnda:
+                text = f"★ {text}"          # nämnd i texten, men inte kopplad
+            menu.addAction(text, lambda eid=entity.id: self.link_entity(eid))
+        if menu.actions():
+            menu.addSeparator()
+        menu.addAction(f"+ {_('scene_entity_new')}", self._new_entity)
+        menu.exec(self.btn_entity_link.mapToGlobal(self.btn_entity_link.rect().bottomLeft()))
+
+    def _new_entity(self) -> None:
+        """Skapar en entitet i projektets codex och kopplar den till scenen."""
+        from ui.entity_dialog import EntityDialog
+
+        dialog = EntityDialog(parent=self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        name, entity_type, summary = dialog.values()
+        if not name:
+            return
+        entity = self.codex.add_entity(name, type=entity_type, summary=summary)
+        self.link_entity(entity.id)
+
+    def link_entity(self, entity_id: str) -> bool:
+        if self.codex is None or self.node is None:
+            return False
+        self.codex.link(entity_id, self.node.id)
+        self._refresh_entities()
+        return True
+
+    def unlink_entity(self, entity_id: str) -> bool:
+        if self.codex is None or self.node is None:
+            return False
+        self.codex.unlink(entity_id, self.node.id)
+        self._refresh_entities()
+        return True
+
+    def _unlink_selected_entity(self) -> bool:
+        item = self.lst_entities.currentItem() or (
+            self.lst_entities.item(0) if self.lst_entities.count() else None)
+        if item is None:
+            return False
+        return self.unlink_entity(item.data(Qt.ItemDataRole.UserRole))
 
     # --------------------------------------------------------------- ändringar
 

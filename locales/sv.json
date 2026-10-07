@@ -573,5 +573,22 @@
   "project_tpl_novell": "Novell",
   "project_tpl_novell_desc": "En enda scen att skriva i. 8 000 ord som förslag.",
   "project_tpl_enkel": "Enkel",
-  "project_tpl_enkel_desc": "Ett kapitel och en scen — du bygger resten själv."
+  "project_tpl_enkel_desc": "Ett kapitel och en scen — du bygger resten själv.",
+  "scene_entities": "Entiteter",
+  "scene_entities_hint": "Personer, platser och ting som är med i scenen. Kopplingen ligger i projektets codex.",
+  "scene_entity_link": "Koppla en entitet till scenen",
+  "scene_entity_unlink": "Ta bort kopplingen",
+  "scene_entities_mentioned": "{count} nämns i texten men är inte kopplade",
+  "scene_entity_new": "Ny entitet…",
+  "entity_dialog_title": "Ny entitet",
+  "entity_name": "Namn",
+  "entity_name_hint": "Till exempel ett personnamn",
+  "entity_type": "Typ",
+  "entity_summary": "Vem är det",
+  "entity_summary_hint": "En rad att känna igen den på",
+  "entity_type_character": "Person",
+  "entity_type_place": "Plats",
+  "entity_type_object": "Föremål",
+  "entity_type_faction": "Grupp",
+  "entity_type_other": "Annat"
 }

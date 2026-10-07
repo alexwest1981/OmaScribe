@@ -573,5 +573,22 @@
   "project_tpl_novell": "Novella",
   "project_tpl_novell_desc": "A single scene to write in. 8,000 words suggested.",
   "project_tpl_enkel": "Simple",
-  "project_tpl_enkel_desc": "One chapter and one scene — you build the rest yourself."
+  "project_tpl_enkel_desc": "One chapter and one scene — you build the rest yourself.",
+  "scene_entities": "Entities",
+  "scene_entities_hint": "People, places and things in this scene. The link lives in the project codex.",
+  "scene_entity_link": "Link an entity to the scene",
+  "scene_entity_unlink": "Remove the link",
+  "scene_entities_mentioned": "{count} are mentioned in the text but not linked",
+  "scene_entity_new": "New entity…",
+  "entity_dialog_title": "New entity",
+  "entity_name": "Name",
+  "entity_name_hint": "A person's name, for instance",
+  "entity_type": "Type",
+  "entity_summary": "Who is it",
+  "entity_summary_hint": "One line to recognise them by",
+  "entity_type_character": "Character",
+  "entity_type_place": "Place",
+  "entity_type_object": "Object",
+  "entity_type_faction": "Group",
+  "entity_type_other": "Other"
 }

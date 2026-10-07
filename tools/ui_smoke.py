@@ -616,6 +616,56 @@ def main() -> int:
           "ordmålet jag skrev är det som gäller")
     dlg.deleteLater()
 
+    print("\n17. Scenens entiteter (codex i projektet)")
+    from core.project import Project as NyBok
+    from ui.entity_dialog import EntityDialog
+    mapp = Path(tempfile.mkdtemp(prefix="codex-")) / "Boken"
+    cbok = NyBok.create(mapp, "Codexboken", template="enkel")
+    win._activate_project(cbok)
+    check(win.codex is not None, "projektets codex öppnas med projektet")
+    check(win.codex.path == str(cbok.codex_path),
+          f"och ligger i projektmappen ({win.codex.path})")
+    scen = cbok.manuscript()[0]
+    win.binder.select_node(scen.id)
+    insp = win.scene_inspector
+    check(insp.lst_entities.count() == 0, "scenen har inga entiteter än")
+    check(insp.btn_entity_link.isEnabled(), "📎 går att använda")
+
+    dlg = EntityDialog(default_name="Elin")
+    check(dlg.combo_type.currentData() == "character", "karaktär är förvald typ")
+    dlg.combo_type.setCurrentIndex(dlg.combo_type.findData("place"))
+    e_namn, e_typ, e_sum = dlg.values()
+    check((e_namn, e_typ) == ("Elin", "place"),
+          f"dialogen lämnar namn och typ ({(e_namn, e_typ)})")
+    dlg.deleteLater()
+
+    elin = win.codex.add_entity(e_namn, type=e_typ, summary="Bor vid älven")
+    check(insp.link_entity(elin.id) is True, "entiteten kopplas till scenen")
+    check(insp.lst_entities.count() == 1,
+          f"och syns i listan ({insp.lst_entities.count()})")
+    ent_rad = insp.lst_entities.item(0).text()
+    check("Elin" in ent_rad and "Plats" in ent_rad, f"med namn och typ ({ent_rad!r})")
+    check([e.id for e in win.codex.for_node(scen.id)] == [elin.id],
+          "kopplingen ligger i codex")
+
+    # en entitet som nämns i texten men inte är kopplad pekas ut
+    alven = win.codex.add_entity("älven", type="place")
+    win.editor.document.setHtml("<p>Elin gick ner till älven.</p>")   # som att skriva det själv
+    win._flush_scene()
+    check("älven" in cbok.read(scen.id), "texten sparades till scenfilen")
+    insp.set_scene(cbok, cbok.by_id(scen.id))
+    check("1" in insp.lbl_entities.text(),
+          f"den okopplade entiteten pekas ut ({insp.lbl_entities.text()!r})")
+    check(len(insp._mentioned_unlinked()) == 1, "och det är just älven")
+    check(insp._mentioned_unlinked()[0].id == alven.id, "inte den kopplade Elin")
+
+    check(insp.unlink_entity(elin.id) is True, "kopplingen kan tas bort")
+    check(insp.lst_entities.count() == 0, "och listan töms")
+    check(win.codex.for_node(scen.id) == [], "och den ligger borta i codex")
+    check(cbok.codex_path.exists(), f"codex-filen finns i projektmappen")
+    win._deactivate_project()
+    check(win.codex is None, "codex stängs när projektet lämnas")
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

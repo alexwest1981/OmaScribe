@@ -153,6 +153,7 @@ class MainWindow(QMainWindow):
         # är öppet — ett enstaka dokument och ett projekt är två skilda lägen.
         self.project = None
         self.active_scene_id = None
+        self.codex = None                # projektets entiteter (core.storybible)
         self.binder = BinderPanel(self)
         self.binder.scene_selected.connect(self._load_scene)
         self.binder.structure_changed.connect(self._on_structure_changed)
@@ -743,6 +744,7 @@ class MainWindow(QMainWindow):
     def _activate_project(self, project):
         self._deactivate_project()
         self.project = project
+        self._open_codex(project)
         self.binder.set_project(project)
         self.binder.setVisible(True)
         self.act_view_scrivenings.setEnabled(True)
@@ -757,10 +759,32 @@ class MainWindow(QMainWindow):
             self._load_scene(scenes[0].id)
         self._update_window_title()
 
+    def _open_codex(self, project):
+        """Öppnar projektets egen codex. Ligger i projektmappen (R03.9, R04.2)."""
+        from core.storybible import StoryBible
+
+        try:
+            self.codex = StoryBible(str(project.codex_path))
+        except Exception as exc:                     # trasig fil får inte stoppa projektet
+            self.codex = None
+            print(f"[codex] kunde inte öppnas: {exc}")
+        self.scene_inspector.set_codex(self.codex)
+        return self.codex
+
+    def _close_codex(self):
+        if self.codex is not None:
+            try:
+                self.codex.close()
+            except Exception:                        # stängning får inte fälla projektbytet
+                pass
+        self.codex = None
+        self.scene_inspector.set_codex(None)
+
     def _deactivate_project(self):
         """Lämnar projektläget. Projektet ligger kvar på disk."""
         if self.project is not None:
             self._flush_scene(quiet=True)
+        self._close_codex()
         self.project = None
         self.active_scene_id = None
         self.binder.set_project(None)

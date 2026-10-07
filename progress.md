@@ -151,3 +151,19 @@
   relation och entitet går att ta bort utan att scenen rörs.
 - Ingen cache för manuset: en cachad siffra som ljuger när man just ändrat en scen är
   värre än att läsa om boken (millisekunder).
+
+### Teckensnittsmenyn: från skärmhög popup till vanlig meny
+
+- **Status:** complete, grindad (362 rökprov + 54 renhetsprov, GRÖNT).
+- Orsak (mätt, inte gissad): stilmallens regler för `QComboBox QAbstractItemView` får Qt att svara
+  ja på `SH_ComboBox_Popup`. Menyn fyller då hela den lediga höjden med skrollpilar och listen
+  läggs mitt i — 800 px meny, listen 390 px på y=133. Samma regler stänger av menyvyns egen
+  skrollist, så bara elva av 37 typsnitt gick att nå.
+- Fix: reglerna bort (färgerna kommer från appens palett, som redan sätts ur temat; radhöjden från
+  `FontItemDelegate.sizeHint`), och `use_dropdown()` svarar nej på menyläget för teckensnitts- och
+  storleksmenyn. Mätt efteråt: 366 px för 14 rader à 26 px, listen från y=0, skrollist med 23 rader
+  kvar, läsbar även i temat dark.
+- Två fällor på vägen, båda värda att minnas: en `QProxyStyle` som bara hålls i en Python-variabel
+  dör före sina widgetar och ger signal 11 i städningen (appen får äga den), och rökprovet får inte
+  öppna menyn — offscreen-plattformen kraschar ibland i städningen efter en visad popup, så provet
+  mäter mekanismen (stilfrågan, skrollisten, radhöjden) i stället.

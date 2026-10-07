@@ -1,6 +1,9 @@
 import os
 from PyQt6.QtGui import QFontDatabase, QFont, QColor
-from PyQt6.QtWidgets import QComboBox, QStyledItemDelegate, QListView
+from PyQt6.QtWidgets import (
+    QApplication, QComboBox, QListView, QProxyStyle, QStyledItemDelegate,
+)
+from PyQt6.QtWidgets import QStyle
 from PyQt6.QtCore import Qt, pyqtSignal
 
 USER_FONTS_DIR = os.path.expanduser("~/.config/omascribe/fonts")
@@ -71,7 +74,54 @@ ALLOWED_NOTO = {
     "Noto Serif Display", "Noto Color Emoji"
 }
 
+class DropdownStyle(QProxyStyle):
+    """Gör en vanlig meny av en combobox vars popup Qt vill fylla hela skärmen med.
+
+    Stilmallens regler för QComboBox får Qt att svara ja på `SH_ComboBox_Popup`:
+    menyn tar då hela den lediga höjden och listen läggs mitt i den — mätt 800px
+    meny med listen 390px på y=133, och det vita tomrummet syns ovanför listan.
+    Svarar vi nej på frågan ritar Qt en vanlig meny: mätt 384px med listen från
+    y=0. Stilmallens regler för menyvyn togs bort samtidigt (theme_manager), för
+    de stängde också av menyvyns egen skrollist — bara elva av 37 typsnitt gick
+    att nå.
+    """
+
+    def styleHint(self, hint, option=None, widget=None, data=None):
+        if hint == QStyle.StyleHint.SH_ComboBox_Popup and widget is not None:
+            return 0
+        return super().styleHint(hint, option, widget, data)
+
+
+_MENY_STIL = None
+
+
+def use_dropdown(combo: QComboBox) -> None:
+    """Ger combon en vanlig meny i stället för en popup över hela skärmen.
+
+    Stilen ägs av applikationen (förälder), inte av Python-variabeln: `setStyle`
+    tar inte över ägandet, och en stil som dör före sina widgetar kraschar i
+    städningen — mätt som signal 11 i rökprovet.
+    """
+    global _MENY_STIL
+    if _MENY_STIL is None:
+        _MENY_STIL = DropdownStyle(QApplication.style())
+        # QProxyStyle tar ingen förälder i konstruktorn (PyQt6), så appen får den
+        # i efterhand: setStyle tar inte över ägandet, och en stil som dör före
+        # sina widgetar kraschar i städningen — mätt som signal 11 i rökprovet.
+        app = QApplication.instance()
+        if app is not None:
+            _MENY_STIL.setParent(app)
+    combo.setStyle(_MENY_STIL)
+
+
 class FontItemDelegate(QStyledItemDelegate):
+    def sizeHint(self, option, index):
+        """Radhöjden sätts här, inte i stilmallen: en stilmallsregel för menyvyn
+        får Qt att göra menyn skärmhög (se theme_manager)."""
+        storlek = super().sizeHint(option, index)
+        storlek.setHeight(26)
+        return storlek
+
     def paint(self, painter, option, index):
         font_family = index.data(Qt.ItemDataRole.UserRole)
         is_header = index.data(Qt.ItemDataRole.UserRole + 1) == "header"
@@ -142,6 +192,10 @@ class FontSelectorComboBox(QComboBox):
         self.setItemDelegate(FontItemDelegate(self))
         self.setFixedWidth(180)
         self.setMaxVisibleItems(14)
+        use_dropdown(self)
+        # Skrollisten skall synas: 37 typsnitt i en meny med 14 rader går inte att
+        # bläddra i om listen ser ut att vara slut.
+        self.list_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         
         self.populate_fonts()
         self.currentIndexChanged.connect(self._on_index_changed)

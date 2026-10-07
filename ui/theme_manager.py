@@ -423,32 +423,13 @@ class ThemeManager(QObject):
         QComboBox::down-arrow:hover {{
             border-top-color: {c["accent"]};
         }}
-        QComboBox QAbstractItemView {{
-            background-color: {c["toolbar_bg"]};
-            color: {c["text_color"]};
-            border: 1px solid {c["canvas_border"]};
-            border-radius: 6px;
-            selection-background-color: {c["accent"]};
-            selection-color: {c["accent_text"]};
-            padding: 4px;
-            outline: none;
-            max-height: 380px;
-        }}
-        QComboBox QAbstractItemView::item {{
-            color: {c["text_color"]};
-            min-height: 26px;
-            padding: 4px 8px;
-            border-radius: 4px;
-        }}
-        QComboBox QAbstractItemView::item:hover {{
-            background-color: {c["btn_hover"]};
-            color: {c["text_color"]};
-        }}
-        QComboBox QAbstractItemView::item:selected {{
-            background-color: {c["accent"]};
-            color: {c["accent_text"]};
-        }}
-
+        /* Menyns vy (QComboBox QAbstractItemView) stils INTE här med flit: en
+           sådan regel får Qt att svara ja på SH_ComboBox_Popup, och då fyller
+           menyn hela skärmen med skrollpilar och listan läggs mitt i (mätt:
+           800px meny, listen 390px på y=133) — dessutom stängs menyvyns egen
+           skrollist av, så bara de första elva typsnitten gick att nå. Färgerna
+           kommer i stället från appens palett (se apply_theme_to_app), och
+           radhöjden från FontItemDelegate.sizeHint. */
         /* LineEdit & TextInputs */
         QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox {{
             background-color: {c["canvas_bg"]};

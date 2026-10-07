@@ -1112,6 +1112,27 @@ def main() -> int:
     check(win.config.get("typewriter_mode") in (True, False),
           f"och valet sparas i configen ({win.config.get('typewriter_mode')})")
 
+    # Teckensnittsmenyn: Qt gör menyn skärmhög när stilmallen styr menyvyn
+    # (SH_ComboBox_Popup svarar ja) — mätt 800px meny med listen 390px på y=133.
+    # Provet mäter mekanismen i stället för att öppna menyn: offscreen-plattformen
+    # kraschar ibland i städningen efter en visad popup, och en grind som kraschar
+    # ibland är värre än en som mäter rätt sak. Siffrorna (366px meny, 14 rader à
+    # 26px, skrollist med 23 rader kvar) är mätta för hand med menyn öppen.
+    from PyQt6.QtCore import Qt as QtKärn
+    from PyQt6.QtWidgets import QStyle, QStyleOptionComboBox
+    combo = win.toolbar.combo_font
+    meny_opt = QStyleOptionComboBox()
+    combo.initStyleOption(meny_opt)
+    meny_läge = combo.style().styleHint(QStyle.StyleHint.SH_ComboBox_Popup, meny_opt, combo)
+    check(meny_läge == 0,
+          f"teckensnittsmenyn följer inte stilmallens skärmhöga meny-läge ({meny_läge})")
+    meny_vy = combo.view()
+    check(meny_vy.verticalScrollBarPolicy() != QtKärn.ScrollBarPolicy.ScrollBarAlwaysOff,
+          f"och menyvyn behåller sin skrollist ({meny_vy.verticalScrollBarPolicy().name})")
+    rad_höjd = combo.view().sizeHintForRow(0)
+    check(rad_höjd == 26,
+          f"och radhöjden sätts i koden, inte i stilmallen ({rad_höjd} px)")
+
     # Tillbaka till provets vanliga läge: fönstret dolt och dokumentet orört, så
     # att stängningen i slutet inte stannar i en fråga om att spara.
     editor.canvas.document().setModified(False)
@@ -1144,7 +1165,6 @@ def main() -> int:
           f"och scenen hon är kopplad till ({panel.lbl_scenes.text()})")
     check(panel.list_relations.count() == 1,
           f"och relationen till en annan entitet ({panel.list_relations.item(0).text()})")
-    from PyQt6.QtCore import Qt as QtKärn      # Qt importeras inte i toppen
     check(panel.list_relations.horizontalScrollBarPolicy()
           == QtKärn.ScrollBarPolicy.ScrollBarAlwaysOff and panel.list_relations.wordWrap(),
           "relationsraden radbryts i stället för att skjuta in en skrollist")

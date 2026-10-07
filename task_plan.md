@@ -197,16 +197,17 @@ kontrollistan när faserna är klara.
 
 ## Att åtgärda senare (rapporterat av Alex, ej gjort)
 
-- [ ] **Teckensnittsväljarens meny spränger hela fönstret.** Rapporterat 2026-10-07 med skärmdump:
-      popupen ligger mitt på skärmen, från toppbaren ned till statusfältet, med två stora tomma
-      fält högst upp och en blå knapp med bara en ikon längst ned; statusfältets text klipps
-      ("…ord idag"). Koden: `core/font_manager.py` `FontSelectorComboBox.__init__` —
-      `setView(QListView(self))`, `setMaxVisibleItems(14)`, `FontItemDelegate` som ritar varje rad
-      i sitt eget typsnitt. Grannmenyn `combo_size` (`ui/toolbar.py`) har samma `setView` men ingen
-      delegat och uppför sig. Mät före ändring: `list_view.sizeHint()`, delegatens `sizeHint()` per
-      rad, popupens `geometry()` efter `showPopup()` — `setMaxVisibleItems` räknar rader, och en hög
-      rad gör 14 rader högre än skärmen.
-
+- [x] **Teckensnittsväljarens meny sprängde hela fönstret.** Fixat 2026-10-07. Orsaken var
+      stilmallens fyra regler för `QComboBox QAbstractItemView` (i `ui/theme_manager.py`): de får
+      Qt att svara ja på `SH_ComboBox_Popup`, och då fyller menyn hela den lediga höjden med
+      skrollpilar och listan läggs mitt i — mätt 800 px meny med listen 390 px på y=133, alltså
+      de två tomma fälten i skärmdumpen. Reglerna stängde dessutom av menyvyns egen skrollist, så
+      bara de första elva av 37 typsnitt gick att nå. Reglerna är borta (färgerna kommer från
+      appens palett, som redan sätts ur temat, och radhöjden från `FontItemDelegate.sizeHint`),
+      och `core.font_manager.use_dropdown` svarar nej på menyläget för teckensnitts- och
+      storleksmenyn. Mätt efteråt: 366 px meny för 14 rader à 26 px, listen från y=0, skrollist
+      med 23 rader kvar — och läsbar även i temat dark (#1e222b bakgrund, #f8fafc text). Tre
+      kontroller i rökprovet vaktar mekanismen (bit-testade: utan fixen blir de röda).
 - [ ] **Inspektörens första flik klipps.** Sett i skärmdumpar 2026-10-07: flikraden visar "…ingar"
       längst till vänster — det är `sidebar_tab_notes` ("Anteckningar", `ui/main_window.py:150`) som
       skjutits ut när den aktiva fliken är den sista. Raden har `setUsesScrollButtons(True)` och

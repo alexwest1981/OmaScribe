@@ -516,6 +516,47 @@ def main() -> int:
           "och manifestet på disk följer med")
     win._deactivate_project()
 
+    print("\n15. Material kopplat till scenen")
+    win._activate_project(bok)
+    insp = win.scene_inspector
+    win.binder.select_node(ett.id)
+    check(insp.lst_material.count() == 0, "scenen har inget material än")
+    check(insp.btn_link.isEnabled(), "📎 går att använda")
+
+    note = bok.by_id(note_id)
+    check(insp.link_material(note_id) is True, "materialet kopplas från panelen")
+    rader = [insp.lst_material.item(i).text() for i in range(insp.lst_material.count())]
+    check(rader == [note.title], f"och syns i listan ({rader})")
+    check([n.id for n in bok.material_for(ett.id)] == [note_id], "kopplingen ligger i modellen")
+    check([n.id for n in Bok.load(projektmapp).material_for(ett.id)] == [note_id],
+          "och i manifestet på disk")
+
+    # dubbelklick (open_node) öppnar anteckningen i editorn
+    insp.open_node.emit(note_id)
+    check(win.active_scene_id == note_id,
+          f"anteckningen öppnas i editorn ({win.active_scene_id})")
+    check("Källa" in win.editor.document.toPlainText(),
+          f"och texten är anteckningens ({win.editor.document.toPlainText()[:24]!r})")
+
+    # kopplingen kan tas bort igen
+    win.binder.select_node(ett.id)
+    check(insp.unlink_material(note_id) is True, "kopplingen kan tas bort")
+    check(insp.lst_material.count() == 0, "och listan töms")
+    check(Bok.load(projektmapp).material_for(ett.id) == [], "och det ligger borta på disk")
+
+    # en scen som tas bort tar kopplingen med sig
+    insp.link_material(note_id)
+    kapitel = bok.by_id(ett.parent)
+    bok.delete_node(kapitel.id)
+    win._on_structure_changed()          # samma väg som panelen tar vid en ändring
+    check(bok.links == [], f"kopplingen städas när scenen försvinner ({bok.links})")
+    check(bok.validate() == [], "och projektet är fortfarande giltigt")
+    check(win.active_scene_id is None,
+          f"editorn släpper scenen som togs bort ({win.active_scene_id})")
+    check(win.editor.document.toPlainText().strip() == "",
+          f"och tömmer sin text ({win.editor.document.toPlainText()[:20]!r})")
+    win._deactivate_project()
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

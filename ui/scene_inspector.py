@@ -6,8 +6,9 @@ Panelen äger ingen data. MainWindow skapar den, säger till vilken scen som är
 
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtWidgets import (
-    QComboBox, QFormLayout, QLabel, QLineEdit, QPlainTextEdit, QSpinBox,
-    QVBoxLayout, QWidget,
+    QComboBox, QFormLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget,
+    QListWidgetItem, QMenu, QPlainTextEdit, QSpinBox, QToolButton, QVBoxLayout,
+    QWidget,
 )
 
 from core.i18n import _, i18n
@@ -17,6 +18,7 @@ class SceneInspector(QWidget):
     """Redigerar metadata för den scen som är öppen."""
 
     meta_changed = pyqtSignal()          # något ändrades, spara manifestet
+    open_node = pyqtSignal(str)          # öppna en nod (material) i editorn
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -82,12 +84,46 @@ class SceneInspector(QWidget):
         self.lbl_words = QLabel("")
         self.lbl_words.setWordWrap(True)
         layout.addWidget(self.lbl_words)
+
+        # Material: researchanteckningar som hör till scenen. Kopplingen är ett
+        # id i manifestet, inte en kopia, så anteckningen ligger kvar i research.
+        self.lst_material = QListWidget()
+        self.lst_material.setMaximumHeight(84)
+        self.lst_material.setToolTip(_("scene_material_hint"))
+        self.lst_material.itemDoubleClicked.connect(self._open_material)
+        form.addRow(_("scene_material"), self.lst_material)
+
+        material_row = QHBoxLayout()
+        material_row.setSpacing(2)
+        self.btn_link = QToolButton()
+        self.btn_link.setText("📎")
+        self.btn_link.setToolTip(_("scene_material_link"))
+        self.btn_link.clicked.connect(self._show_candidates)
+        material_row.addWidget(self.btn_link)
+        self.btn_unlink = QToolButton()
+        self.btn_unlink.setText("✂️")
+        self.btn_unlink.setToolTip(_("scene_material_unlink"))
+        self.btn_unlink.clicked.connect(self._unlink_selected)
+        material_row.addWidget(self.btn_unlink)
+        material_row.addStretch(1)
+        self.lbl_material = QLabel("")
+        self.lbl_material.setStyleSheet("color: palette(mid);")
+        material_row.addWidget(self.lbl_material)
+        form.addRow("", self._wrap(material_row))
+
         layout.addStretch(1)
 
         i18n.language_changed.connect(self.retranslate_ui)
         self.set_scene(None, None)
 
     # ------------------------------------------------------------------- data
+
+    @staticmethod
+    def _wrap(layout) -> QWidget:
+        """Lägger en rad med knappar i en widget — QFormLayout vill ha en widget."""
+        holder = QWidget()
+        holder.setLayout(layout)
+        return holder
 
     def set_scene(self, project, node) -> None:
         """Fyller panelen från noden. project=None eller node=None tömmer den."""
@@ -121,6 +157,7 @@ class SceneInspector(QWidget):
             self.spin_target.setValue(int(node.target_words or 0))
             self.spin_revision.setValue(int(node.revision or 1))
             self._update_words()
+            self._refresh_material()
         finally:
             self._loading = False
 
@@ -137,6 +174,67 @@ class SceneInspector(QWidget):
             self.lbl_words.setText(_("scene_words_of", words=words, target=target, percent=percent))
         else:
             self.lbl_words.setText(_("scene_words", words=words))
+
+    # ------------------------------------------------------------- materialet
+
+    def _refresh_material(self) -> None:
+        """Materialet som hör till scenen, och förslagen som ännu inte gör det."""
+        self.lst_material.clear()
+        has = self.project is not None and self.node is not None
+        self.btn_link.setEnabled(has)
+        self.btn_unlink.setEnabled(has)
+        if not has:
+            self.lbl_material.setText("")
+            return
+        for note in self.project.material_for(self.node.id):
+            item = QListWidgetItem(note.title)
+            item.setData(Qt.ItemDataRole.UserRole, note.id)
+            item.setToolTip(_("scene_material_open"))
+            self.lst_material.addItem(item)
+        kvar = len(self.project.material_candidates(self.node.id))
+        self.lbl_material.setText(_("scene_material_left", count=kvar) if kvar else "")
+
+    def _show_candidates(self) -> None:
+        """📎: välj bland materialet som ännu inte hör till scenen."""
+        if self.project is None or self.node is None:
+            return
+        candidates = self.project.material_candidates(self.node.id)
+        if not candidates:
+            return
+        menu = QMenu(self)
+        for note in candidates:
+            menu.addAction(note.title, lambda nid=note.id: self.link_material(nid))
+        menu.exec(self.btn_link.mapToGlobal(self.btn_link.rect().bottomLeft()))
+
+    def link_material(self, material_id: str) -> bool:
+        if self.project is None or self.node is None:
+            return False
+        if not self.project.link_material(self.node.id, material_id):
+            return False
+        self._refresh_material()
+        self.meta_changed.emit()
+        return True
+
+    def unlink_material(self, material_id: str) -> bool:
+        if self.project is None or self.node is None:
+            return False
+        if not self.project.unlink_material(self.node.id, material_id):
+            return False
+        self._refresh_material()
+        self.meta_changed.emit()
+        return True
+
+    def _unlink_selected(self) -> bool:
+        item = self.lst_material.currentItem() or (
+            self.lst_material.item(0) if self.lst_material.count() else None)
+        if item is None:
+            return False
+        return self.unlink_material(item.data(Qt.ItemDataRole.UserRole))
+
+    def _open_material(self, item) -> None:
+        node_id = item.data(Qt.ItemDataRole.UserRole)
+        if node_id:
+            self.open_node.emit(node_id)
 
     # --------------------------------------------------------------- ändringar
 

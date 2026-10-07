@@ -551,5 +551,11 @@
   "binder_new_research": "New research folder",
   "binder_default_note": "Note",
   "binder_default_research": "Research",
-  "research_tab_hint": "Research belongs to the project but is not part of the manuscript."
+  "research_tab_hint": "Research belongs to the project but is not part of the manuscript.",
+  "scene_material": "Material",
+  "scene_material_hint": "Research notes attached to this scene. Double-click to open.",
+  "scene_material_link": "Attach research material to the scene",
+  "scene_material_unlink": "Remove the link",
+  "scene_material_open": "Double-click to open",
+  "scene_material_left": "{count} to attach"
 }

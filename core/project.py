@@ -165,6 +165,7 @@ class Project:
         self.settings: dict = dict(DEFAULT_SETTINGS)
         self.nodes: list[ProjectNode] = []
         self.collections: list[Collection] = []
+        self.links: list[dict] = []               # [{"scene": id, "material": id}]
         self._words: dict[str, int] = {}          # cache per nod-id
 
     # ------------------------------------------------------------- skapa/ladda
@@ -203,6 +204,11 @@ class Project:
         project.settings = {**DEFAULT_SETTINGS, **(data.get("settings") or {})}
         project.nodes = [ProjectNode.from_dict(d) for d in data.get("nodes", [])]
         project.collections = [Collection.from_dict(d) for d in data.get("collections", [])]
+        project.links = [
+            {"scene": str(l.get("scene")), "material": str(l.get("material"))}
+            for l in (data.get("links") or [])
+            if l.get("scene") and l.get("material")
+        ]
         return project
 
     def save(self) -> None:
@@ -212,6 +218,7 @@ class Project:
             "settings": self.settings,
             "nodes": [n.to_dict() for n in self.nodes],
             "collections": [c.to_dict() for c in self.collections],
+            "links": [dict(l) for l in self.links],
         }
         self.root.mkdir(parents=True, exist_ok=True)
         atomic_write_text(
@@ -344,6 +351,9 @@ class Project:
                     path.unlink()
             self._words.pop(victim.id, None)
         self.nodes = [n for n in self.nodes if n.id not in ids]
+        # Kopplingar till det som försvann städas, annars samlas döda id:n.
+        self.links = [l for l in self.links
+                      if l["scene"] not in ids and l["material"] not in ids]
         self._renumber(node.parent)
         return ids
 
@@ -491,6 +501,37 @@ class Project:
         return [n for n in self.manuscript()
                 if collections_mod.matches(n, terms, html_to_text(self.read(n.id)))]
 
+    # ----------------------------------------------------- scen och material
+
+    def link_material(self, scene_id: str, material_id: str) -> bool:
+        """Kopplar researchmaterial till en scen. True om kopplingen är ny."""
+        self.by_id(scene_id)
+        self.by_id(material_id)
+        if any(l["scene"] == scene_id and l["material"] == material_id for l in self.links):
+            return False
+        self.links.append({"scene": scene_id, "material": material_id})
+        return True
+
+    def unlink_material(self, scene_id: str, material_id: str) -> bool:
+        before = len(self.links)
+        self.links = [l for l in self.links
+                      if not (l["scene"] == scene_id and l["material"] == material_id)]
+        return len(self.links) != before
+
+    def material_for(self, scene_id: str) -> list[ProjectNode]:
+        """Materialet som hör till scenen, i läsordning.
+
+        Kopplingen är ett id, inte en kopia — en anteckning kan höra till flera
+        scener, och en nod som tagits bort faller ur listan av sig själv.
+        """
+        ids = {l["material"] for l in self.links if l["scene"] == scene_id}
+        return [n for n in self.walk() if n.id in ids]
+
+    def material_candidates(self, scene_id: str) -> list[ProjectNode]:
+        """Researchmaterial som ännu inte hör till scenen."""
+        linked = {n.id for n in self.material_for(scene_id)}
+        return [n for n in self.research() if n.is_writable and n.id not in linked]
+
     # ------------------------------------------------------------------ kontroll
 
     def validate(self) -> list[str]:
@@ -514,6 +555,11 @@ class Project:
                 if node.file in seen:
                     problems.append(f"{node.title}: två noder delar filen {node.file}")
                 seen.add(node.file)
+        for link in self.links:
+            if link.get("scene") not in ids or link.get("material") not in ids:
+                problems.append(
+                    f"koppling till en nod som inte finns "
+                    f"({link.get('scene')} → {link.get('material')})")
         # cykler: en nod som är sin egen förfader. Okänd förälder avbryter
         # vandringen i stället för att kasta — den är redan rapporterad ovan.
         for node in self.nodes:
@@ -614,6 +660,24 @@ def _self_check() -> int:
         check(anteckning.id in [n.id for n in book.research()], "men den finns i research")
         check(book.validate() == [], "en anteckning i research är giltig")
 
+        # koppling scen ↔ researchmaterial (R01.7)
+        check(book.link_material(scene.id, anteckning.id) is True,
+              "materialet kopplas till scenen")
+        check([n.id for n in book.material_for(scene.id)] == [anteckning.id],
+              f"scenen visar sitt material ({[n.title for n in book.material_for(scene.id)]})")
+        check(book.link_material(scene.id, anteckning.id) is False,
+              "samma koppling läggs inte två gånger")
+        check(book.material_candidates(scene.id) == [],
+              "det kopplade materialet är inte kvar som förslag")
+        karta = book.add_node(NOTE, "Karta", parent=research.id)
+        check([n.title for n in book.material_candidates(scene.id)] == ["Karta"],
+              f"ett okopplat material föreslås "
+              f"({[n.title for n in book.material_candidates(scene.id)]})")
+        check(book.unlink_material(scene.id, anteckning.id) is True, "kopplingen kan tas bort")
+        check(book.material_for(scene.id) == [], "och scenen visar inget material")
+        book.link_material(scene.id, anteckning.id)
+        check(book.validate() == [], "en koppling mellan två noder som finns är giltig")
+
         # text och ordräkning ("Rubrik" + fyra ord = 5)
         book.write(scene.id, "<html><body><h1>Rubrik</h1><p>ord ett två tre</p></body></html>")
         check(book.words(scene.id) == 5, f"ordräkningen stämmer ({book.words(scene.id)} != 5)")
@@ -622,7 +686,10 @@ def _self_check() -> int:
         # spara och ladda om
         book.save()
         again = Project.load(root)
-        check(len(again.walk()) == 5, f"trädet överlever en omladdning ({len(again.walk())})")
+        check(len(again.walk()) == len(book.nodes),
+              f"trädet överlever en omladdning ({len(again.walk())} av {len(book.nodes)})")
+        check([n.id for n in again.material_for(scene.id)] == [anteckning.id],
+              "och kopplingen scen ↔ material följer med")
         check(again.words(scene.id) == 5, "texten överlever en omladdning")
 
         # ordning och flytt
@@ -734,6 +801,9 @@ def _self_check() -> int:
         check([n.id for n in book.select_collection(manuell.id)] == [second.id],
               f"en borttagen scen faller ur den handplockade samlingen "
               f"({[n.title for n in book.select_collection(manuell.id)]})")
+        check(book.links == [] or all(l["scene"] in {n.id for n in book.nodes}
+                                      for l in book.links),
+              f"kopplingen städas när scenen tas bort ({book.links})")
         check(book.validate() == [], "projektet är giltigt efter borttagning")
 
         # mål och dagsbehov

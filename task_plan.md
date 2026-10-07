@@ -14,13 +14,12 @@ taget (`ui/main_window.py:663`). Se `findings.md`.
 
 ## Next Step
 
-Fas 1.10 andra halvan: koppla researchmaterial till en scen och visa det i
-scenpanelen, så materialet går att öppna därifrån. Därefter 1.11 anteckningar
-och kommentarer per scen, 1.12 projektmallar, 1.13 scenkopplingar.
+Fas 1.11: anteckningar och kommentarer per scen (knyter ihop med valvet, R01.12).
+Därefter 1.12 projektmallar och 1.13 scenkopplingar.
 
 ## Current Phase
 
-Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.4 samt 1.6, 1.8, 1.9 klara)
+Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.4 samt 1.6 och 1.8–1.10 klara)
 
 ## Arbetsregler
 
@@ -68,7 +67,7 @@ Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.4 samt 1.6, 1.8, 1.9 klara)
 - [~] **1.7** Sammanhängande läsvy (Scrivenings): flera scener som ett manus. R01.9 — *läsningen klar; redigering i vyn kvar (kräver att verktygsraden och Edit-åtgärderna riktas mot den scen som har fokus — 28 anrop pekar på `editor.canvas`)*
 - [x] **1.8** Ordräkningsmål per scen, kapitel och projekt, summerat i hierarkin. R01.10
 - [x] **1.9** Samlingar: manuella grupper och sparade sökningar, utan att ändra binderordningen. R01.8
-- [~] **1.10** Researchmapp: källor, länkar och bilder skilda från manuset, uteslutna ur export. R01.7 — *mappen, anteckningarna och uteslutningen klara; kopplingen scen ↔ material i inspector kvar*
+- [x] **1.10** Researchmapp: källor, länkar och bilder skilda från manuset, uteslutna ur export. R01.7
 - [ ] **1.11** Anteckningar och kommentarer per scen (knyter ihop med valvet). R01.12
 - [ ] **1.12** Projektmallar: Roman, Fackbok, novell — binderstruktur + statusvärden, separat från dokumentmallarna. R01.13, R03.8
 - [ ] **1.13** Scener och scenkopplingar: scen som enhet med sammanfattning, POV och kopplade entiteter. R04.2

@@ -143,6 +143,7 @@ class MainWindow(QMainWindow):
         # data — den visar den nod projektvyn har markerat.
         self.scene_inspector = SceneInspector(self)
         self.scene_inspector.meta_changed.connect(self._on_scene_meta_changed)
+        self.scene_inspector.open_node.connect(self._open_node)
         self.sidebar.add_tab(self.scene_inspector, "sidebar_tab_scene")
 
         self.splitter.addWidget(self.sidebar)
@@ -153,7 +154,7 @@ class MainWindow(QMainWindow):
         self.active_scene_id = None
         self.binder = BinderPanel(self)
         self.binder.scene_selected.connect(self._load_scene)
-        self.binder.structure_changed.connect(self._save_project_manifest)
+        self.binder.structure_changed.connect(self._on_structure_changed)
         self.binder.setVisible(False)
         self.splitter.insertWidget(0, self.binder)
 
@@ -816,12 +817,41 @@ class MainWindow(QMainWindow):
         except Exception as exc:                      # noqa: BLE001
             QMessageBox.critical(self, _("project_save_error_title"), str(exc))
 
+    def _on_structure_changed(self):
+        """Trädet ändrades: spara manifestet och kontrollera scenen i editorn.
+
+        Tar man bort kapitlet som scenen ligger i står editorn annars kvar med en
+        nod som inte finns, och nästa Spara skriver till en död scen. Här släpps
+        den i stället, så det syns att texten är borta och inte går att spara.
+        """
+        self._save_project_manifest()
+        if self.project is None or not self.active_scene_id:
+            return
+        try:
+            self.project.by_id(self.active_scene_id)
+            return
+        except KeyError:
+            pass
+        self.active_scene_id = None
+        self.current_filepath = None
+        self.editor.document.clear()
+        self.is_modified = False
+        self.scene_inspector.set_scene(None, None)
+        self._update_window_title()
+
     def _on_scene_meta_changed(self):
         """Panelen ändrade något i scenen: spara och visa det i vyerna."""
         if self.project is None:
             return
         self._save_project_manifest()
         self.binder.refresh(select_id=self.active_scene_id)
+
+    def _open_node(self, node_id: str):
+        """Öppna en nod i editorn — en scen, eller en researchanteckning."""
+        if self.project is None:
+            return
+        self._close_scrivenings()
+        self.binder.select_node(node_id)
 
     # ---------------------------------------------------------------- läsvyn
 

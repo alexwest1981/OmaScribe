@@ -24,6 +24,7 @@ ICONS = {
     project_mod.CHAPTER: "📂",
     project_mod.SCENE: "📄",
     project_mod.NOTE: "📝",
+    project_mod.RESEARCH: "📚",
 }
 
 
@@ -37,6 +38,8 @@ ADD_KINDS = (
     (project_mod.SCENE, "binder_new_scene"),
     (project_mod.CHAPTER, "binder_new_chapter"),
     (project_mod.PART, "binder_new_part"),
+    (project_mod.NOTE, "binder_new_note"),
+    (project_mod.RESEARCH, "binder_new_research"),
 )
 
 
@@ -306,6 +309,15 @@ class BinderPanel(QWidget):
                 containers = self.project.children(None)
                 parent = next((n for n in containers if n.type == project_mod.CHAPTER), None)
                 parent_id = parent.id if parent else None
+        elif kind == project_mod.NOTE:
+            # Anteckningar är researchmaterial. De hamnar i researchmappen om man
+            # inte redan står där — annars skulle de ligga mitt i manuset.
+            if parent is None or parent.type != project_mod.RESEARCH:
+                mapp = next((n for n in self.project.children(None)
+                             if n.type == project_mod.RESEARCH), None)
+                parent_id = mapp.id if mapp else None
+        elif kind == project_mod.RESEARCH:
+            parent_id = None                    # researchmappar ligger överst
         elif parent is not None and parent.type == project_mod.SCENE:
             parent_id = parent.parent      # nya kapitel/delar hamnar inte inuti en scen
 
@@ -313,6 +325,8 @@ class BinderPanel(QWidget):
             project_mod.SCENE: "binder_default_scene",
             project_mod.CHAPTER: "binder_default_chapter",
             project_mod.PART: "binder_default_part",
+            project_mod.NOTE: "binder_default_note",
+            project_mod.RESEARCH: "binder_default_research",
         }[kind]
         siblings = self.project.children(parent_id)
         title = f"{_(prefix)} {len(siblings) + 1}"

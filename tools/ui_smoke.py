@@ -267,10 +267,32 @@ def main() -> int:
     check("Delta epsilon." in andra_text, "andra scenen sparades där den skulle")
     check(not win.is_modified, "dokumentet är osparat-flagga borta efter Spara")
 
+    # researchmaterial hör till projektet men inte till manuset (R01.7)
+    researchmapp = next(n for n in bok.children(None) if n.type == project_mod.RESEARCH)
+    win.binder.select_node(researchmapp.id)
+    win.binder.add_node(project_mod.NOTE)          # samma väg som 📝-knappen
+    note = bok.research()[-1]
+    note_id = note.id
+    check(note.parent == researchmapp.id,
+          f"anteckningen hamnar i researchmappen ({note.parent})")
+    check(note.type == project_mod.NOTE and note.is_writable,
+          f"anteckningen är en skrivbar nod ({note.type})")
+    fore_ord = bok.total_words()
+    win.editor.document.setHtml("<h1>Källor</h1><p>Källa ett två tre.</p>")
+    win.is_modified = True
+    win.binder.select_node(forsta.id)              # bytet sparar anteckningen
+    check(bok.words(note_id) == 5, f"anteckningen har sin text ({bok.words(note_id)})")
+    check(bok.total_words() == fore_ord, "anteckningens ord räknas inte in i projektet")
+    check(bok.node_progress(researchmapp.id)["words"] == 0,
+          "och researchmappen visar inga manusord")
+
     igen = Bok.load(projektmapp)                   # läs allt tillbaka från disk
     check(igen.total_words() == bok.total_words() and igen.total_words() > 0,
           f"projektet läses tillbaka med samma ordantal ({igen.total_words()})")
-    check(len(igen.walk()) == 4, f"trädet överlever rundturen ({len(igen.walk())})")
+    check(len(igen.walk()) == len(bok.walk()),
+          f"trädet överlever rundturen ({len(igen.walk())} av {len(bok.walk())})")
+    check(all(n.id != note_id for n in igen.manuscript()),
+          "researchanteckningen är inte med i manuset efter omladdning")
 
     win._deactivate_project()
     check(win.project is None and win.binder.isHidden(), "trädet göms när projektet stängs")

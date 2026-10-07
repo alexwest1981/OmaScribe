@@ -546,5 +546,10 @@
   "collections_query": "Fråga",
   "collections_query_hint": "status:Utkast, etikett:Anna, pov:Anna, text:havet",
   "collections_search_title": "Sparad sökning",
-  "collections_search_readonly": "En sparad sökning äger sina träffar. Ändra frågan i stället för att fylla på för hand."
+  "collections_search_readonly": "En sparad sökning äger sina träffar. Ändra frågan i stället för att fylla på för hand.",
+  "binder_new_note": "Ny researchanteckning",
+  "binder_new_research": "Ny researchmapp",
+  "binder_default_note": "Anteckning",
+  "binder_default_research": "Research",
+  "research_tab_hint": "Research hör till projektet men räknas inte in i manuset."
 }

@@ -546,5 +546,10 @@
   "collections_query": "Query",
   "collections_query_hint": "status:Draft, label:Anna, pov:Anna, text:sea",
   "collections_search_title": "Saved search",
-  "collections_search_readonly": "A saved search owns its hits. Change the query instead of adding by hand."
+  "collections_search_readonly": "A saved search owns its hits. Change the query instead of adding by hand.",
+  "binder_new_note": "New research note",
+  "binder_new_research": "New research folder",
+  "binder_default_note": "Note",
+  "binder_default_research": "Research",
+  "research_tab_hint": "Research belongs to the project but is not part of the manuscript."
 }

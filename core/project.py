@@ -36,9 +36,9 @@ RESEARCH_DIR = "research"
 SNAPSHOT_DIR = ".snapshots"
 SCHEMA_VERSION = 1
 
-PART, CHAPTER, SCENE, NOTE = "part", "chapter", "scene", "note"
+PART, CHAPTER, SCENE, NOTE, RESEARCH = "part", "chapter", "scene", "note", "research"
 WRITABLE = (SCENE, NOTE)          # nodtyper som har en egen textfil
-CONTAINERS = (PART, CHAPTER)      # nodtyper som bara håller ordning
+CONTAINERS = (PART, CHAPTER, RESEARCH)   # nodtyper som bara håller ordning
 
 
 # ------------------------------------------------------------------ textmätning
@@ -186,6 +186,9 @@ class Project:
         else:
             chapter = project.add_node(CHAPTER, "Kapitel 1")
             project.add_node(SCENE, "Scen 1", parent=chapter.id)
+        # Researchmappen ligger i projektet men utanför manuset: bara scener
+        # räknas in i manuset, ordtalen och exporten (R01.7).
+        project.add_node(RESEARCH, "Research")
         project.save()
         return project
 
@@ -239,6 +242,10 @@ class Project:
     def manuscript(self) -> list[ProjectNode]:
         """Bara det som blir bok: scener, i läsordning, utan research."""
         return [n for n in self.walk() if n.is_writable and n.type == SCENE]
+
+    def research(self) -> list[ProjectNode]:
+        """Materialet vid sidan av manuset: anteckningar och researchmappar."""
+        return [n for n in self.walk() if n.type in (RESEARCH, NOTE)]
 
     def path_of(self, node: ProjectNode) -> Path | None:
         return (self.root / node.file) if node.file else None
@@ -584,12 +591,28 @@ def _self_check() -> int:
         root = Path(tmp) / "Min bok"
         book = Project.create(root, "Min bok", template="roman")
         check(book.title == "Min bok", "titeln sparas")
-        check(len(book.walk()) == 3, "romanmallen ger del, kapitel och scen")
+        check(len(book.walk()) == 4, "romanmallen ger del, kapitel, scen och research")
         check(book.validate() == [], f"färskt projekt är giltigt: {book.validate()}")
 
         part = book.children(None)[0]
         chapter = book.children(part.id)[0]
         scene = book.children(chapter.id)[0]
+
+        # researchmappen ligger i projektet men utanför manuset (R01.7)
+        research = next((n for n in book.children(None) if n.type == RESEARCH), None)
+        check(research is not None, "projektet har en researchmapp")
+        check(not research.file, f"researchmappen är en behållare utan textfil ({research.file!r})")
+        anteckning = book.add_node(NOTE, "Källor", parent=research.id)
+        book.write(anteckning.id, "<p>Källa ett två tre fyra</p>")
+        check(book.words(anteckning.id) == 5,
+              f"anteckningen har sin egen text ({book.words(anteckning.id)})")
+        check(all(n.id != anteckning.id for n in book.manuscript()),
+              "anteckningen är inte med i manuset")
+        check(book.words_in(research.id) == 0 and book.node_progress(research.id)["target"] == 0,
+              f"researchmappen har noll manusord och inget mål "
+              f"({book.node_progress(research.id)})")
+        check(anteckning.id in [n.id for n in book.research()], "men den finns i research")
+        check(book.validate() == [], "en anteckning i research är giltig")
 
         # text och ordräkning ("Rubrik" + fyra ord = 5)
         book.write(scene.id, "<html><body><h1>Rubrik</h1><p>ord ett två tre</p></body></html>")
@@ -599,7 +622,7 @@ def _self_check() -> int:
         # spara och ladda om
         book.save()
         again = Project.load(root)
-        check(len(again.walk()) == 3, "trädet överlever en omladdning")
+        check(len(again.walk()) == 5, f"trädet överlever en omladdning ({len(again.walk())})")
         check(again.words(scene.id) == 5, "texten överlever en omladdning")
 
         # ordning och flytt

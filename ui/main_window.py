@@ -25,6 +25,7 @@ from ui.graph_dialog import GraphDialog
 from ui.code_dialog import CodeDialog
 from ui.template_dialog import TemplateDialog
 from ui.binder_panel import BinderPanel
+from ui.scene_inspector import SceneInspector
 from core.project import Project
 from ui.chart_dialog import ChartDialog
 from ui.image_dialog import ImageDialog
@@ -136,6 +137,12 @@ class MainWindow(QMainWindow):
         self.notes_panel.show_graph_requested.connect(self._open_graph)
         self.notes_panel.vault_changed.connect(self._on_vault_changed)
         self.sidebar.add_tab(self.notes_panel, "sidebar_tab_notes")
+
+        # Scenens uppgifter: synopsis, status, etiketter, mål. Panelen äger ingen
+        # data — den visar den nod projektvyn har markerat.
+        self.scene_inspector = SceneInspector(self)
+        self.scene_inspector.meta_changed.connect(self._on_scene_meta_changed)
+        self.sidebar.add_tab(self.scene_inspector, "sidebar_tab_scene")
 
         self.splitter.addWidget(self.sidebar)
 
@@ -731,6 +738,7 @@ class MainWindow(QMainWindow):
         self.active_scene_id = None
         self.binder.set_project(None)
         self.binder.setVisible(False)
+        self.scene_inspector.set_scene(None, None)
 
     def _flush_scene(self, quiet: bool = False) -> bool:
         """Skriver editorns text till den scen som är öppen."""
@@ -738,6 +746,7 @@ class MainWindow(QMainWindow):
             return True
         try:
             self.project.write(self.active_scene_id, self.editor.document.toHtml())
+            self.scene_inspector.refresh_words()
             return True
         except Exception as exc:                      # noqa: BLE001 — skall synas
             if quiet:
@@ -765,6 +774,7 @@ class MainWindow(QMainWindow):
         path = self.project.path_of(node)
         self.current_filepath = str(path) if path else None
         self.is_modified = False
+        self.scene_inspector.set_scene(self.project, node)
         self.notes_panel.set_current_document(self._current_note_title())
         self.notes_panel.set_current_file(self.current_filepath or "")
         self._update_window_title()
@@ -778,6 +788,13 @@ class MainWindow(QMainWindow):
             self.project.save()
         except Exception as exc:                      # noqa: BLE001
             QMessageBox.critical(self, _("project_save_error_title"), str(exc))
+
+    def _on_scene_meta_changed(self):
+        """Panelen ändrade något i scenen: spara och visa det i vyerna."""
+        if self.project is None:
+            return
+        self._save_project_manifest()
+        self.binder.refresh(select_id=self.active_scene_id)
 
     def file_new(self):
         if self.stack.currentIndex() == 1 and not self._maybe_save_changes():

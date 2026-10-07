@@ -8,12 +8,13 @@ så att editorn byter text. Den rör ingen text själv.
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QStandardItem, QStandardItemModel
 from PyQt6.QtWidgets import (
-    QHBoxLayout, QInputDialog, QLabel, QMessageBox, QToolButton, QTreeView,
-    QVBoxLayout, QWidget,
+    QHBoxLayout, QInputDialog, QLabel, QMessageBox, QTabWidget, QToolButton,
+    QTreeView, QVBoxLayout, QWidget,
 )
 
 from core import project as project_mod
-from core.i18n import _
+from core.i18n import _, i18n
+from ui.corkboard import Corkboard
 
 ICONS = {
     project_mod.PART: "📁",
@@ -54,6 +55,7 @@ class BinderPanel(QWidget):
         buttons = QHBoxLayout()
         buttons.setSpacing(2)
         self.buttons = []
+        self._tip_widgets = []                 # [(widget, nyckel)] för översättning
         for kind, key in ADD_KINDS:
             button = QToolButton()
             button.setText(ICONS[kind])
@@ -61,26 +63,31 @@ class BinderPanel(QWidget):
             button.clicked.connect(lambda _checked=False, k=kind: self.add_node(k))
             buttons.addWidget(button)
             self.buttons.append(button)
+            self._tip_widgets.append((button, key))
         self.btn_rename = QToolButton()
         self.btn_rename.setText("✏️")
         self.btn_rename.setToolTip(_("binder_rename"))
         self.btn_rename.clicked.connect(self.rename_current)
         buttons.addWidget(self.btn_rename)
+        self._tip_widgets.append((self.btn_rename, "binder_rename"))
         self.btn_delete = QToolButton()
         self.btn_delete.setText("🗑")
         self.btn_delete.setToolTip(_("binder_delete"))
         self.btn_delete.clicked.connect(self.delete_current)
         buttons.addWidget(self.btn_delete)
+        self._tip_widgets.append((self.btn_delete, "binder_delete"))
         self.btn_up = QToolButton()
         self.btn_up.setText("⬆")
         self.btn_up.setToolTip(_("binder_move_up"))
         self.btn_up.clicked.connect(lambda: self.move_current(-1))
         buttons.addWidget(self.btn_up)
+        self._tip_widgets.append((self.btn_up, "binder_move_up"))
         self.btn_down = QToolButton()
         self.btn_down.setText("⬇")
         self.btn_down.setToolTip(_("binder_move_down"))
         self.btn_down.clicked.connect(lambda: self.move_current(1))
         buttons.addWidget(self.btn_down)
+        self._tip_widgets.append((self.btn_down, "binder_move_down"))
         buttons.addStretch(1)
         layout.addLayout(buttons)
         self.buttons.extend([self.btn_rename, self.btn_delete, self.btn_up, self.btn_down])
@@ -94,7 +101,18 @@ class BinderPanel(QWidget):
         self.tree.setModel(self.model)
         self.tree.doubleClicked.connect(self._on_double_clicked)
         self.tree.selectionModel().currentChanged.connect(self._on_current_changed)
-        layout.addWidget(self.tree, 1)
+
+        # Trädet och korktavlan är två vyer av samma projekt. De ligger i samma
+        # panel med flit: då delar de markering, och skrivvyn står kvar bredvid
+        # tavlan i stället för att bytas ut. Vill du ha en tavla över hela
+        # fönstret är det en egen vy — säg till.
+        self.tabs = QTabWidget()
+        self.tabs.addTab(self.tree, _("binder_tab_tree"))
+        self.corkboard = Corkboard(self)
+        self.corkboard.scene_selected.connect(self._on_card_clicked)
+        self.tabs.addTab(self.corkboard, _("binder_tab_cards"))
+        i18n.language_changed.connect(self.retranslate_ui)
+        layout.addWidget(self.tabs, 1)
 
         self.set_project(None)
 
@@ -103,6 +121,7 @@ class BinderPanel(QWidget):
     def set_project(self, project: project_mod.Project | None) -> None:
         self.project = project
         self._last_scene_id = None
+        self.corkboard.set_project(project)
         self.refresh()
         for widget in self.buttons:
             widget.setEnabled(project is not None)
@@ -130,6 +149,7 @@ class BinderPanel(QWidget):
 
         add(None, None)
         self.tree.expandAll()
+        self.corkboard.refresh()
         if keep:
             self.select_node(keep)
 
@@ -140,6 +160,7 @@ class BinderPanel(QWidget):
         return indexes[0].data(Qt.ItemDataRole.UserRole)
 
     def select_node(self, node_id: str) -> bool:
+        self.corkboard.select_node(node_id)
         for row in self._iter_items():
             if row.data(Qt.ItemDataRole.UserRole) == node_id:
                 self.tree.setCurrentIndex(row.index())
@@ -258,3 +279,14 @@ class BinderPanel(QWidget):
         node_id = index.data(Qt.ItemDataRole.UserRole)
         if node_id:
             self.rename_current(node_id)
+
+    def _on_card_clicked(self, node_id: str) -> None:
+        """Ett kort markerar samma nod i trädet — en väg till signalen, inte två."""
+        self.select_node(node_id)
+
+    def retranslate_ui(self) -> None:
+        self.tabs.setTabText(0, _("binder_tab_tree"))
+        self.tabs.setTabText(1, _("binder_tab_cards"))
+        for widget, key in self._tip_widgets:
+            widget.setToolTip(_(key))
+        self.lbl_title.setText(self.project.title if self.project else _("binder_title"))

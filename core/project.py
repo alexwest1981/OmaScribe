@@ -254,9 +254,13 @@ class Project:
         if type in WRITABLE:
             node.file = self._scene_path(title)
             atomic_write_text(self.root / node.file, empty_scene_html(title))
+        # Ordningstalen sätts ur den avsiktliga listan, inte ur en sortering:
+        # en ny nod har inget order-värde än, och sorteringen föll då tillbaka på
+        # titeln — "Scen 3" hamnade före "Scen 2".
+        ordered = siblings[:position] + [node] + siblings[position:]
         self.nodes.append(node)
-        siblings.insert(position, node)
-        self._renumber(parent)
+        for index, sibling in enumerate(ordered):
+            sibling.order = index
         return node
 
     def _scene_path(self, title: str) -> str:
@@ -533,6 +537,13 @@ def _self_check() -> int:
             check(False, "cirkelflytt skall avvisas")
         except ValueError:
             check(True, "cirkelflytt avvisas")
+
+        # ordning: en ny nod hamnar där den beställdes, inte i titelordning
+        tredje = book.add_node(SCENE, "Aaa först i alfabetet", parent=chapter.id)
+        check([n.title for n in book.children(chapter.id)][-1] == tredje.title,
+              f"en ny nod hamnar sist även när titeln sorterar först "
+              f"({[n.title for n in book.children(chapter.id)]})")
+        book.delete_node(tredje.id)
 
         # metadata
         book.set_meta(scene.id, synopsis="Hon kommer hem.", status="Utkast",

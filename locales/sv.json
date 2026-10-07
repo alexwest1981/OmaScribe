@@ -509,5 +509,22 @@
   "binder_delete_text": "Ta bort ”{title}” och {count} nod(er) under den? Texten raderas från disken.",
   "binder_default_scene": "Scen",
   "binder_default_chapter": "Kapitel",
-  "binder_default_part": "Del"
+  "binder_default_part": "Del",
+  "binder_tab_tree": "Träd",
+  "binder_tab_cards": "Kort",
+  "corkboard_empty": "Inga scener i projektet än.",
+  "sidebar_tab_scene": "Scen",
+  "scene_no_project": "Öppna ett projekt för att se scenens uppgifter.",
+  "scene_title": "Rubrik",
+  "scene_synopsis": "Sammanfattning",
+  "scene_synopsis_hint": "Vad händer i scenen?",
+  "scene_status": "Status",
+  "scene_labels": "Etiketter",
+  "scene_labels_hint": "åtskilda med komma",
+  "scene_pov": "Synvinkel",
+  "scene_target": "Ord i scenen",
+  "scene_target_none": "inget mål",
+  "scene_revision": "Utkast",
+  "scene_words": "{words} ord",
+  "scene_words_of": "{words} av {target} ord ({percent} %)"
 }

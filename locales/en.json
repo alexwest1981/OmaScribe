@@ -509,5 +509,22 @@
   "binder_delete_text": "Delete “{title}” and {count} node(s) beneath it? The text is removed from disk.",
   "binder_default_scene": "Scene",
   "binder_default_chapter": "Chapter",
-  "binder_default_part": "Part"
+  "binder_default_part": "Part",
+  "binder_tab_tree": "Tree",
+  "binder_tab_cards": "Cards",
+  "corkboard_empty": "No scenes in the project yet.",
+  "sidebar_tab_scene": "Scene",
+  "scene_no_project": "Open a project to see the scene's details.",
+  "scene_title": "Heading",
+  "scene_synopsis": "Synopsis",
+  "scene_synopsis_hint": "What happens in this scene?",
+  "scene_status": "Status",
+  "scene_labels": "Labels",
+  "scene_labels_hint": "separated by commas",
+  "scene_pov": "Point of view",
+  "scene_target": "Words in scene",
+  "scene_target_none": "no target",
+  "scene_revision": "Draft",
+  "scene_words": "{words} words",
+  "scene_words_of": "{words} of {target} words ({percent} %)"
 }

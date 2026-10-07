@@ -275,6 +275,55 @@ def main() -> int:
     win._deactivate_project()
     check(win.project is None and win.binder.isHidden(), "trädet göms när projektet stängs")
 
+    print("\n10. Scenens uppgifter och korktavlan")
+    from PyQt6.QtCore import Qt as QtNS
+    win._activate_project(bok)
+    insp = win.scene_inspector
+    kort = win.binder.corkboard
+    win.binder.select_node(forsta.id)
+    check(insp.input_title.text() == forsta.title, f"panelen visar scenens rubrik ({insp.input_title.text()!r})")
+    check(insp.input_title.isEnabled(), "fälten är öppna när en scen är vald")
+    check(kort.list.count() == len(bok.manuscript()),
+          f"ett kort per scen ({kort.list.count()} kort, {len(bok.manuscript())} scener)")
+
+    # rubriken ändras i panelen och skall slå igenom i trädet och på disk
+    insp.input_title.setText("Scen ett, omdöpt")
+    insp.input_title.editingFinished.emit()
+    check(forsta.title == "Scen ett, omdöpt", f"rubriken ändras ({forsta.title!r})")
+    igen2 = Bok.load(projektmapp)
+    check(igen2.by_id(forsta.id).title == "Scen ett, omdöpt", "den nya rubriken ligger på disk")
+    markering = win.binder.tree.currentIndex().data(QtNS.ItemDataRole.UserRole)
+    check(markering == forsta.id, "markeringen stannar kvar efter namnbytet")
+    check(win.active_scene_id == forsta.id, "och samma scen är kvar i editorn")
+
+    # status, etiketter, mål
+    insp.combo_status.setCurrentText("Bearbetning")
+    check(forsta.status == "Bearbetning", f"statusen sätts ({forsta.status!r})")
+    check("Bearbetning" in bok.settings["statuses"], "en ny status hamnar i projektets lista")
+    insp.input_labels.setText("Anna, kväll")
+    insp.input_labels.editingFinished.emit()
+    check(forsta.labels == ["Anna", "kväll"], f"etiketterna delas på komma ({forsta.labels})")
+    insp.spin_target.setValue(50)
+    check(forsta.target_words == 50, "målantalet sätts")
+    check("5" in insp.lbl_words.text() and "50" in insp.lbl_words.text(),
+          f"panelen visar ord mot mål ({insp.lbl_words.text()!r})")
+    insp.spin_revision.setValue(3)
+    check(forsta.revision == 3, "utkastnumret sätts")
+
+    # kortet visar statusen, och ett klick på kortet öppnar scenen
+    check("Bearbetning" in kort.list.item(0).text(),
+          f"kortet visar statusen ({kort.list.item(0).text()!r})")
+    win.binder.select_node(andra.id)
+    check(win.active_scene_id == andra.id, "scen två är öppen")
+    kort._on_clicked(kort.list.item(0))            # samma väg som ett musklick
+    check(win.active_scene_id == forsta.id, "ett klick på kortet öppnar scenen")
+
+    # utan projekt skall panelen vara tom och stängd
+    win._deactivate_project()
+    check(not insp.input_title.isEnabled() and insp.input_title.text() == "",
+          "panelen töms och stängs när projektet stängs")
+    check(insp.lbl_hint.isHidden() is False, "och förklarar varför den är tom")
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

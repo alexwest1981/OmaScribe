@@ -64,6 +64,7 @@ run "skrivloggen" "$PY" -m core.writing_log
 run "storybible" "$PY" -m core.storybible
 run "sök och ersätt" "$PY" -m core.find_replace
 run "autokorrigeringen" "$PY" -m core.autocorrect
+run "korktavlan" "$PY" -m ui.corkboard
 run "ui_smoke" "$PY" tools/ui_smoke.py
 run "print_purity" "$PY" tools/print_purity_check.py
 

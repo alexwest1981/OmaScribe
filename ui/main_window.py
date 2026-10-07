@@ -29,6 +29,7 @@ from ui.project_dialog import NewProjectDialog
 from ui.binder_panel import BinderPanel
 from ui.chrome import LeftRail, TopBar
 from ui.scene_inspector import SceneInspector
+from ui.writing_log_panel import WritingLogPanel
 from ui.scrivenings import ScriveningsView
 from core.project import Project
 from ui.chart_dialog import ChartDialog
@@ -154,6 +155,15 @@ class MainWindow(QMainWindow):
         self.scene_inspector.comment_activated.connect(self.goto_comment)
         self.sidebar.add_tab(self.scene_inspector, "sidebar_tab_scene")
 
+        # Skrivloggen (fas 2.1–2.5): dagens ord, kvot mot deadline, historik,
+        # svit och sprintar. Den bokför skillnaden mellan två mätningar av
+        # ordantalet — ett ändrat ord är inte ett skrivet ord.
+        self.writing_log = WritingLogPanel(self.config, self.theme_mgr)
+        self.writing_log.status_message.connect(
+            lambda m: self.status_bar.showMessage(m, 6000))
+        self.writing_log.sprint_finished.connect(self._on_sprint_finished)
+        self.sidebar.add_tab(self.writing_log, "sidebar_tab_log")
+
         self.splitter.addWidget(self.sidebar)
 
         # Projektets träd. Ligger först i delaren men visas bara när ett projekt
@@ -249,6 +259,7 @@ class MainWindow(QMainWindow):
         self._update_lang_toggle_btn()
 
         self.status_bar.addWidget(self.lbl_stats)
+        self.status_bar.addPermanentWidget(self.writing_log.status_widget())
         self.status_bar.addPermanentWidget(self.lbl_ai_status)
         self.status_bar.addPermanentWidget(self.lbl_dict_status)
         self.status_bar.addPermanentWidget(self.lbl_cursor)
@@ -592,9 +603,33 @@ class MainWindow(QMainWindow):
             words = sum(self.project.words(n.id) for n in self.scrivenings.shown_nodes()) \
                 if self.project else 0
             self.lbl_stats.setText(_("scrivenings_stats", words=words))
+            self._track_writing()
             return
         self.sidebar.update_metrics_and_outline(self.editor.document)
         self.lbl_stats.setText(self.sidebar.status_text())
+        self._track_writing()
+
+    def _track_writing(self) -> None:
+        """Skrivloggen får antalet ord och vilket dokument det gäller.
+
+        Nyckeln skiljer scen, läsvyns samlade text och ett löst dokument, så att
+        ett byte av vy eller scen blir en ny baslinje i stället för ett hopp i
+        statistiken.
+        """
+        if self.stack.currentIndex() == getattr(self, "_scrivenings_index", -1):
+            ord_antal = (sum(self.project.words(n.id) for n in self.scrivenings.shown_nodes())
+                         if self.project else 0)
+            self.writing_log.track(ord_antal, f"scrivenings:{id(self.project)}")
+        elif self.project is not None and self.active_scene_id:
+            self.writing_log.track(self.sidebar.words, f"scen:{self.active_scene_id}")
+        else:
+            self.writing_log.track(self.sidebar.words,
+                                   f"dok:{self.current_filepath or 'utan-titel'}")
+
+    def _on_sprint_finished(self, minutes: int, words: int) -> None:
+        """Sprinten är slut: en rad i statusfältet och en vink i aktivitetsfältet."""
+        self.status_bar.showMessage(_("log_sprint_done", minutes=minutes, n=words), 10000)
+        QApplication.alert(self, 3000)
 
     def _update_window_title(self):
         if self.stack.currentIndex() == 0:
@@ -855,6 +890,7 @@ class MainWindow(QMainWindow):
         self.project = project
         self._open_codex(project)
         self.binder.set_project(project)
+        self.writing_log.set_project(project)
         self.binder.setVisible(True)
         self.act_view_scrivenings.setEnabled(True)
         self.act_view_variants.setEnabled(True)
@@ -899,6 +935,7 @@ class MainWindow(QMainWindow):
         self.project = None
         self.active_scene_id = None
         self.binder.set_project(None)
+        self.writing_log.set_project(None)
         self.binder.setVisible(False)
         self.scene_inspector.set_scene(None, None)
         self._refresh_comment_marks()
@@ -1444,6 +1481,7 @@ class MainWindow(QMainWindow):
         return False
 
     def closeEvent(self, event):
+        self.writing_log.close_log()
         if self.project is not None:
             self._flush_scene(quiet=True)
             try:

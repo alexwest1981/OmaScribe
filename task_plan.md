@@ -14,14 +14,15 @@ taget (`ui/main_window.py:663`). Se `findings.md`.
 
 ## Next Step
 
-Fas 1.12: projektmallar — Roman, Fackbok, novell med binderstruktur och
-statusvärden, skilda från dokumentmallarna. Därefter 1.13 scenkopplingar.
-Kvar att slutföra: kommentarer i texten (1.11), statusfärg (1.5) och redigering
-i läsvyn (1.7).
+Fas 2.6 (skrivmaskinsläge) och 2.8 (karaktärsblad på codex), därefter 2.9
+(tidslinje och plot-tavla) som är nästa större punkt. Rutnätet i 2.9 bygger på
+scenmodellen och på att scenens status redan finns.
 
 ## Current Phase
 
-Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.4, 1.6, 1.8–1.10 klara)
+Fas 2 — Författarlagret (2.1–2.5 klara: skrivloggen, kvot, historik, sprintar).
+Fas 0, 0b och 1 är klara. Sedan dess: appskalet följer v0-referensen, och
+pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 
 ## Arbetsregler
 
@@ -78,11 +79,11 @@ Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.4, 1.6, 1.8–1.10 klara)
 
 ### Fas 2: Författarlagret
 
-- [ ] **2.1** Mål för session och projekt, med progress i statusfältet. R03.1, R03.14
-- [ ] **2.2** Deadline och dagskvot: valda skrivdagar → `ceil((mål − nu) / dagar)`. R03.2
-- [ ] **2.3** Historik, diagram och streaks över faktiska ord per dag. R03.3
-- [ ] **2.4** Sessionshistorik och skrivlogg, sessionsrader i SQLite, CSV-export. R03.4
-- [ ] **2.5** Skrivsprintar och timer (`QTimer`, diskret notis, paus). R03.5
+- [x] **2.1** Mål för session och projekt, med progress i statusfältet. `ui/writing_log_panel.py` äger loggen, får ordantalet efter varje ändring (`track()` räknar skillnaden mot förra mätningen — ett ändrat ord är inte ett skrivet ord) och visar dagens netto i panelen och i statusfältet. Projektets mål och andel kommer ur `project.progress()`. R03.1, R03.14
+- [x] **2.2** Deadline och dagskvot: `project.daily_quota()` räknas redan i projektmodellen; panelen visar kvoten, hur många ord som är kvar och en stapel, och etiketten bär deadline i sin verktygstext. Utan projekt visas i stället andelen av manusets mål. R03.2
+- [x] **2.3** Historik, diagram och svit över faktiska ord per dag: 14 dagar som stapeldiagram (`DayChart`, ritad i widgeten, inga nya beroenden), svit och längsta svit, snitt per skrivdag. R03.3
+- [x] **2.4** Sessionshistorik och skrivlogg i SQLite via `core.writing_log` (som redan fanns och nu äntligen nås): dagens rader med added/removed separat, sessioner som startar vid första ändringen och stängs vid flush/stängning, CSV-export genom en filväljare. Loggen ligger i projektmappen när ett projekt är öppet — bokens dagar hör till boken. R03.4
+- [x] **2.5** Skrivsprintar och timer: 15/25/45/60 minuter, nedräkning i panelen, avbryt, och vid slut en rad i statusfältet plus `QApplication.alert` (diskret — ingen modal). Antalet ord under sprinten räknas och rapporteras. R03.5
 - [ ] **2.6** Skrivmaskinsläge utöver befintligt helskärmsläge: centrerad markör, maxbredd. R03.6
 - [ ] **2.7** Pauspåminnelser och ergonomi, valbart. R03.7 — *låg*
 - [ ] **2.8** Karaktärsblad och story bible i projektet. R03.9
@@ -95,7 +96,7 @@ Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.4, 1.6, 1.8–1.10 klara)
 - [ ] **2.15** Läsbarhetsanalys och stilråd i texten (LIX finns, markeringar saknas). R03.17
 - [ ] **2.16** Projektöversikt och anteckningar (valvet som projektlager, taggar/properties). R03.18
 - [ ] **2.17** Projektinstruktioner: per-projekt kontext för AI:n. R04.18
-- **Status:** pending
+- **Status:** in progress (2.1–2.5 klara och grindade)
 
 ### Fas 3: Revision och granskning
 

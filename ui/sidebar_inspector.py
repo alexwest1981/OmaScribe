@@ -200,6 +200,11 @@ class SidebarInspector(QWidget):
         self._words = 0
         self._chars = 0
 
+    @property
+    def words(self) -> int:
+        """Antalet ord panelen visar — skrivloggen bokför samma siffra."""
+        return int(getattr(self, "_words", 0))
+
     def status_text(self) -> str:
         """Statusbarens sammanfattning — samma siffror som panelen visar."""
         return f"{self._words} {_('status_words')} | {self._chars} {_('status_chars')}"

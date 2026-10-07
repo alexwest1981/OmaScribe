@@ -91,3 +91,33 @@
 | What's the goal? | Allt ett professionellt författarverktyg har, in i OmaScribe |
 | What have I learned? | Se `findings.md` |
 | What have I done? | Se ovan — fas 0 (fundament, grind, projektmodell) och fas 1 (manusstruktur 1.1–1.14) |
+
+## Session: 2026-10-07 (pass 5 — pappret blir ark, författarlagret börjar)
+
+### Pappret: ett ark per sida
+
+- **Status:** complete, pushat (`8a26fde`). Alex: "DELA bladet, så det blir 2 ark, eller fler,
+  när man når slutet" — det gamla försöket (ett grått band över texten) revs.
+- `core/pagination.py` (ny): radbunden paginering — varje ark börjar vid en *rads* överkant,
+  tabeller och bilder flyttas hela, en inlagd sidbrytning börjar ett nytt ark. Eget självprov
+  som kontrollerar att ingen rad korsar en arkgräns.
+- `ui/paged_paper.py` (ny): ark-kolumnen. Det ark markören står i bär den riktiga editorn
+  (flyttas dit, klipps till arkets egen texthöjd); övriga ark ritas statiskt ur dokumentets
+  layout. Klick i ett annat ark sätter markören dit. Sidnumret ligger i arkets fot, där det
+  nu finns tom plats.
+- Mätt: två ark med 26 px mellanrum (`#f4f5f7` mellan, `#ffffff` på arket), ingen rad klippt,
+  hjul över texten skrollar pappret (0 → 120), inlagd sidbrytning ger nytt ark (3 → 4).
+- Kvar, sagt rakt ut: musmarkering kan inte spänna över två ark, och änke/föräldralöst-skydd saknas.
+
+### Fas 2.1–2.5: författarlagret
+
+- **Status:** complete, grindad (344 rökprov + 54 renhetsprov, GRÖNT).
+- `ui/writing_log_panel.py` (ny): skrivloggen i sidopanelen och i statusfältet. Dagens netto,
+  dagskvot mot deadline (ur projektmodellen), 14 dagar som stapeldiagram, svit och snitt,
+  skrivsprintar med nedräkning och diskret notis, CSV-export.
+- `core/writing_log.py` fanns färdig sedan fas 0b men nåddes inte från gränssnittet — nu gör den
+  det, med ett prov per inkoppling (7 nya kontroller i `ui_smoke`).
+- Loggen ligger i projektmappen när ett projekt är öppet, annars i `~/.local/share/omascribe`.
+  Grinden och rökprovet pekar om den med `OMASCRIBE_DATA_DIR` till en temp-mapp, så att deras
+  skrivande inte hamnar i Alex riktiga logg.
+- Grinden kör nu även `core.pagination`.

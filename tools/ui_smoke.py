@@ -14,6 +14,8 @@ import tempfile
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+# Skrivloggens data hamnar i en temp-mapp: rökprovet skriver riktiga ord.
+os.environ.setdefault("OMASCRIBE_DATA_DIR", tempfile.mkdtemp(prefix="omascribe-log-"))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from typing import cast  # noqa: E402
@@ -1030,6 +1032,45 @@ def main() -> int:
           "och ingen dubbel text bredvid")
     check(not win.topbar.btn_undo.icon().isNull(), "Ångra i topbaren har en ikon")
     check(win.topbar.btn_file.icon().isNull() is False, "och dokumentknappen med")
+
+    print("\n22. Skrivloggen (författarlagret)")
+
+    logg = win.writing_log
+    före = logg.log.day()
+    logg.track(100, "dok:prov")          # baslinje
+    logg.track(160, "dok:prov")          # +60
+    logg.track(150, "dok:prov")          # −10
+    check(logg.today_net() - före.net == 50,
+          f"ändrade ord bokförs som skillnaden mellan två mätningar ({logg.today_net() - före.net})")
+    logg.flush()
+    efter = logg.log.day()
+    check(efter.added - före.added == 60 and efter.removed - före.removed == 10,
+          f"och loggen har lagt till och tagit bort separat "
+          f"(+{efter.added - före.added}/−{efter.removed - före.removed})")
+    check(str(logg.today_net()) in logg.lbl_status.text()
+          and str(logg.today_net()) in logg.lbl_today.text(),
+          f"statusfältet och panelen visar samma siffra ({logg.lbl_status.text()!r})")
+
+    logg.track(9000, "annat:dokument")
+    logg.track(9000, "annat:dokument")
+    check(logg.today_net() == efter.net,
+          "ett dokumentbyte blir en ny baslinje, inte ett hopp i statistiken")
+
+    logg._sprint_left = 1
+    klara = []
+    logg.sprint_finished.connect(lambda m, n: klara.append((m, n)))
+    logg._on_tick()
+    check(bool(klara) and klara[0][0] == logg.combo_sprint.currentData(),
+          f"sprinten larmar när tiden är slut ({klara})")
+    from core.i18n import _ as _t          # `_` är en slingvariabel i main()
+    check(logg.lbl_sprint.text() == "--:--" and logg.btn_sprint.text() == _t("log_sprint_start"),
+          "och panelen går tillbaka till startläget")
+
+    csv_väg = out / "skrivlogg-prov.csv"
+    logg.log.export_csv(str(csv_väg))
+    rader = csv_väg.read_text(encoding="utf-8").strip().splitlines() if csv_väg.exists() else []
+    check(len(rader) >= 2 and rader[0].startswith("day,"),
+          f"och loggen går att exportera som CSV ({len(rader)} rader)")
 
     # Arken: ett ark per sida med ett mellanrum där ytan syns, och texten delad
     # mellan rader. Mätt i en riktig rendering, med temats färger.

@@ -8,7 +8,7 @@ så att editorn byter text. Den rör ingen text själv.
 from html import escape
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QStandardItem, QStandardItemModel
+from PyQt6.QtGui import QBrush, QColor, QStandardItem, QStandardItemModel
 from PyQt6.QtWidgets import (
     QHBoxLayout, QInputDialog, QLabel, QMessageBox, QTabWidget, QToolButton,
     QTreeView, QVBoxLayout, QWidget,
@@ -206,6 +206,7 @@ class BinderPanel(QWidget):
             for node in self.project.children(parent_id):
                 item = QStandardItem(self._label_for(node))
                 item.setData(node.id, Qt.ItemDataRole.UserRole)
+                self._apply_status_color(item, node)
                 if node.synopsis:
                     item.setToolTip(node.synopsis)
                 if parent_item is None:
@@ -223,16 +224,26 @@ class BinderPanel(QWidget):
             self.select_node(keep)
 
     def _label_for(self, node) -> str:
-        """Trädraden: ikon, titel och ord mot mål (summerat för behållare)."""
-        icon = ICONS.get(node.type, "•")
+        """Trädraden: ikon, titel, status och ord mot mål (summerat för behållare).
+
+        Statusen står som text, inte bara som färg — färg är presentation och
+        får aldrig bära betydelsen ensam (R01.5).
+        """
+        delar = [f"{ICONS.get(node.type, '•')} {node.title}"]
+        if node.status:
+            delar.append(node.status)
         progress = self.project.node_progress(node.id)
-        if not progress["words"] and not progress["target"]:
-            return f"{icon} {node.title}"
-        if progress["target"]:
-            ord_text = f"{_tal(progress['words'])}/{_tal(progress['target'])}"
-        else:
-            ord_text = _tal(progress["words"])
-        return f"{icon} {node.title}   {ord_text}"
+        if progress["words"] or progress["target"]:
+            if progress["target"]:
+                delar.append(f"{_tal(progress['words'])}/{_tal(progress['target'])}")
+            else:
+                delar.append(_tal(progress["words"]))
+        return "   ".join(delar)
+
+    def _apply_status_color(self, item, node) -> None:
+        """Färgar raden efter status. Utan status: ingen egen färg alls."""
+        colour = self.project.status_color(node.status) if node.status else None
+        item.setForeground(QBrush(QColor(colour)) if colour else QBrush())
 
     def refresh_labels(self) -> None:
         """Uppdaterar bara texterna — ordtalen ändras när en scen sparas.
@@ -248,6 +259,7 @@ class BinderPanel(QWidget):
             except KeyError:
                 continue
             item.setText(self._label_for(node))
+            self._apply_status_color(item, node)
         self._refresh_header()
 
     def _refresh_header(self) -> None:

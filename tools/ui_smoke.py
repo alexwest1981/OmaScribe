@@ -347,6 +347,21 @@ def main() -> int:
     # kortet visar statusen, och ett klick på kortet öppnar scenen
     check("Bearbetning" in kort.list.item(0).text(),
           f"kortet visar statusen ({kort.list.item(0).text()!r})")
+    check(kort.list.item(0).foreground().color().name() == bok.status_color("Bearbetning"),
+          f"och kortet bär statusens färg "
+          f"({kort.list.item(0).foreground().color().name()})")
+    # statusen står som text i trädet också — färgen bär aldrig betydelsen själv
+    check("Bearbetning" in win.binder._item_for(forsta.id).text(),
+          f"trädraden visar statusen som text "
+          f"({win.binder._item_for(forsta.id).text()!r})")
+    check(win.binder._item_for(forsta.id).foreground().color().name()
+          == bok.status_color("Bearbetning"),
+          f"och raden bär statusens färg "
+          f"({win.binder._item_for(forsta.id).foreground().color().name()})")
+    utan_status = next(n for n in bok.children(forsta.parent) if not n.status)
+    check(win.binder._item_for(utan_status.id).foreground().style()
+          == QtNS.BrushStyle.NoBrush,
+          "en nod utan status får ingen egen färg")
     win.binder.select_node(andra.id)
     check(win.active_scene_id == andra.id, "scen två är öppen")
     kort._on_clicked(kort.list.item(0))            # samma väg som ett musklick
@@ -568,6 +583,38 @@ def main() -> int:
     check(win.editor.document.toPlainText().strip() == "",
           f"och tömmer sin text ({win.editor.document.toPlainText()[:20]!r})")
     win._deactivate_project()
+
+    print("\n16. Projektmallar och nytt projekt")
+    from core.project import Project, PROJECT_TEMPLATES, SCENE
+    from ui.project_dialog import NewProjectDialog
+    dlg = NewProjectDialog(default_name="Testbok")
+    check(dlg.input_name.text() == "Testbok", "namnet är förifyllt från mappen")
+    check(dlg.combo_template.currentData() == "roman", "roman är förvald")
+    check(dlg.spin_target.value() == 80_000,
+          f"och romanens ordmål står där ({dlg.spin_target.value()})")
+    check(dlg.lbl_description.text().strip() != "",
+          f"mallen beskrivs ({dlg.lbl_description.text()!r})")
+    dlg.combo_template.setCurrentIndex(dlg.combo_template.findData("novell"))
+    check(dlg.spin_target.value() == 8_000,
+          f"novellen byter ordmålet ({dlg.spin_target.value()})")
+    dlg.spin_target.setValue(9_500)                 # mitt eget mål går före mallens
+    namn, mall, mal = dlg.values()
+    check((namn, mall, mal) == ("Testbok", "novell", 9_500),
+          f"dialogen lämnar ifrån sig valen ({(namn, mall, mal)})")
+    check(dlg.combo_template.count() == len(PROJECT_TEMPLATES),
+          f"alla mallar finns i listan ({dlg.combo_template.count()})")
+
+    # samma väg som new_project tar efter dialogen
+    mapp = Path(tempfile.mkdtemp(prefix="nytt-projekt-")) / "Testbok"
+    ny = Project.create(mapp, namn, template=mall)
+    ny.settings["target_words"] = mal
+    ny.save()
+    check(ny.children(None)[0].type == SCENE,
+          f"novellprojektet börjar med en scen ({ny.children(None)[0].type})")
+    check(len(ny.children(None)) == 2, "och researchmappen ligger bredvid")
+    check(Project.load(mapp).settings["target_words"] == 9_500,
+          "ordmålet jag skrev är det som gäller")
+    dlg.deleteLater()
 
     print("\n" + "=" * 66)
     if failures:

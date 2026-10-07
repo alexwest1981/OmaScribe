@@ -24,6 +24,7 @@ from ui.ghostwriter_dialog import GhostwriterDialog
 from ui.graph_dialog import GraphDialog
 from ui.code_dialog import CodeDialog
 from ui.template_dialog import TemplateDialog
+from ui.project_dialog import NewProjectDialog
 from ui.binder_panel import BinderPanel
 from ui.scene_inspector import SceneInspector
 from ui.scrivenings import ScriveningsView
@@ -700,13 +701,16 @@ class MainWindow(QMainWindow):
         if not folder:
             return
         default = os.path.basename(folder.rstrip(os.sep)) or _("project_untitled")
-        title, accepted = QInputDialog.getText(
-            self, _("project_new_title"), _("project_new_label"), text=default
-        )
-        if not accepted or not title.strip():
+        dialog = NewProjectDialog(default_name=default, parent=self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        title, template, target = dialog.values()
+        if not title:
             return
         try:
-            project = Project.create(folder, title.strip(), template="roman")
+            project = Project.create(folder, title, template=template)
+            project.settings["target_words"] = target
+            project.save()
         except FileExistsError:
             QMessageBox.warning(self, _("project_new_title"),
                                 _("project_not_empty", path=folder))

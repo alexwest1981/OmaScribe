@@ -158,6 +158,53 @@ DEFAULT_SETTINGS = {
     "audience": "",
 }
 
+# Statusfärger är presentation: de följer ordningen i projektets statuslista, så
+# samma status har samma färg varje gång och ingen behöver ställa in något. Vill
+# du välja färg själv är det ett eget steg — värdet ligger redan som en nyckel.
+# Färgen bär aldrig ensam betydelse: statusen står som text också (R01.5).
+STATUS_PALETTE = (
+    "#7f8c8d", "#2980b9", "#27ae60", "#d35400",
+    "#8e44ad", "#16a085", "#c0392b", "#b7950b",
+)
+
+
+# Projektmallar (R01.13, R03.8): vilken struktur och vilket ordmål ett nytt
+# projekt börjar med. Skilda från dokumentmallarna i core/templates.py — de är
+# färdiga texter, det här är ett tomt projekt att fylla. `structure` läses som
+# (nodtyp, rubrik, förälderns nodtyp): raderna byggs uppifrån och ned.
+PROJECT_TEMPLATES = {
+    "roman": {
+        "target_words": 80_000,
+        "structure": [
+            (PART, "Del ett", None),
+            (CHAPTER, "Kapitel 1", PART),
+            (SCENE, "Scen 1", CHAPTER),
+        ],
+    },
+    "fackbok": {
+        "target_words": 40_000,
+        "structure": [
+            (CHAPTER, "Kapitel 1", None),
+            (SCENE, "Avsnitt 1", CHAPTER),
+        ],
+    },
+    "novell": {
+        "target_words": 8_000,
+        "structure": [
+            (SCENE, "Novellen", None),
+        ],
+    },
+    "enkel": {
+        "target_words": 0,
+        "structure": [
+            (CHAPTER, "Kapitel 1", None),
+            (SCENE, "Scen 1", CHAPTER),
+        ],
+    },
+}
+DEFAULT_TEMPLATE = "roman"      # vad väljaren föreslår för ett nytt projekt
+MINIMAL_TEMPLATE = "enkel"      # vad create() utan mall ger — minsta möjliga
+
 
 class Project:
     """Ett projekt på disk. Alla ändringar skrivs med `save()`."""
@@ -182,14 +229,16 @@ class Project:
         project.title = title
         (project.root / MANUSCRIPT_DIR).mkdir(exist_ok=True)
         (project.root / RESEARCH_DIR).mkdir(exist_ok=True)
-        if template == "roman":
-            part = project.add_node(PART, "Del ett")
-            chapter = project.add_node(CHAPTER, "Kapitel 1", parent=part.id)
-            project.add_node(SCENE, "Scen 1", parent=chapter.id)
-            project.settings["target_words"] = 80_000
-        else:
-            chapter = project.add_node(CHAPTER, "Kapitel 1")
-            project.add_node(SCENE, "Scen 1", parent=chapter.id)
+        if template not in PROJECT_TEMPLATES:
+            template = MINIMAL_TEMPLATE
+        spec = PROJECT_TEMPLATES[template]
+        made: dict = {}
+        for node_type, node_title, parent_type in spec["structure"]:
+            parent = made.get(parent_type)
+            made[node_type] = project.add_node(
+                node_type, node_title, parent=parent.id if parent else None)
+        # Ordmålet är mallens förslag — går att ändra i inställningarna.
+        project.settings["target_words"] = spec["target_words"]
         # Researchmappen ligger i projektet men utanför manuset: bara scener
         # räknas in i manuset, ordtalen och exporten (R01.7).
         project.add_node(RESEARCH, "Research")
@@ -535,6 +584,21 @@ class Project:
         linked = {n.id for n in self.material_for(scene_id)}
         return [n for n in self.research() if n.is_writable and n.id not in linked]
 
+    def status_color(self, status: str):
+        """Färgen för en status, eller None. Härledd ur statuslistans ordning."""
+        statuses = list(self.settings.get("statuses") or [])
+        if status not in statuses:
+            return None
+        return STATUS_PALETTE[statuses.index(status) % len(STATUS_PALETTE)]
+
+    def status_color_for(self, node_id: str):
+        """Färgen för nodens status, eller None om den inte har någon."""
+        try:
+            status = self.by_id(node_id).status
+        except KeyError:
+            return None
+        return self.status_color(status) if status else None
+
     # ------------------------------------------------------------------ kontroll
 
     def validate(self) -> list[str]:
@@ -639,8 +703,42 @@ def _self_check() -> int:
     try:
         root = Path(tmp) / "Min bok"
         book = Project.create(root, "Min bok", template="roman")
+        check(book.title == "Min bok", "titeln sätts")
+        check([n.type for n in book.children(None)] == [PART, RESEARCH],
+              f"romanmallen har del och research ({[n.type for n in book.children(None)]})")
+        check(book.settings["target_words"] == 80_000, "och romanens ordmål")
+
+        # projektmallarna: struktur och ordmål per mall (R01.13)
+        mallar = {}
+        for namn in PROJECT_TEMPLATES:
+            mapp = tempfile.mkdtemp(prefix=f"mall-{namn}-")
+            try:
+                p = Project.create(mapp, f"Test {namn}", template=namn)
+                mallar[namn] = ([n.type for n in p.children(None)], p.settings["target_words"])
+            finally:
+                shutil.rmtree(mapp, ignore_errors=True)
+        check(mallar["roman"][0] == [PART, RESEARCH], f"roman: {mallar['roman'][0]}")
+        check(mallar["fackbok"][0] == [CHAPTER, RESEARCH], f"fackbok: {mallar['fackbok'][0]}")
+        check(mallar["novell"][0] == [SCENE, RESEARCH],
+              f"novell: {mallar['novell'][0]} — en scen, inga kapitel")
+        check(mallar["enkel"][0] == [CHAPTER, RESEARCH], f"enkel: {mallar['enkel'][0]}")
+        check(len(set(PROJECT_TEMPLATES)) == len(mallar), "alla mallar går att skapa")
+        check(mallar["roman"][1] > mallar["novell"][1] > mallar["enkel"][1],
+              f"ordmålen skiljer sig åt ({[m[1] for m in mallar.values()]})")
+        mapp = tempfile.mkdtemp(prefix="mall-okand-")
+        try:
+            p = Project.create(mapp, "Okänd mall", template="finns-inte")
+            check([n.type for n in p.children(None)] == [CHAPTER, RESEARCH],
+                  f"en okänd mall ger den minsta strukturen "
+                  f"({[n.type for n in p.children(None)]})")
+            tom = Project.create(tempfile.mkdtemp(prefix="mall-tom-"), "Ingen mall alls")
+            check([n.type for n in tom.children(None)] == [CHAPTER, RESEARCH],
+                  "och samma sak utan mall alls")
+        finally:
+            shutil.rmtree(mapp, ignore_errors=True)
         check(book.title == "Min bok", "titeln sparas")
-        check(len(book.walk()) == 4, "romanmallen ger del, kapitel, scen och research")
+        check(len(book.walk()) == len(book.nodes),
+              f"allt ligger i trädet ({len(book.walk())} av {len(book.nodes)})")
         check(book.validate() == [], f"färskt projekt är giltigt: {book.validate()}")
 
         part = book.children(None)[0]
@@ -730,6 +828,29 @@ def _self_check() -> int:
                       labels=["POV: Anna"], target_words=1200, pov="Anna")
         check(book.by_id(scene.id).synopsis == "Hon kommer hem.", "synopsis sparas")
         check("Utkast" in book.settings["statuses"], "nya statusvärden lärs in")
+
+        # statusfärg: härledd ur statuslistans ordning, samma varje gång (R01.5)
+        check(book.status_color("Idé") == STATUS_PALETTE[0],
+              f"första statusen får första färgen ({book.status_color('Idé')})")
+        check(book.status_color("Utkast") == STATUS_PALETTE[1], "nästa status nästa färg")
+        check(book.status_color("Finns inte") is None, "en status utanför listan har ingen färg")
+        book.set_meta(second.id, status="Bearbetning")
+        check(book.status_color("Bearbetning") == STATUS_PALETTE[4],
+              f"en ny status får nästa lediga färg ({book.status_color('Bearbetning')})")
+        check(book.status_color_for(scene.id) == book.status_color("Utkast"),
+              "noden får sin status färg")
+        check(book.status_color_for(part.id) is None, "en nod utan status har ingen färg")
+        book.save()
+        check(Project.load(root).status_color("Bearbetning") == STATUS_PALETTE[4],
+              "och färgen är densamma efter en omladdning")
+        # fler statusar än färger: paletten börjar om, inte kraschar
+        for i in range(len(STATUS_PALETTE)):
+            book.settings["statuses"].append(f"Status {i}")
+        sista = len(book.settings["statuses"]) - 1
+        check(book.status_color(f"Status {len(STATUS_PALETTE) - 1}")
+              == STATUS_PALETTE[sista % len(STATUS_PALETTE)],
+              f"paletten börjar om när statusarna är fler än färgerna "
+              f"({book.status_color(f'Status {len(STATUS_PALETTE) - 1}')})")
 
         # ord och mål summerade i hierarkin (R01.10)
         book.write(scene.id, "<p>ett två tre fyra fem sex sju</p>")

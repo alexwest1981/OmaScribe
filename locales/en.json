@@ -559,5 +559,19 @@
   "scene_material_open": "Double-click to open",
   "scene_material_left": "{count} to attach",
   "scene_note": "Note",
-  "scene_note_hint": "Your own note about the scene. Stays in the project, never in the text."
+  "scene_note_hint": "Your own note about the scene. Stays in the project, never in the text.",
+  "project_dialog_title": "New project",
+  "project_name": "Name",
+  "project_name_hint": "The name of the book",
+  "project_template": "Template",
+  "project_target": "Word target",
+  "project_target_none": "No target",
+  "project_tpl_roman": "Novel",
+  "project_tpl_roman_desc": "Parts, chapters and scenes. 80,000 words suggested.",
+  "project_tpl_fackbok": "Non-fiction",
+  "project_tpl_fackbok_desc": "Chapters with sections, no parts. 40,000 words suggested.",
+  "project_tpl_novell": "Novella",
+  "project_tpl_novell_desc": "A single scene to write in. 8,000 words suggested.",
+  "project_tpl_enkel": "Simple",
+  "project_tpl_enkel_desc": "One chapter and one scene — you build the rest yourself."
 }

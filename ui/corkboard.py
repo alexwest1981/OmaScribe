@@ -8,6 +8,7 @@ väljs.
 """
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QAbstractItemView, QListWidget, QListWidgetItem, QVBoxLayout, QWidget,
 )
@@ -110,7 +111,7 @@ class Corkboard(QWidget):
     def _card_for(self, node) -> QListWidgetItem:
         # ponytail: kortet är text, inte en egen widget med layout — färre rader
         # och mindre som kan gå sönder. Byt till en QStyledItemDelegate när
-        # korten behöver färg per status eller bild.
+        # korten behöver bild eller flera färger i samma kort.
         lines = [node.title]
         if node.status:
             lines.append(f"• {node.status}")
@@ -119,6 +120,9 @@ class Corkboard(QWidget):
         item = QListWidgetItem("\n".join(lines))
         item.setData(Qt.ItemDataRole.UserRole, node.id)
         item.setToolTip(node.synopsis or node.title)
+        colour = self.project.status_color(node.status) if node.status else None
+        if colour:
+            item.setForeground(QColor(colour))
         return item
 
     def select_node(self, node_id: str) -> bool:

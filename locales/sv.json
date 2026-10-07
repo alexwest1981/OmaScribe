@@ -559,5 +559,19 @@
   "scene_material_open": "Dubbelklicka för att öppna",
   "scene_material_left": "{count} att koppla",
   "scene_note": "Anteckning",
-  "scene_note_hint": "Din egen notering om scenen. Följer med projektet, aldrig med i texten."
+  "scene_note_hint": "Din egen notering om scenen. Följer med projektet, aldrig med i texten.",
+  "project_dialog_title": "Nytt projekt",
+  "project_name": "Namn",
+  "project_name_hint": "Bokens namn",
+  "project_template": "Mall",
+  "project_target": "Ordmål",
+  "project_target_none": "Inget mål",
+  "project_tpl_roman": "Roman",
+  "project_tpl_roman_desc": "Delar, kapitel och scener. 80 000 ord som förslag.",
+  "project_tpl_fackbok": "Fackbok",
+  "project_tpl_fackbok_desc": "Kapitel med avsnitt, utan delar. 40 000 ord som förslag.",
+  "project_tpl_novell": "Novell",
+  "project_tpl_novell_desc": "En enda scen att skriva i. 8 000 ord som förslag.",
+  "project_tpl_enkel": "Enkel",
+  "project_tpl_enkel_desc": "Ett kapitel och en scen — du bygger resten själv."
 }

@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 from core import project as project_mod
 from core.i18n import _, i18n
 from ui.corkboard import Corkboard
+from ui.collections_panel import CollectionsPanel
 
 ICONS = {
     project_mod.PART: "📁",
@@ -163,9 +164,16 @@ class BinderPanel(QWidget):
         self.tabs = QTabWidget()
         self.tabs.addTab(self.tree, _("binder_tab_tree"))
         self.corkboard = Corkboard(self)
-        self.corkboard.scene_selected.connect(self._on_card_clicked)
+        self.corkboard.scene_selected.connect(self._select_scene_from_view)
         self.corkboard.card_dropped.connect(self.move_by_drop)
         self.tabs.addTab(self.corkboard, _("binder_tab_cards"))
+
+        # Samlingar: handplockade grupper och sparade sökningar. Tredje vyn över
+        # samma projekt — samma markering, samma klickväg.
+        self.collections = CollectionsPanel(self)
+        self.collections.scene_selected.connect(self._select_scene_from_view)
+        self.collections.changed.connect(self.structure_changed)
+        self.tabs.addTab(self.collections, _("collections_tab"))
         i18n.language_changed.connect(self.retranslate_ui)
         layout.addWidget(self.tabs, 1)
 
@@ -177,6 +185,7 @@ class BinderPanel(QWidget):
         self.project = project
         self._last_scene_id = None
         self.corkboard.set_project(project)
+        self.collections.set_project(project)
         self.refresh()
         for widget in self.buttons:
             widget.setEnabled(project is not None)
@@ -205,6 +214,7 @@ class BinderPanel(QWidget):
         add(None, None)
         self.tree.expandAll()
         self.corkboard.refresh()
+        self.collections.refresh()
         self._refresh_header()
         if keep:
             self.select_node(keep)
@@ -406,6 +416,7 @@ class BinderPanel(QWidget):
             return
         if node_id != self._last_scene_id:
             self._last_scene_id = node_id
+            self.collections.set_active_scene(node_id)
             self.scene_selected.emit(node_id)
 
     def _on_double_clicked(self, index) -> None:
@@ -413,13 +424,18 @@ class BinderPanel(QWidget):
         if node_id:
             self.rename_current(node_id)
 
-    def _on_card_clicked(self, node_id: str) -> None:
-        """Ett kort markerar samma nod i trädet — en väg till signalen, inte två."""
+    def _select_scene_from_view(self, node_id: str) -> None:
+        """Ett kort eller en samlingsrad markerar samma nod i trädet.
+
+        En väg till signalen i stället för tre: trädet äger markeringen, och
+        scene_selected går därifrån. Då kan vyerna inte säga emot varandra.
+        """
         self.select_node(node_id)
 
     def retranslate_ui(self) -> None:
         self.tabs.setTabText(0, _("binder_tab_tree"))
         self.tabs.setTabText(1, _("binder_tab_cards"))
+        self.tabs.setTabText(2, _("collections_tab"))
         for widget, key in self._tip_widgets:
             widget.setToolTip(_(key))
         self._refresh_header()

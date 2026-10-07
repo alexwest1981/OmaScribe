@@ -532,5 +532,19 @@
   "menu_view_scrivenings": "Sammanhängande läsvy",
   "scrivenings_stats": "{words} ord i läsvyn",
   "binder_progress_of": "{words} av {target} ord ({percent} %)",
-  "binder_words": "{words} ord"
+  "binder_words": "{words} ord",
+  "collections_tab": "Samlingar",
+  "collections_empty": "Inga samlingar än. ＋ skapar en grupp, 🔍 en sparad sökning.",
+  "collections_no_project": "Öppna ett projekt för att samla scener.",
+  "collections_new": "Ny samling",
+  "collections_new_search": "Ny sparad sökning",
+  "collections_toggle": "Lägg till eller ta bort markerad scen",
+  "collections_rename": "Byt namn",
+  "collections_delete": "Ta bort samlingen",
+  "collections_delete_ask": "Ta bort samlingen ”{name}”? Scenerna ligger kvar i manuset.",
+  "collections_name": "Namn",
+  "collections_query": "Fråga",
+  "collections_query_hint": "status:Utkast, etikett:Anna, pov:Anna, text:havet",
+  "collections_search_title": "Sparad sökning",
+  "collections_search_readonly": "En sparad sökning äger sina träffar. Ändra frågan i stället för att fylla på för hand."
 }

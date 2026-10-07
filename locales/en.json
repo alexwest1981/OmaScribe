@@ -532,5 +532,19 @@
   "menu_view_scrivenings": "Continuous reading view",
   "scrivenings_stats": "{words} words in the reading view",
   "binder_progress_of": "{words} of {target} words ({percent} %)",
-  "binder_words": "{words} words"
+  "binder_words": "{words} words",
+  "collections_tab": "Collections",
+  "collections_empty": "No collections yet. ＋ makes a group, 🔍 a saved search.",
+  "collections_no_project": "Open a project to collect scenes.",
+  "collections_new": "New collection",
+  "collections_new_search": "New saved search",
+  "collections_toggle": "Add or remove the selected scene",
+  "collections_rename": "Rename",
+  "collections_delete": "Delete the collection",
+  "collections_delete_ask": "Delete the collection “{name}”? The scenes stay in the manuscript.",
+  "collections_name": "Name",
+  "collections_query": "Query",
+  "collections_query_hint": "status:Draft, label:Anna, pov:Anna, text:sea",
+  "collections_search_title": "Saved search",
+  "collections_search_readonly": "A saved search owns its hits. Change the query instead of adding by hand."
 }

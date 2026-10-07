@@ -27,6 +27,9 @@ from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from pathlib import Path
 
+from core.collections import Collection
+from core import collections as collections_mod
+
 MANIFEST = "project.json"
 MANUSCRIPT_DIR = "manuscript"
 RESEARCH_DIR = "research"
@@ -161,6 +164,7 @@ class Project:
         self.title = ""
         self.settings: dict = dict(DEFAULT_SETTINGS)
         self.nodes: list[ProjectNode] = []
+        self.collections: list[Collection] = []
         self._words: dict[str, int] = {}          # cache per nod-id
 
     # ------------------------------------------------------------- skapa/ladda
@@ -195,6 +199,7 @@ class Project:
         project.title = data.get("title", "")
         project.settings = {**DEFAULT_SETTINGS, **(data.get("settings") or {})}
         project.nodes = [ProjectNode.from_dict(d) for d in data.get("nodes", [])]
+        project.collections = [Collection.from_dict(d) for d in data.get("collections", [])]
         return project
 
     def save(self) -> None:
@@ -203,6 +208,7 @@ class Project:
             "title": self.title,
             "settings": self.settings,
             "nodes": [n.to_dict() for n in self.nodes],
+            "collections": [c.to_dict() for c in self.collections],
         }
         self.root.mkdir(parents=True, exist_ok=True)
         atomic_write_text(
@@ -425,6 +431,59 @@ class Project:
         left = max(0, goal - self.total_words())
         return -(-left // remaining_days)          # ceil
 
+    # -------------------------------------------------------------- samlingar
+
+    def add_collection(self, name: str, kind: str = collections_mod.MANUAL,
+                       query: str = "", node_ids=None) -> Collection:
+        collection = Collection(
+            id=collections_mod.new_id(),
+            name=name.strip() or collections_mod.describe(
+                Collection(id="", name="", kind=kind, query=query)),
+            kind=kind if kind in (collections_mod.MANUAL, collections_mod.SEARCH)
+            else collections_mod.MANUAL,
+            query=(query or "").strip(),
+            node_ids=[str(n) for n in (node_ids or [])],
+        )
+        self.collections.append(collection)
+        return collection
+
+    def collection(self, collection_id: str) -> Collection:
+        for collection in self.collections:
+            if collection.id == collection_id:
+                return collection
+        raise KeyError(f"ingen samling med id {collection_id}")
+
+    def remove_collection(self, collection_id: str) -> bool:
+        before = len(self.collections)
+        self.collections = [c for c in self.collections if c.id != collection_id]
+        return len(self.collections) != before
+
+    def toggle_in_collection(self, collection_id: str, node_id: str) -> bool:
+        """Lägger till eller tar bort scenen. True om den ligger i samlingen efteråt."""
+        collection = self.collection(collection_id)
+        if collection.kind != collections_mod.MANUAL:
+            return False               # en sökning äger sina träffar själv
+        self.by_id(node_id)            # kastar om scenen inte finns
+        if collection.contains(node_id):
+            collection.node_ids.remove(node_id)
+            return False
+        collection.node_ids.append(node_id)
+        return True
+
+    def select_collection(self, collection_id: str) -> list[ProjectNode]:
+        """Scenerna i samlingen, i manusets ordning. Binderordningen rörs inte.
+
+        En handplockad samling tappar scener som tagits bort ur projektet, och
+        en sökning räknas om varje gång — den är en fråga, inte en lista.
+        """
+        collection = self.collection(collection_id)
+        if collection.kind == collections_mod.MANUAL:
+            wanted = set(collection.node_ids)
+            return [n for n in self.manuscript() if n.id in wanted]
+        terms = collections_mod.parse_query(collection.query)
+        return [n for n in self.manuscript()
+                if collections_mod.matches(n, terms, html_to_text(self.read(n.id)))]
+
     # ------------------------------------------------------------------ kontroll
 
     def validate(self) -> list[str]:
@@ -604,12 +663,54 @@ def _self_check() -> int:
               f"projektet når 100 procent på sitt eget mål ({book.progress()})")
         book.settings["target_words"] = 0
 
+        # samlingar: en handplockad och en sparad sökning (R01.8)
+        manuell = book.add_collection("Tråd A", node_ids=[scene.id, second.id])
+        check([n.id for n in book.select_collection(manuell.id)] == [scene.id, second.id],
+              f"den handplockade samlingen ger sina scener i manusordning "
+              f"({[n.title for n in book.select_collection(manuell.id)]})")
+        check(book.toggle_in_collection(manuell.id, second.id) is False,
+              "en scen kan tas ur samlingen")
+        check([n.id for n in book.select_collection(manuell.id)] == [scene.id],
+              "och är då borta ur urvalet")
+        check(book.toggle_in_collection(manuell.id, second.id) is True, "och in igen")
+
+        sokning = book.add_collection("Utkast", kind="search", query="status:Utkast")
+        check([n.id for n in book.select_collection(sokning.id)] == [scene.id],
+              f"sökningen hittar scenen med rätt status "
+              f"({[n.title for n in book.select_collection(sokning.id)]})")
+        bok = book.add_collection("Timglas", kind="search", query="Timglas")
+        check(book.select_collection(bok.id) == [], "en sökning utan träff ger inget")
+        book.write(second.id, "<p>Ett timglas stod på bordet.</p>")
+        check([n.id for n in book.select_collection(bok.id)] == [second.id],
+              "och hittar ordet när det finns i texten")
+        book.write(second.id, "<p>Inget glas alls.</p>")
+        check(book.select_collection(bok.id) == [],
+              "en sökning är en fråga och räknas om varje gång")
+
+        book.save()
+        omladdad = Project.load(root)
+        check([c.name for c in omladdad.collections] == [c.name for c in book.collections],
+              f"samlingarna följer med till disk ({[c.name for c in omladdad.collections]})")
+        check(omladdad.collection(sokning.id).query == "status:Utkast",
+              "och frågan står kvar")
+        kast = book.add_collection("Kastas")
+        check(book.remove_collection(kast.id) is True
+              and all(c.id != kast.id for c in book.collections), "en samling kan tas bort")
+        try:
+            book.collection("finns_inte")
+            check(False, "okänt samlings-id skall ge KeyError")
+        except KeyError:
+            check(True, "okänt samlings-id ger KeyError")
+
         # borttagning tar barnen med sig och filen försvinner
         scene_file = book.path_of(book.by_id(scene.id))
         book.delete_node(chapter.id)
         check(all(n.id != chapter.id for n in book.nodes), "kapitlet är borta")
         check(scene_file is not None and not scene_file.exists(),
               "scenens fil städas bort")
+        check([n.id for n in book.select_collection(manuell.id)] == [second.id],
+              f"en borttagen scen faller ur den handplockade samlingen "
+              f"({[n.title for n in book.select_collection(manuell.id)]})")
         check(book.validate() == [], "projektet är giltigt efter borttagning")
 
         # mål och dagsbehov

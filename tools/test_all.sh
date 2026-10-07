@@ -66,6 +66,8 @@ run "sök och ersätt" "$PY" -m core.find_replace
 run "autokorrigeringen" "$PY" -m core.autocorrect
 run "korktavlan" "$PY" -m ui.corkboard
 run "läsvyn" "$PY" -m ui.scrivenings
+run "samlingarna" "$PY" -m core.collections
+run "samlingspanelen" "$PY" -m ui.collections_panel
 run "ui_smoke" "$PY" tools/ui_smoke.py
 run "print_purity" "$PY" tools/print_purity_check.py
 

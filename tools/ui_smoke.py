@@ -451,6 +451,49 @@ def main() -> int:
     check(bok.by_id(ett.id).target_words == 50, "scenens eget mål ligger kvar")
     win._deactivate_project()
 
+    print("\n14. Samlingar")
+    win._activate_project(bok)
+    binder = win.binder
+    check(binder.tabs.count() == 3, f"tre vyer i panelen ({binder.tabs.count()})")
+    check(binder.tabs.tabText(2) != "", f"samlingsfliken har en rubrik ({binder.tabs.tabText(2)!r})")
+
+    binder.select_node(ett.id)                     # scenen som ★ lägger in
+    samling = binder.collections.new_manual("Provsamling")
+    check(samling is not None, "en handplockad samling skapas")
+    check(bok.collection(samling).contains(ett.id),
+          f"den markerade scenen hamnade i samlingen ({bok.collection(samling).node_ids})")
+    check(binder.collections.tree.topLevelItemCount() == 1,
+          "samlingen syns i panelen")
+
+    # samlingen skall ligga på disk
+    igen4 = Bok.load(projektmapp)
+    check([c.name for c in igen4.collections] == ["Provsamling"],
+          f"samlingen ligger i manifestet ({[c.name for c in igen4.collections]})")
+
+    # ett klick på en rad i samlingen öppnar scenen
+    rad = binder.collections.tree.topLevelItem(0).child(0)
+    binder.collections._on_clicked(rad, 0)
+    check(win.active_scene_id == ett.id, f"klicket öppnar scenen ({win.active_scene_id})")
+
+    # sparad sökning (scenens text skrevs om i avsnitt 13, så ordet är 'ett')
+    binder.collections.new_search("Med ettan", "text:ett")
+    check(binder.collections.tree.topLevelItemCount() == 2, "sökningen blir en samling")
+    traffar = [binder.collections.tree.topLevelItem(1).child(i).text(0)
+               for i in range(binder.collections.tree.topLevelItem(1).childCount())]
+    check(any("Scen ett" in rad for rad in traffar),
+          f"sökningen hittar scenen med ordet ({traffar})")
+    check(len(bok.select_collection(bok.collections[1].id)) == 1,
+          f"och bara den ({len(bok.select_collection(bok.collections[1].id))})")
+    check(bok.select_collection(bok.collections[1].id)[0].id == ett.id,
+          "och det är rätt scen")
+
+    # samlingen kan tas bort igen
+    binder.collections.delete(samling, ask=False)
+    check(len(bok.collections) == 1, f"den handplockade samlingen är borta ({len(bok.collections)})")
+    check(Bok.load(projektmapp).collections[0].name == "Med ettan",
+          "och manifestet på disk följer med")
+    win._deactivate_project()
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

@@ -207,6 +207,19 @@ kontrollistan när faserna är klara.
       rad, popupens `geometry()` efter `showPopup()` — `setMaxVisibleItems` räknar rader, och en hög
       rad gör 14 rader högre än skärmen.
 
+- [ ] **Inspektörens första flik klipps.** Sett i skärmdumpar 2026-10-07: flikraden visar "…ingar"
+      längst till vänster — det är `sidebar_tab_notes` ("Anteckningar", `ui/main_window.py:150`) som
+      skjutits ut när den aktiva fliken är den sista. Raden har `setUsesScrollButtons(True)` och
+      pilarna är 10 px men osynliga: stilmallen tar bort plattformens pilar, så det finns ingen synlig
+      väg tillbaka till första fliken. Fixen: stila `QTabBar::scroller` och dess
+      `QToolButton::left-arrow/right-arrow` (samma fallgrop som tidigare, se Designkrav), eller visa
+      flikarna i två rader när de inte får plats.
+- [ ] **Verktygsradens emoji blir svarta fyrkanter.** Sett i skärmdumpar 2026-10-07: rutor i stället
+      för ikon där emoji används — `ui/toolbar.py`: `🌐` (`act_gfonts`), `🎨 Color`, `🖍️ Highlight`,
+      `🧹 Tx`, `📊` (`btn_table`). Vanliga glyfer (`𝐁`, `𝐼`, `≡`, `⇤`) ritas korrekt, så det är
+      emojin och typsnittet, inte knapparna. `ui/icons.py` med Lucide-SVG:er finns redan och används
+      i toppbaren och vänsterrail sedan `6e44ecb` — byt emojin mot dem (eller mot ren text).
+
 ## Designkrav (fallgropar som styr bygget)
 
 - [ ] Visa källpassager; låt aldrig AI-genererade fakta bli kanon automatiskt. R04

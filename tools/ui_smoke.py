@@ -1118,6 +1118,62 @@ def main() -> int:
     win.is_modified = False
     win.hide()
 
+    print("\n24. Story biblen (codex)")
+
+    bibel_mapp = out / "bibeln"
+    bibel_mapp.mkdir()
+    bibelbok = Bok.create(bibel_mapp, "Bibelbok", template="roman")
+    win._activate_project(bibelbok)
+    codex = win.codex
+    panel = win.codex_panel
+    scener = bibelbok.manuscript()
+
+    anna = codex.add_entity("Anna", aliases=["Anka"], summary="En pilot")
+    hamn = codex.add_entity("Hamnstaden", type="place")
+    codex.link(anna.id, scener[0].id)
+    codex.add_relation(anna.id, hamn.id, "bor i")
+    bibelbok.write(scener[0].id, "<p>Anna gick till kajen. Anka tittade upp. Anna log.</p>")
+    panel.refresh()
+
+    check(panel.list_entities.count() == 2,
+          f"projektets codex syns i panelen ({panel.list_entities.count()} entiteter)")
+    panel.select(anna.id)
+    check(panel.current is not None and panel.current.id == anna.id,
+          f"bladet visar den valda entiteten ({panel.lbl_name.text()})")
+    check(panel.list_scenes.count() == 1 and panel._scene_of_row == [scener[0].id],
+          f"och scenen hon är kopplad till ({panel.lbl_scenes.text()})")
+    check(panel.list_relations.count() == 1,
+          f"och relationen till en annan entitet ({panel.list_relations.item(0).text()})")
+    from PyQt6.QtCore import Qt as QtKärn      # Qt importeras inte i toppen
+    check(panel.list_relations.horizontalScrollBarPolicy()
+          == QtKärn.ScrollBarPolicy.ScrollBarAlwaysOff and panel.list_relations.wordWrap(),
+          "relationsraden radbryts i stället för att skjuta in en skrollist")
+    check("3" in panel.lbl_mentions.text(),
+          f"och omnämnandena räknas, alias inräknat ({panel.lbl_mentions.text()})")
+
+    panel.combo_type.setCurrentIndex(panel.combo_type.findData("place"))
+    check(panel.list_entities.count() == 1, "typfiltret visar bara platser")
+    panel.combo_type.setCurrentIndex(0)
+    panel.input_search.setText("Anka")
+    check(panel.list_entities.count() == 1, "och sökningen hittar ett alias")
+    panel.input_search.setText("")
+
+    panel.select(anna.id)
+    öppnade = []
+    panel.open_scene.connect(öppnade.append)
+    panel._open_scene(panel.list_scenes.item(0))
+    check(öppnade == [scener[0].id], f"klick på scenen öppnar rätt scen ({öppnade})")
+
+    panel.list_relations.setCurrentRow(0)
+    panel.remove_selected_relation()
+    check(panel.list_relations.count() == 0 and codex.entity(anna.id) is not None,
+          "en relation går att ta bort, entiteterna består")
+    panel.remove_current(ask=False)
+    check(panel.list_entities.count() == 1 and codex.by_name("Anna") is None,
+          "och entiteten går att ta bort, scenen består")
+
+    win._deactivate_project()
+
     # Arken: ett ark per sida med ett mellanrum där ytan syns, och texten delad
     # mellan rader. Mätt i en riktig rendering, med temats färger.
     from PyQt6.QtCore import QPointF as QtPunkt, QRect as QtRect

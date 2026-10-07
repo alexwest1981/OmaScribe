@@ -18,9 +18,12 @@ from core.storybible import ENTITY_TYPES
 class EntityDialog(QDialog):
     """Namn, typ och sammanfattning för en ny entitet."""
 
-    def __init__(self, default_name: str = "", parent=None):
+    def __init__(self, default_name: str = "", parent=None, entity=None):
+        """`entity` förifyller fälten: samma dialog skapar och redigerar."""
         super().__init__(parent)
-        self.setWindowTitle(_("entity_dialog_title"))
+        self.setWindowTitle(_("entity_dialog_edit" if entity is not None else "entity_dialog_title"))
+        if entity is not None:
+            default_name = entity.name
         self.setModal(True)
         self.resize(400, 0)
 
@@ -40,6 +43,12 @@ class EntityDialog(QDialog):
         self.input_summary.setPlaceholderText(_("entity_summary_hint"))
         self.input_summary.setFixedHeight(64)
         form.addRow(_("entity_summary"), self.input_summary)
+
+        if entity is not None:
+            index = self.combo_type.findData(entity.type)
+            if index >= 0:
+                self.combo_type.setCurrentIndex(index)
+            self.input_summary.setPlainText(entity.summary)
 
         layout.addLayout(form)
         buttons = QDialogButtonBox(

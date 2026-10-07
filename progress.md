@@ -133,3 +133,21 @@
 - Rökprovet fick lära sig visa fönstret för den mätningen (skrollfältet är 22 px högt utan
   utläggning) och sedan städa efter sig: dolt fönster och orört dokument, annars stannar
   provets egen stängning i en fråga om att spara — 25 minuter utan ett ord på skärmen.
+
+### Fas 2.8: story biblen
+
+- **Status:** complete, grindad (359 rökprov + 54 renhetsprov, GRÖNT).
+- `ui/codex_panel.py` (ny): projektets codex i sidopanelen — sökning, typfilter, lista,
+  och ett blad per entitet: namn, typ, alias, vem det är, relationer, scenerna den är
+  kopplad till (klick öppnar scenen) och antalet omnämnanden i manuset (alias inräknade).
+  Ny/redigera/ta bort, koppla loss scen, lägg till och ta bort relation.
+- `core.storybible` fanns färdig sedan fas 1.13 och fick bara `remove_relation` — en
+  relation skall gå att ångra. Entiteter, scenkopplingar och relationer städas av
+  `ON DELETE CASCADE` när en entitet tas bort (kontrollerat i schemat, inte antaget).
+- `ui/entity_dialog.py` förifylls vid redigering, så samma dialog skapar och ändrar.
+- Mätt: 2 entiteter i listan, bladet visar rätt scen och relation, omnämnandena räknas
+  till 3 med alias ("Anna gick … Anka tittade upp. Anna log."), typfiltret visar bara
+  platser, sökningen hittar "Anka" som alias, klick på scenen öppnar rätt nod, och både
+  relation och entitet går att ta bort utan att scenen rörs.
+- Ingen cache för manuset: en cachad siffra som ljuger när man just ändrat en scen är
+  värre än att läsa om boken (millisekunder).

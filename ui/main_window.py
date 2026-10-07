@@ -30,6 +30,7 @@ from ui.binder_panel import BinderPanel
 from ui.chrome import LeftRail, TopBar
 from ui.scene_inspector import SceneInspector
 from ui.writing_log_panel import WritingLogPanel
+from ui.codex_panel import CodexPanel
 from ui.scrivenings import ScriveningsView
 from core.project import Project
 from ui.chart_dialog import ChartDialog
@@ -165,6 +166,15 @@ class MainWindow(QMainWindow):
             lambda m: self.status_bar.showMessage(m, 6000))
         self.writing_log.sprint_finished.connect(self._on_sprint_finished)
         self.sidebar.add_tab(self.writing_log, "sidebar_tab_log")
+
+        # Story biblen (fas 2.8): karaktärsblad, relationer och scenkopplingar
+        # ur projektets codex. Bladet visar vilka scener personen är med i och
+        # hur ofta namnet nämns i manuset.
+        self.codex_panel = CodexPanel(self.config, self.theme_mgr)
+        self.codex_panel.status_message.connect(
+            lambda m: self.status_bar.showMessage(m, 6000))
+        self.codex_panel.open_scene.connect(self._open_node)
+        self.sidebar.add_tab(self.codex_panel, "sidebar_tab_codex")
 
         self.splitter.addWidget(self.sidebar)
 
@@ -930,6 +940,7 @@ class MainWindow(QMainWindow):
             self.codex = None
             print(f"[codex] kunde inte öppnas: {exc}")
         self.scene_inspector.set_codex(self.codex)
+        self.codex_panel.set_project(project, self.codex)
         return self.codex
 
     def _close_codex(self):
@@ -940,6 +951,7 @@ class MainWindow(QMainWindow):
                 pass
         self.codex = None
         self.scene_inspector.set_codex(None)
+        self.codex_panel.set_project(None, None)
 
     def _deactivate_project(self):
         """Lämnar projektläget. Projektet ligger kvar på disk."""

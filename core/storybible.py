@@ -178,6 +178,12 @@ class StoryBible:
                                 (entity_id, entity_id))
         return [Relation(*row) for row in rows]
 
+    def remove_relation(self, from_id: str, to_id: str, kind: str) -> None:
+        """Tar bort en enskild relation. Entiteterna och deras scener består."""
+        self._db.execute("DELETE FROM relations WHERE from_id=? AND to_id=? AND kind=?",
+                         (from_id, to_id, kind))
+        self._db.commit()
+
     def search(self, text: str) -> list[Entity]:
         needle = text.casefold()
         if not needle:
@@ -245,6 +251,9 @@ def _self_test() -> None:
             assert all(e.id != place.id for e in bible.for_node("scene:1")); checks += 1
             bible.add_relation(anna.id, other.id, "sibling", "They grew up together")
             assert len(bible.relations(anna.id)) == 1 and len(bible.relations(other.id)) == 1; checks += 1
+            bible.remove_relation(anna.id, other.id, "sibling")
+            assert bible.relations(anna.id) == [] and bible.entity(anna.id) is not None; checks += 1
+            bible.add_relation(anna.id, other.id, "sibling", "They grew up together")
             assert anna.id in {e.id for e in bible.search("brave")} and anna.id in {e.id for e in bible.search("Northport")}; checks += 1
             exported = Path(temp) / "export.json"
             bible.export_json(exported)

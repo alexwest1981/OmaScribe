@@ -14,14 +14,14 @@ taget (`ui/main_window.py:663`). Se `findings.md`.
 
 ## Next Step
 
-Fas 2.8 (karaktärsblad och story bible på codex), därefter 2.9
+Fas 2.9 (tidslinje och plot-tavla)
 (tidslinje och plot-tavla) som är nästa större punkt. Rutnätet i 2.9 bygger på
 scenmodellen och på att scenens status redan finns.
 
 ## Current Phase
 
-Fas 2 — Författarlagret (2.1–2.6 klara: skrivloggen, kvot, historik, sprintar,
-skrivmaskinsläget).
+Fas 2 — Författarlagret (2.1–2.6 och 2.8 klara: skrivloggen, kvot, historik,
+sprintar, skrivmaskinsläget, story biblen).
 Fas 0, 0b och 1 är klara. Sedan dess: appskalet följer v0-referensen, och
 pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 
@@ -87,7 +87,7 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 - [x] **2.5** Skrivsprintar och timer: 15/25/45/60 minuter, nedräkning i panelen, avbryt, och vid slut en rad i statusfältet plus `QApplication.alert` (diskret — ingen modal). Antalet ord under sprinten räknas och rapporteras. R03.5
 - [x] **2.6** Skrivmaskinsläge utöver befintligt helskärmsläge: `PagedPaper.center_cursor()` håller markörens rad mitt i fönstret medan man skriver, kopplat till markörens rörelse i `ui/editor_view.py`. Läget slås på i Visa-menyn och kommer ihåg sig i configen. Maxbredden var redan satt — arket är A4 (750 px) och texten kan inte bli bredare. Nära dokumentets slut kan ingen centrering ske (det finns ingen text att skrolla förbi), precis som i Word. R03.6
 - [ ] **2.7** Pauspåminnelser och ergonomi, valbart. R03.7 — *låg*
-- [ ] **2.8** Karaktärsblad och story bible i projektet. R03.9
+- [x] **2.8** Karaktärsblad och story bible i projektet: `ui/codex_panel.py` visar projektets codex (codex.sqlite i projektmappen) med sökning och typfilter, och ett blad per entitet — namn, alias, vem det är (sparas med kort fördröjning medan man skriver), relationer till andra i boken, scenerna den är kopplad till (klick öppnar scenen) och hur ofta namnet nämns i manuset. Ny/redigera/ta bort, koppla loss scen, lägg till och ta bort relation. `core.storybible` fick `remove_relation`; dialogrutan förifylls vid redigering. R03.9
 - [ ] **2.9** Tidslinje, plot-tavla och scenöversikt (Plot Grid-modellen). R03.10
 - [ ] **2.10** Taggar, samlingar och anteckningar knutna till scen. R03.11
 - [ ] **2.11** Namn- och ordförrådsgenerator. R03.12 — *låg*
@@ -97,7 +97,7 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 - [ ] **2.15** Läsbarhetsanalys och stilråd i texten (LIX finns, markeringar saknas). R03.17
 - [ ] **2.16** Projektöversikt och anteckningar (valvet som projektlager, taggar/properties). R03.18
 - [ ] **2.17** Projektinstruktioner: per-projekt kontext för AI:n. R04.18
-- **Status:** in progress (2.1–2.6 klara och grindade)
+- **Status:** in progress (2.1–2.6 och 2.8 klara och grindade)
 
 ### Fas 3: Revision och granskning
 

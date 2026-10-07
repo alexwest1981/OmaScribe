@@ -31,6 +31,7 @@ class FormattingToolBar(QToolBar):
 
     def __init__(self, editor_view, theme_mgr=None, parent=None):
         super().__init__(parent)
+        self.setObjectName("FormatBar")     # stilen hänger på detta namn
         self.editor = editor_view
         self.theme_mgr = theme_mgr
         self.setMovable(False)
@@ -97,6 +98,11 @@ class FormattingToolBar(QToolBar):
         # 2. Font Family & Google Fonts
         # ---------------------------------------------------------------------
         self.combo_font = FontSelectorComboBox()
+        # Klassen låser bredden till 180px, och etiketten ("Popular Writing
+        # Fonts") är 208px — då klipptes namnet mitt i ordet. Den får växa
+        # till sin egen textbredd i stället.
+        self.combo_font.setMinimumWidth(0)
+        self.combo_font.setMaximumWidth(max(180, self.combo_font.sizeHint().width()) + 4)
         self.combo_font.font_selected.connect(self._on_font_changed)
         self.addWidget(self.combo_font)
 

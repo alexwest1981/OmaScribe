@@ -619,5 +619,21 @@
   "variants_outside": "{count} scenes are not in the manuscript",
   "variants_missing": "{count} scenes are missing from the variant",
   "variants_applied": "{count} scenes were moved in the manuscript.",
-  "menu_view_variants": "Manuscript variants"
+  "menu_view_variants": "Manuscript variants",
+  "topbar_saved": "Saved",
+  "topbar_unsaved": "Unsaved changes",
+  "topbar_help": "Help and about",
+  "rail_document": "Current document",
+  "rail_files": "Open files",
+  "rail_templates": "Templates",
+  "rail_settings": "Settings",
+  "inspector_eyebrow": "AI INSPECTOR",
+  "inspector_title": "The text",
+  "inspector_close": "Close panel",
+  "inspector_tone": "Tone",
+  "inspector_to_review": "{count} to review",
+  "inspector_rewrite": "Rewrite selection",
+  "stage_edited_today": "Last edited today · {time}",
+  "metric_minutes": "{n} min",
+  "inspector_idle": "No review yet. Press ⟳ to review the text."
 }

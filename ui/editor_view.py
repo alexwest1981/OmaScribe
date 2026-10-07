@@ -2,8 +2,8 @@ import re
 import math
 import uuid
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QTextEdit, QScrollArea, QFrame, QMenu, QApplication,
-    QListWidget, QListWidgetItem, QMessageBox
+    QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QScrollArea, QFrame, QMenu,
+    QApplication, QLabel, QSizePolicy, QListWidget, QListWidgetItem, QMessageBox
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QRectF, QPointF, QByteArray, QBuffer, QIODevice, QUrl
 from PyQt6.QtGui import (
@@ -16,6 +16,7 @@ from core.i18n import _
 from core.vault import WIKILINK_RE, split_link_target, slugify
 from core import directives, richtext, print_style
 from core.doc_manager import DEFAULT_PAGE_SETTINGS
+from ui.chrome import set_tracking
 
 
 class WikiLinkHighlighter(QSyntaxHighlighter):
@@ -707,24 +708,71 @@ class EditorView(QWidget):
         self.scroll_area.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
 
+        # Dokumentytan enligt referensen: en metarad ovanför papperet, och
+        # papperet så brett referensen har det (750) i A4-höjd.
+        self.stage = QWidget()
+        self.stage.setObjectName("DocumentStage")
+        stage_layout = QVBoxLayout(self.stage)
+        stage_layout.setContentsMargins(0, 28, 0, 54)     # referensen: 28px 34px 54px
+        stage_layout.setSpacing(0)
+
+        self.meta_row = QWidget()
+        meta_row = QHBoxLayout(self.meta_row)
+        meta_row.setContentsMargins(0, 0, 0, 13)          # referensen: margin-bottom 13
+        meta_row.setSpacing(8)
+        self.lbl_meta_left = QLabel()
+        self.lbl_meta_left.setObjectName("StageMeta")
+        set_tracking(self.lbl_meta_left, 1.2)             # referensen: .12em
+        self.lbl_meta_right = QLabel()
+        self.lbl_meta_right.setObjectName("StageMeta")
+        meta_row.addWidget(self.lbl_meta_left)
+        meta_row.addStretch(1)
+        meta_row.addWidget(self.lbl_meta_right)
+        self.meta_row.setMaximumWidth(750)
+        self.meta_row.setVisible(False)                   # visas när fönstret ger den data
+        self.meta_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+
+        meta_hall = QHBoxLayout()
+        meta_hall.setContentsMargins(0, 0, 0, 0)
+        meta_hall.addStretch(1)
+        meta_hall.addWidget(self.meta_row, 12)
+        meta_hall.addStretch(1)
+        stage_layout.addLayout(meta_hall, 0)
+
         # Page Container (Simulating A4 paper)
         self.page_frame = QFrame()
         self.page_frame.setObjectName("PageFrame")
         self.page_frame.setMinimumWidth(360)
-        self.page_frame.setMaximumWidth(840)
-        self.page_frame.setMinimumHeight(1160)
+        self.page_frame.setMaximumWidth(750)              # referensen: max-width 750
+        self.page_frame.setMinimumHeight(1060)            # A4 vid 750px
+        self.page_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         page_layout = QVBoxLayout(self.page_frame)
-        page_layout.setContentsMargins(12, 16, 12, 16)
+        # Referensens inre marginal är 70px upp och 88px i sidled. Dokumentet
+        # har redan 36px egen marginal, så ramen lägger till resten.
+        page_layout.setContentsMargins(52, 34, 52, 42)
 
         self.canvas = DocumentCanvas(self.page_frame)
         page_layout.addWidget(self.canvas)
 
-        self.scroll_area.setWidget(self.page_frame)
+        sida_hall = QHBoxLayout()
+        sida_hall.setContentsMargins(0, 0, 0, 0)
+        sida_hall.addStretch(1)
+        sida_hall.addWidget(self.page_frame, 12)
+        sida_hall.addStretch(1)
+        stage_layout.addLayout(sida_hall, 1)
+
+        self.scroll_area.setWidget(self.stage)
         layout.addWidget(self.scroll_area)
 
         self.apply_theme()
         self.theme_mgr.theme_changed.connect(self.apply_theme)
+
+    def set_stage_meta(self, left: str, right: str) -> None:
+        """Metaraden över papperet: vad dokumentet är och när det ändrades."""
+        self.lbl_meta_left.setText((left or "").upper())
+        self.lbl_meta_right.setText(right or "")
+        self.meta_row.setVisible(bool(left or right))
 
     @property
     def document(self):
@@ -749,10 +797,7 @@ class EditorView(QWidget):
         self.page_frame.setStyleSheet(f"""
             #PageFrame {{
                 background-color: {paper['canvas_bg']};
-                border: 1px solid {c['canvas_border']};
-                border-radius: 4px;
-                margin-top: 20px;
-                margin-bottom: 40px;
+                border: 0;
             }}
         """)
         self.canvas.setStyleSheet(f"""

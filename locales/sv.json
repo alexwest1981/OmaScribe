@@ -619,5 +619,21 @@
   "variants_outside": "{count} scener finns inte i manuset",
   "variants_missing": "{count} scener saknas i varianten",
   "variants_applied": "{count} scener flyttades i manuset.",
-  "menu_view_variants": "Manusvarianter"
+  "menu_view_variants": "Manusvarianter",
+  "topbar_saved": "Sparat",
+  "topbar_unsaved": "Osparade ändringar",
+  "topbar_help": "Hjälp och om",
+  "rail_document": "Aktuellt dokument",
+  "rail_files": "Öppna filer",
+  "rail_templates": "Mallar",
+  "rail_settings": "Inställningar",
+  "inspector_eyebrow": "AI-INSPEKTÖR",
+  "inspector_title": "Texten",
+  "inspector_close": "Stäng panelen",
+  "inspector_tone": "Ton",
+  "inspector_to_review": "{count} att granska",
+  "inspector_rewrite": "Förbättra markeringen",
+  "stage_edited_today": "Senast ändrad idag · {time}",
+  "metric_minutes": "{n} min",
+  "inspector_idle": "Ingen granskning gjord än. Tryck ⟳ för att granska texten."
 }

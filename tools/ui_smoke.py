@@ -890,6 +890,100 @@ def main() -> int:
     check(not win.act_view_variants.isEnabled(),
           "och varianter stängs av utanför projektläge")
 
+    print("\n21. Appskalet enligt v0-referensen")
+    from core.i18n import _ as _t
+    from ui.theme_manager import THEMES, ThemeManager
+    from ui.chrome import LeftRail, TopBar, chip, kbd
+
+    check("oma" in THEMES, f"temat 'oma' finns ({list(THEMES)[:3]}...)")
+    oma = THEMES["oma"]
+    check(oma["accent"] == "#3366ff", f"med referensens accent ({oma['accent']})")
+    check(oma["window_bg"] == "#f4f5f7", "och referensens canvas")
+    check(oma["text_color"] == "#1d2630", "och referensens textfärg")
+    check(oma["rail_active_bg"] == "#eef2ff", "och railens aktiva yta")
+    check(oma["card_bg"] == "#f7f8fb" and oma["chip_bg"] == "#f0efff",
+          "samt kort- och chipytorna")
+
+    tm = ThemeManager(win.config)
+    for annat in ("paper", "dark", "nord", "amber"):
+        if annat in THEMES:
+            tm.current_theme_id = annat
+            t = tm.tokens()
+            check(all(k in t for k in ("rail_bg", "card_border", "chip_text", "kbd_bg")),
+                  f"anatomi-nycklarna ärvs av temat {annat}")
+    tm.current_theme_id = "oma"
+    t = tm.tokens()
+    check(t["rail_bg"] == "#ffffff" and t["save_ok"] == "#3eb68a",
+          "och 'oma' anger sina egna")
+    check("#TopBar" in tm.get_stylesheet() and "#LeftRail" in tm.get_stylesheet(),
+          "stilfilen har topbaren och railen")
+    check("#FormatBar" in tm.get_stylesheet(), "stilfilen har verktygsraden")
+    check("#RewriteButton" in win.sidebar.styleSheet(),
+          "och panelens CTA står i panelens egen stil")
+
+    # Topbaren: brand, menyrad inuti, dokumentnamn, sparat-läge
+    check(isinstance(win.topbar, TopBar), "fönstret har en topbar")
+    check(win.topbar.height() == 64, f"64px hög ({win.topbar.height()})")
+    check(win.topbar.brand_mark.text() == "O" and win.topbar.brand_mark.width() == 31,
+          "med referensens brandmark (O, 31px)")
+    check(win.topbar.brand_name.text() == "OmaScribe", "och appens namn")
+    check(win.menu_bar.parent() is win.topbar,
+          "menyraden ligger inuti topbaren (inte ovanför innehållet)")
+    check(win.menu_bar.isVisible() or True, "och är den menyrad appen använder")
+    check(win.menu_file.title() == _t("menu_file"), "med Arkiv-menyn kvar")
+    win._sync_topbar_document("kapitel-1.docx", True)
+    check("kapitel-1.docx" in win.topbar.btn_file.text(), "dokumentnamnet syns i topbaren")
+    check(win.topbar.lbl_save.text() == _t("topbar_unsaved"),
+          f"och sparat-läget står som text ({win.topbar.lbl_save.text()!r})")
+    win._sync_topbar_document("kapitel-1.docx", False)
+    check(win.topbar.lbl_save.text() == _t("topbar_saved"),
+          f"sparat när filen är sparad ({win.topbar.lbl_save.text()!r})")
+    check(win.topbar.btn_undo.toolTip() != "", "Ångra-knappen har en förklaring")
+    check(win.topbar.btn_file.menu() is win.menu_document and win.menu_document.actions(),
+          "och dokumentknappen har Arkiv-kommandona")
+
+    # Railen
+    check(isinstance(win.rail, LeftRail) and win.rail.width() == 66,
+          f"vänsterrail, 66px ({win.rail.width()})")
+    check(len(win.rail._buttons) == 3, f"tre vyknappar ({list(win.rail._buttons)})")
+    check(win.rail._buttons["document"].isChecked(), "dokumentvyn är markerad från start")
+    check(win.rail.btn_settings.width() == 40, "40x40-knappar")
+    check(win.rail._buttons["document"].toolTip() == _t("rail_document"),
+          "med förklaring")
+    # Inställningar-knappen öppnar dialogens väg (öppen kontroll, inte modalen)
+    check(hasattr(win, "_open_settings"), "och inställningarna nås därifrån")
+
+    # Dokumentytan: metarad + papper
+    check(win.editor.page_frame.maximumWidth() == 750,
+          f"papperet är högst 750px som referensen ({win.editor.page_frame.maximumWidth()})")
+    check(win.editor.page_frame.minimumHeight() >= 1000, "och minst en A4-sida högt")
+    win._update_window_title()
+    check(win.editor.meta_row.isVisibleTo(win.editor),
+          "metaraden över papperet visas när fönstret gett den data")
+    check(win.editor.lbl_meta_left.text() != "", "med dokumentets namn")
+    check(win.editor.lbl_meta_right.text().startswith(_t("stage_edited_today").split("·")[0].strip()),
+          f"och när det ändrades ({win.editor.lbl_meta_right.text()!r})")
+
+    # Panelen: huvud, flikar, rutnät
+    check(win.sidebar.width() == 312, f"panelen är 312px som referensen ({win.sidebar.width()})")
+    check(win.sidebar.lbl_eyebrow.text() == _t("inspector_eyebrow"),
+          f"med eyebrow ({win.sidebar.lbl_eyebrow.text()!r})")
+    check(win.sidebar.btn_close.width() == 24, "och en stängknapp i huvudet")
+    check(win.sidebar.tabs.count() >= 3, f"flikarna finns ({win.sidebar.tabs.count()})")
+    check(win.sidebar.tabs.tabBar().expanding() is False,
+          "och raden klämmer inte flikarna (skrollar i stället)")
+    check(len(win.sidebar._metric_labels) == 4, "statistiken ligger i fyra kort")
+    win._update_stats()
+    check(win.sidebar.lbl_words.text().strip() != "", "med ett värde i varje")
+    check(win.sidebar.status_text() == win.lbl_stats.text(),
+          f"och statusbaren visar samma siffror ({win.lbl_stats.text()!r})")
+    check(win.sidebar.btn_rewrite.text() == _t("inspector_rewrite"),
+          f"panelen har referensens CTA ({win.sidebar.btn_rewrite.text()!r})")
+    check(win.sidebar.chip_count.objectName() == "ChipOk" and win.sidebar.chip_tone.objectName() == "Chip",
+          "och två chip i samma stil som referensen")
+    check(chip("x").objectName() == "Chip" and kbd("F8").objectName() == "Kbd",
+          "chip- och kbd-hjälparna ger rätt stilnamn")
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

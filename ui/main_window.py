@@ -1,7 +1,8 @@
 import os
+from datetime import datetime
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFileDialog,
-    QMessageBox, QLabel, QSplitter, QStatusBar, QApplication,
+    QMessageBox, QLabel, QSplitter, QStatusBar, QApplication, QMenuBar,
     QStackedWidget, QMenu, QDialog, QPushButton, QInputDialog, QTextEdit
 )
 from PyQt6.QtCore import Qt, QTimer, QPoint, QMarginsF
@@ -26,6 +27,7 @@ from ui.code_dialog import CodeDialog
 from ui.template_dialog import TemplateDialog
 from ui.project_dialog import NewProjectDialog
 from ui.binder_panel import BinderPanel
+from ui.chrome import LeftRail, TopBar
 from ui.scene_inspector import SceneInspector
 from ui.scrivenings import ScriveningsView
 from core.project import Project
@@ -96,6 +98,9 @@ class MainWindow(QMainWindow):
         self.sidebar.apply_suggestion_requested.connect(self._apply_ai_suggestion)
         self.sidebar.outline_item_clicked.connect(self._navigate_to_position)
         self.sidebar.btn_refresh.clicked.connect(self._trigger_ai_review)
+        self.sidebar.close_requested.connect(self._toggle_sidebar)
+        self.sidebar.rewrite_requested.connect(
+            lambda: self._open_inline_ai(self.editor.textCursor().selectedText(), None))
 
         # Popups
         self.inline_ai = InlineAIPopup(self.ai, self.theme_mgr, self)
@@ -175,7 +180,29 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.scrivenings)
         self._scrivenings_index = self.stack.indexOf(self.scrivenings)
 
-        self.setCentralWidget(self.stack)
+        # Appskalet: topbaren läggs i fönstrets menyplats (då hamnar den över
+        # verktygsraden, som referensen), och railen + stacken blir innehållet.
+        self.topbar = TopBar(self)
+        self.topbar.undo_requested.connect(lambda: self.active_canvas.undo())
+        self.topbar.redo_requested.connect(lambda: self.active_canvas.redo())
+        self.topbar.help_requested.connect(self._show_about)
+        # Egen menyrad inuti topbaren. Fönstrets egen menyrad hade tagit
+        # tillbaka sin plats ovanför innehållet (och gjort topbaren osynlig).
+        self.menu_bar = QMenuBar(self.topbar)
+        self.topbar.set_menu_bar(self.menu_bar)
+        self.setMenuWidget(self.topbar)
+
+        self.rail = LeftRail(self)
+        self.rail.view_requested.connect(self._on_rail_view)
+        self.rail.settings_requested.connect(self._open_settings)
+
+        self.shell = QWidget(self)
+        rad = QHBoxLayout(self.shell)
+        rad.setContentsMargins(0, 0, 0, 0)
+        rad.setSpacing(0)
+        rad.addWidget(self.rail)
+        rad.addWidget(self.stack, 1)
+        self.setCentralWidget(self.shell)
 
         # 3. Formatting Toolbar
         self.toolbar = FormattingToolBar(self.editor, self.theme_mgr, self)
@@ -227,8 +254,29 @@ class MainWindow(QMainWindow):
         self.status_bar.addPermanentWidget(self.lbl_cursor)
         self.status_bar.addPermanentWidget(self.btn_lang_toggle)
 
+        # 5. Appskalet enligt referensen: topbar (64px) överst med menyraden
+        # inuti, och en 66px-rail längst till vänster. Se
+        # docs/design/omascribe-ui-spec.md. Railen äger ingen data — den byter vy.
         # Gör valvets anteckningar tillgängliga som [[förslag]] direkt
         self._refresh_link_titles()
+
+    def _on_rail_view(self, key: str) -> None:
+        """Railen byter vy. Varje knapp gör något som redan finns: visa
+        dokumentet, visa filerna (projektets träd, annars listan över senaste)
+        eller öppna mallarna."""
+        if not hasattr(self, "rail"):
+            return
+        self.rail.set_active(key)
+        if key == "document":
+            self.show_editor_screen()
+        elif key == "files":
+            if self.project is not None:
+                self.binder.setVisible(True)
+                self.show_editor_screen()
+            else:
+                self.show_start_screen()
+        elif key == "templates":
+            self.open_template_dialog()
 
     def _add_action(self, menu, text, slot, shortcut=None):
         act = QAction(text, self)
@@ -240,7 +288,7 @@ class MainWindow(QMainWindow):
         return act
 
     def init_menus(self):
-        mb = self.menuBar()
+        mb = self.menu_bar
 
         # File Menu
         self.menu_file = mb.addMenu(_("menu_file"))
@@ -371,6 +419,18 @@ class MainWindow(QMainWindow):
         # Help Menu
         self.menu_help = mb.addMenu(_("menu_help"))
         self.act_about = self._add_action(self.menu_help, _("menu_help_about"), self._show_about)
+
+        # Dokumentknappen i topbaren: samma kommandon som Arkiv, samlade på
+        # det ställe referensen har dem (filnamnet högst upp till vänster).
+        self.menu_document = QMenu(self)
+        self.menu_document.addAction(self.act_new)
+        self.menu_document.addAction(self.act_open)
+        self.menu_document.addAction(self.menu_recent.menuAction())
+        self.menu_document.addSeparator()
+        self.menu_document.addAction(self.act_save)
+        self.menu_document.addAction(self.act_save_as)
+        if getattr(self, "topbar", None) is not None:
+            self.topbar.set_file_menu(self.menu_document)
 
     def _update_recent_menu(self):
         self.menu_recent.clear()
@@ -534,18 +594,18 @@ class MainWindow(QMainWindow):
             self.lbl_stats.setText(_("scrivenings_stats", words=words))
             return
         self.sidebar.update_metrics_and_outline(self.editor.document)
-        stats = self.sidebar.lbl_words.text()
-        chars = self.sidebar.lbl_chars.text()
-        self.lbl_stats.setText(f"{stats} | {chars}")
+        self.lbl_stats.setText(self.sidebar.status_text())
 
     def _update_window_title(self):
         if self.stack.currentIndex() == 0:
             self.setWindowTitle(_("app_name"))
+            self._sync_topbar_document("", False)
             return
         if self.project is not None:
             if self.stack.currentIndex() == getattr(self, "_scrivenings_index", -1):
                 self.setWindowTitle(
                     f"{self.project.title} — {_('menu_view_scrivenings')} — {_('app_name')}")
+                self._sync_topbar_document(self.project.title, self.is_modified)
                 return
             scene = ""
             if self.active_scene_id:
@@ -556,10 +616,27 @@ class MainWindow(QMainWindow):
             mod_flag = " •" if self.is_modified else ""
             parts = [self.project.title] + ([scene] if scene else [])
             self.setWindowTitle(f"{' — '.join(parts)}{mod_flag} — {_('app_name')}")
+            self._sync_topbar_document(parts[-1], self.is_modified)
             return
         doc_name = os.path.basename(self.current_filepath) if self.current_filepath else _("untitled_document")
         mod_flag = " •" if self.is_modified else ""
         self.setWindowTitle(f"{doc_name}{mod_flag} — {_('app_name')}")
+        self._sync_topbar_document(doc_name, self.is_modified)
+
+    def _sync_topbar_document(self, name: str, modified: bool) -> None:
+        """Håller topbarens dokumentknapp och sparat-läge i takt med fönstret.
+
+        Sparat-läget syns som text också — punkten är färg, orden är beskedet.
+        """
+        if getattr(self, "topbar", None) is None:
+            return
+        self.topbar.set_document_name(name)
+        self.topbar.set_modified(modified)
+        tid = None
+        if self.current_filepath and os.path.exists(self.current_filepath):
+            tid = datetime.fromtimestamp(os.path.getmtime(self.current_filepath))
+        self.editor.set_stage_meta(
+            name, _("stage_edited_today", time=(tid or datetime.now()).strftime("%H:%M")))
 
     def _on_review_timer_fired(self):
         if self.stack.currentIndex() == 1:
@@ -638,14 +715,14 @@ class MainWindow(QMainWindow):
         """
         if self.isFullScreen():
             self.showNormal()
-            self.menuBar().setVisible(True)
+            self.menu_bar.setVisible(True)
             self.status_bar.setVisible(True)
             if self.stack.currentIndex() == 1:
                 self.toolbar.setVisible(True)
                 self.sidebar.setVisible(self.config.get("show_ai_sidebar", True))
         else:
             self.showFullScreen()
-            self.menuBar().setVisible(False)
+            self.menu_bar.setVisible(False)
             self.status_bar.setVisible(False)
             self.toolbar.setVisible(False)
             self.sidebar.setVisible(False)

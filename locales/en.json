@@ -728,5 +728,22 @@
   "instructions_title": "Project instructions",
   "instructions_label": "What should the AI keep to in this book? (tone, tense, names, anything that must stay consistent)",
   "instructions_saved": "Project instructions saved",
-  "instructions_needs_project": "Open a project first"
+  "instructions_needs_project": "Open a project first",
+  "menu_file_overview": "Project overview…",
+  "overview_title": "Project overview",
+  "overview_no_project": "No project open",
+  "overview_words": "Words vs target",
+  "overview_per_day": "words/writing day",
+  "overview_quota": "Left to deadline",
+  "overview_scenes": "Scenes",
+  "overview_status": "Status",
+  "overview_drafts": "Drafts",
+  "overview_threads": "Threads",
+  "overview_none": "—",
+  "overview_no_status": "no status",
+  "overview_notes": "Notes in the vault",
+  "overview_links": "Links with no note",
+  "overview_links_ok": "every link leads somewhere",
+  "overview_instructions": "Project instructions for the AI",
+  "overview_draft": "Draft {n}"
 }

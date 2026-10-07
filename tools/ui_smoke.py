@@ -1437,6 +1437,84 @@ def main() -> int:
           "och ett tomt fält ger systemprompten tillbaka orörd")
     check(win.act_instructions is not None, "menyn har en väg till fältet")
 
+    print("\n30. Projektöversikten (fas 2.16)")
+
+    from core.i18n import _ as tr
+    from ui.overview_dialog import OverviewDialog, overview_rows
+    from core.vault import Vault
+
+    # ett valv med en anteckning som länkar till en som inte finns
+    valvmapp = tempfile.mkdtemp(prefix="omascribe-valv-")
+    with open(os.path.join(valvmapp, "Märta.md"), "w", encoding="utf-8") as handtag:
+        handtag.write("Hon har nyckeln. Se [[Källaren]] och [[Märta]].\n")
+    valv = Vault(valvmapp)
+    valv.scan()
+
+    rader = dict(overview_rows(ovningsbok, valv))
+    from core.i18n import i18n
+    scener = list(ovningsbok.manuscript())
+    mal = f'{int(ovningsbok.settings.get("target_words") or 0):,}'.replace(",", " ")
+    check(len(rader) >= 8, f"översikten har raderna den ska ({len(rader)})")
+    check(str(ovningsbok.total_words()) == rader[tr("overview_words")].split(" /")[0].strip(),
+          f"orden räknas ur projektet ({rader[tr('overview_words')]})")
+    check(mal in rader[tr("overview_words")], f"målet står bredvid ({mal})")
+    check(rader[tr("overview_scenes")] == str(len(scener)),
+          f"scenerna räknas ({rader[tr('overview_scenes')]})")
+    check("nyckeln" in rader[tr("overview_instructions")].lower()
+          or rader[tr("overview_instructions")] != "",
+          "projektets instruktioner syns, i kortform")
+    check(rader[tr("overview_notes")] == "1", "en anteckning i valvet räknas")
+    lanter = rader[tr("overview_links")]
+    check("Källaren" in lanter and "Märta" not in lanter,
+          f"länken utan anteckning visas, den som finns gör det inte ({lanter})")
+    check(rader[tr("overview_status")] != "" and rader[tr("overview_drafts")] != "",
+          f"status och utkast räknas ur scenerna "
+          f"({rader[tr('overview_status')]} · {rader[tr('overview_drafts')]})")
+
+    check(rader[tr("overview_drafts")].startswith(tr("overview_draft", n=1)),
+          f"utkastet skrivs ut med namn, inte som en siffra ({rader[tr('overview_drafts')]})")
+
+    # Qts egna standardknappar: svenska i en svensk dialog
+    from PyQt6.QtWidgets import QDialogButtonBox
+    def _knapptexter():
+        ruta = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        return ruta.button(QDialogButtonBox.StandardButton.Close).text().replace("&", "")
+    check(win._qt_translator is not None or i18n.current_lang != "sv",
+          f"appen har Qts svenska översättning ({i18n.current_lang})")
+    check(_knapptexter() == "Stäng",
+          f"och stäng-knappen är svensk, inte 'Close' ({_knapptexter()!r})")
+    i18n.set_language("en")
+    app.processEvents()
+    check(_knapptexter() == "Close",
+          f"och engelsk igen när språket byts ({_knapptexter()!r})")
+    _fangat = {}
+    win.ai.suggest = lambda category, **kw: _fangat.update(kw)
+    win._ask_exercise(None, "next")
+    check(_fangat.get("lang") == "English",
+          f"och AI-frågan följer språket ({_fangat.get('lang')!r})")
+    i18n.set_language("sv")
+    app.processEvents()
+    win.ai.suggest = riktig_suggest
+    check(_knapptexter() == "Stäng", "och svensk igen")
+    # dagskvoten: en deadline ger en siffra, och den ska vara grupperad som ordmålet
+    ovningsbok.settings["deadline"] = "2026-12-01"
+    ovningsbok.settings["target_words"] = 90000
+    rader = dict(overview_rows(ovningsbok, valv))
+    kvot = rader[tr("overview_quota")]
+    forvantad = f'{ovningsbok.daily_quota():,}'.replace(",", " ")
+    check(tr("overview_per_day") in kvot and forvantad in kvot,
+          f"dagskvoten är märkt och grupperad som målet ({kvot})")
+
+    # menyn och rutan
+    check(win.act_overview is not None, "arkivmenyn har en väg hit")
+    oppnade = []
+    riktig_exec = OverviewDialog.exec
+    OverviewDialog.exec = lambda self: (oppnade.append(self), 0)[1]
+    win._open_overview()
+    OverviewDialog.exec = riktig_exec
+    check(len(oppnade) == 1, "och menyvalet öppnar översikten")
+    oppnade[0].close()
+
     # Arken: ett ark per sida med ett mellanrum där ytan syns, och texten delad
     # mellan rader. Mätt i en riktig rendering, med temats färger.
     from PyQt6.QtCore import QPointF as QtPunkt, QRect as QtRect

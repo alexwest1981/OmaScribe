@@ -267,3 +267,22 @@
   texten sparas trimmad, och ett tomt fält ger prompten tillbaka orörd.
 - **Kvar av fas 2:** 2.16 projektöversikt, samt 2.7 (pauspåminnelser), 2.11 (namngenerator) och
   2.13 (blurb/synopsis) som är markerade låg. Synopsis finns redan per scen.
+
+### Fas 2.16: projektöversikten — och en appvid knappbugg som skärmdumpen avslöjade
+
+- **Status:** complete, grindad (423 rökprov + 54 renhetsprov, GRÖNT).
+- **Arkiv → Projektöversikt** (Ctrl+Shift+O) visar var boken står på ett ställe: ord mot mål,
+  dagskvot mot deadline, scener, status, utkast, trådar, antal anteckningar i valvet, länkar som
+  inte leder någonstans, och projektets AI-instruktioner i kortform. Allt räknas ur projektet och
+  valvet som redan finns; `overview_rows(project, vault)` är ren och provas mot oberoende räkningar.
+- **Valvet som projektlager** i vyn, inte på disken: hans anteckningar ligger kvar i en samling och
+  länkarna mellan dem fungerar som förut. Att dela valvet per bok är ett eget beslut — det rör hans
+  egna filer, så det byggs inte utan att han säger till.
+- Rutan är så hög som innehållet (292 px, mätt i skärmdump) och knappen är svensk.
+- **Bugg hittad och åtgärdad på vägen (appvid):** en svensk dialog visade engelska standardknappar
+  ("Close", "Cancel") — Qt:s egna knapptexter kommer ur Qts översättningar, och appen installerade
+  aldrig någon `QTranslator`. Nu laddas `qtbase_sv.qm` (systemets, med fallback till Qts egen
+  sökväg) vid start och vid språkbyte, och översättaren hålls i fönstret så att den inte dör.
+  Mätt: en ny knapprad ger Ok/Stäng/Avbryt på svenska, OK/Close/Cancel på engelska, och tillbaka.
+  Samma mätning avslöjade att AI-övningarnas språk läste `i18n.language` som inte finns (föll
+  tyst tillbaka på svenska) — rätt attribut är `i18n.current_lang`.

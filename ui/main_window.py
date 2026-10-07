@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (
     QMessageBox, QLabel, QSplitter, QStatusBar, QApplication, QMenuBar,
     QStackedWidget, QMenu, QDialog, QPushButton, QInputDialog, QTextEdit
 )
+from PyQt6 import QtCore
 from PyQt6.QtCore import Qt, QTimer, QPoint, QMarginsF
 from PyQt6.QtGui import QAction, QKeySequence, QPalette, QTextCursor, QPageLayout, QPageSize, QCursor
 from PyQt6.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
@@ -33,6 +34,7 @@ from ui.writing_log_panel import WritingLogPanel
 from ui.codex_panel import CodexPanel
 from ui.plot_grid import PlotGrid
 from ui.exercise_dialog import ExerciseDialog
+from ui.overview_dialog import OverviewDialog
 from core.font_manager import install_dropdown_style
 from ui.scrivenings import ScriveningsView
 from core.project import Project
@@ -54,6 +56,8 @@ class MainWindow(QMainWindow):
         # regler får Qt att välja meny-läget, och stilen svarar nej på det. En gång
         # här, före gränssnittet, så att applikationen äger stilen.
         install_dropdown_style()
+        self._qt_translator = None
+        self._install_qt_translations()
 
         self.current_filepath = None
         self.is_modified = False
@@ -338,6 +342,8 @@ class MainWindow(QMainWindow):
         self.act_new_template = self._add_action(self.menu_file, "🎨 " + _("menu_file_new_template"), self.open_template_dialog, "Ctrl+Shift+T")
         self.act_instructions = self._add_action(self.menu_file, "📌 " + _("menu_file_instructions"),
                                                  self._edit_ai_instructions)
+        self.act_overview = self._add_action(self.menu_file, "📊 " + _("menu_file_overview"),
+                                             self._open_overview, "Ctrl+Shift+O")
         self.act_open = self._add_action(self.menu_file, _("menu_file_open"), self.file_open, "Ctrl+O")
         self.menu_file.addSeparator()
         self.act_new_project = self._add_action(self.menu_file, "📚 " + _("menu_file_new_project"), self.new_project)
@@ -1124,7 +1130,7 @@ class MainWindow(QMainWindow):
             selection=markerat,
             scene_note=(node.note if node else ""),
             chapter=(node.title if node else ""),
-            lang=("svenska" if getattr(i18n, "language", "sv") == "sv" else "English"),
+            lang="svenska" if i18n.current_lang == "sv" else "English",
         )
 
     def _insert_exercise(self, suggestion: str) -> None:
@@ -1136,6 +1142,39 @@ class MainWindow(QMainWindow):
         self._save_project_manifest()
         self.scene_inspector.set_scene(self.project, self.project.by_id(node.id))
         self.status_bar.showMessage(_("exercise_saved"), 5000)
+
+    def _install_qt_translations(self) -> None:
+        """Qts egna standardknappar på rätt språk (OK, Avbryt, Stäng).
+
+        Appens egna texter översätts av i18n, men QDialogButtonBox hämtar sina
+        knapptexter ur Qts egna översättningar — utan den här raden står det
+        "Close" i en svensk dialog. Översättaren hålls i self, för en
+        QTranslator som dör tas bort igen.
+        """
+        språk = i18n.current_lang
+        app = QApplication.instance()
+        if app is None:
+            return
+        if getattr(self, "_qt_translator", None) is not None:
+            app.removeTranslator(self._qt_translator)
+            self._qt_translator = None
+        if språk == "sv":
+            kataloger = [QtCore.QLibraryInfo.path(QtCore.QLibraryInfo.LibraryPath.TranslationsPath),
+                         "/usr/share/qt6/translations"]
+            for katalog in kataloger:
+                if not katalog:
+                    continue
+                if self._qt_translator is None:
+                    self._qt_translator = QtCore.QTranslator()
+                if self._qt_translator.load("qtbase_sv", katalog) and app.installTranslator(self._qt_translator):
+                    break
+
+    def _open_overview(self) -> None:
+        """Var boken står: framsteg, ogjort, trådar och anteckningar på ett ställe."""
+        if self.project is None:
+            self.status_bar.showMessage(_("instructions_needs_project"), 5000)
+            return
+        OverviewDialog(self.project, self.vault, self).exec()
 
     def _edit_ai_instructions(self) -> None:
         """Projektets egna instruktioner till AI:n (R03.18).
@@ -1940,6 +1979,7 @@ class MainWindow(QMainWindow):
         self._update_stats()
 
     def retranslate_ui(self):
+        self._install_qt_translations()
         self.lbl_ai_status.setText("✨ " + _("status_ai_ready"))
         self.lbl_dict_status.setText("🎙️ " + _("status_dictation_idle"))
         self._update_lang_toggle_btn()
@@ -1950,6 +1990,7 @@ class MainWindow(QMainWindow):
         self.act_new.setText(_("menu_file_new"))
         self.act_new_template.setText("🎨 " + _("menu_file_new_template"))
         self.act_instructions.setText("📌 " + _("menu_file_instructions"))
+        self.act_overview.setText("📊 " + _("menu_file_overview"))
         self.act_open.setText(_("menu_file_open"))
         self.menu_recent.setTitle(_("menu_file_recent"))
         self.act_save.setText(_("menu_file_save"))

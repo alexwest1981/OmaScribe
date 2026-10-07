@@ -728,5 +728,22 @@
   "instructions_title": "Projektets instruktioner",
   "instructions_label": "Vad ska AI:n hålla sig till i den här boken? (ton, tempus, namn, sådant som ska vara lika hela vägen)",
   "instructions_saved": "Projektets instruktioner sparade",
-  "instructions_needs_project": "Öppna ett projekt först"
+  "instructions_needs_project": "Öppna ett projekt först",
+  "menu_file_overview": "Projektöversikt…",
+  "overview_title": "Projektöversikt",
+  "overview_no_project": "Inget projekt öppet",
+  "overview_words": "Ord mot mål",
+  "overview_per_day": "ord/skrivdag",
+  "overview_quota": "Kvar till deadline",
+  "overview_scenes": "Scener",
+  "overview_status": "Status",
+  "overview_drafts": "Utkast",
+  "overview_threads": "Trådar",
+  "overview_none": "—",
+  "overview_no_status": "utan status",
+  "overview_notes": "Anteckningar i valvet",
+  "overview_links": "Länkar utan anteckning",
+  "overview_links_ok": "alla länkar leder någonstans",
+  "overview_instructions": "Projektets instruktioner till AI:n",
+  "overview_draft": "Utkast {n}"
 }

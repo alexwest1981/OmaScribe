@@ -55,6 +55,16 @@ class SceneInspector(QWidget):
         self.input_synopsis.textChanged.connect(self._on_synopsis_edited)
         form.addRow(_("scene_synopsis"), self.input_synopsis)
 
+        self.input_note = QPlainTextEdit()
+        self.input_note.setPlaceholderText(_("scene_note_hint"))
+        self.input_note.setFixedHeight(60)
+        self._note_timer = QTimer(self)
+        self._note_timer.setSingleShot(True)
+        self._note_timer.setInterval(600)
+        self._note_timer.timeout.connect(self._apply_note)
+        self.input_note.textChanged.connect(self._on_note_edited)
+        form.addRow(_("scene_note"), self.input_note)
+
         self.combo_status = QComboBox()
         self.combo_status.setEditable(True)
         self.combo_status.currentTextChanged.connect(self._apply_status)
@@ -132,20 +142,22 @@ class SceneInspector(QWidget):
         self._loading = True
         try:
             has = project is not None and node is not None
-            for widget in (self.input_title, self.input_synopsis, self.combo_status,
-                           self.input_labels, self.input_pov, self.spin_target,
-                           self.spin_revision):
+            for widget in (self.input_title, self.input_synopsis, self.input_note,
+                           self.combo_status, self.input_labels, self.input_pov,
+                           self.spin_target, self.spin_revision):
                 widget.setEnabled(has)
             self.lbl_hint.setVisible(not has)
             if not has:
                 self.input_title.clear()
                 self.input_synopsis.setPlainText("")
+                self.input_note.setPlainText("")
                 self.input_labels.clear()
                 self.input_pov.clear()
                 self.lbl_words.setText("")
                 return
             self.input_title.setText(node.title)
             self.input_synopsis.setPlainText(node.synopsis)
+            self.input_note.setPlainText(node.note)
             statuses = list(project.settings.get("statuses") or [])
             self.combo_status.clear()
             self.combo_status.addItem("")
@@ -259,6 +271,20 @@ class SceneInspector(QWidget):
             self.node.synopsis = text
             self.meta_changed.emit()
 
+    def _on_note_edited(self) -> None:
+        if self._loading:
+            return
+        self._note_timer.start()
+
+    def _apply_note(self) -> None:
+        """Scenanteckningen sparas som allt annat i noden — den rör inte prosan."""
+        if self._loading or self.node is None:
+            return
+        text = self.input_note.toPlainText()
+        if text != self.node.note:
+            self.node.note = text
+            self.meta_changed.emit()
+
     def _apply_status(self, value) -> None:
         if self._loading or self.node is None:
             return
@@ -305,6 +331,7 @@ class SceneInspector(QWidget):
     def retranslate_ui(self) -> None:
         self.lbl_hint.setText(_("scene_no_project"))
         self.input_synopsis.setPlaceholderText(_("scene_synopsis_hint"))
+        self.input_note.setPlaceholderText(_("scene_note_hint"))
         self.input_labels.setPlaceholderText(_("scene_labels_hint"))
         self.spin_target.setSpecialValueText(_("scene_target_none"))
         self._update_words()

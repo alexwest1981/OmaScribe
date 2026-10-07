@@ -557,5 +557,7 @@
   "scene_material_link": "Koppla researchmaterial till scenen",
   "scene_material_unlink": "Ta bort kopplingen",
   "scene_material_open": "Dubbelklicka för att öppna",
-  "scene_material_left": "{count} att koppla"
+  "scene_material_left": "{count} att koppla",
+  "scene_note": "Anteckning",
+  "scene_note_hint": "Din egen notering om scenen. Följer med projektet, aldrig med i texten."
 }

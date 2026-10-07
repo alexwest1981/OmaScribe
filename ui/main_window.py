@@ -1176,6 +1176,17 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------- valv & anteckningar
 
     def _current_note_title(self):
+        """Namnet valvpanelen slår upp backlinks med.
+
+        I ett projekt heter filen '0001-scen-1', vilket ingen skriver i sina
+        anteckningar — där används scenens rubrik i stället, så [[Scen 1]] i
+        valvet hittar sin scen.
+        """
+        if self.project is not None and self.active_scene_id:
+            try:
+                return self.project.by_id(self.active_scene_id).title
+            except KeyError:
+                return ""
         if not self.current_filepath:
             return ""
         return os.path.splitext(os.path.basename(self.current_filepath))[0]

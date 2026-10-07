@@ -14,12 +14,14 @@ taget (`ui/main_window.py:663`). Se `findings.md`.
 
 ## Next Step
 
-Fas 1.11: anteckningar och kommentarer per scen (knyter ihop med valvet, R01.12).
-Därefter 1.12 projektmallar och 1.13 scenkopplingar.
+Fas 1.12: projektmallar — Roman, Fackbok, novell med binderstruktur och
+statusvärden, skilda från dokumentmallarna. Därefter 1.13 scenkopplingar.
+Kvar att slutföra: kommentarer i texten (1.11), statusfärg (1.5) och redigering
+i läsvyn (1.7).
 
 ## Current Phase
 
-Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.4 samt 1.6 och 1.8–1.10 klara)
+Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.4, 1.6, 1.8–1.10 klara)
 
 ## Arbetsregler
 
@@ -68,7 +70,7 @@ Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.4 samt 1.6 och 1.8–1.10 klara
 - [x] **1.8** Ordräkningsmål per scen, kapitel och projekt, summerat i hierarkin. R01.10
 - [x] **1.9** Samlingar: manuella grupper och sparade sökningar, utan att ändra binderordningen. R01.8
 - [x] **1.10** Researchmapp: källor, länkar och bilder skilda från manuset, uteslutna ur export. R01.7
-- [ ] **1.11** Anteckningar och kommentarer per scen (knyter ihop med valvet). R01.12
+- [~] **1.11** Anteckningar och kommentarer per scen (knyter ihop med valvet). R01.12 — *scenanteckningen och valvkopplingen klara; kommentarer fästa i själva texten kvar (kräver ankare som håller vid redigering — eget steg)*
 - [ ] **1.12** Projektmallar: Roman, Fackbok, novell — binderstruktur + statusvärden, separat från dokumentmallarna. R01.13, R03.8
 - [ ] **1.13** Scener och scenkopplingar: scen som enhet med sammanfattning, POV och kopplade entiteter. R04.2
 - [ ] **1.14** Manusvarianter och alternativa strukturer. R01.14 — *låg*

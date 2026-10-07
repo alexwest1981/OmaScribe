@@ -332,6 +332,18 @@ def main() -> int:
     insp.spin_revision.setValue(3)
     check(forsta.revision == 3, "utkastnumret sätts")
 
+    # scenanteckningen hör till scenen och rör inte prosan (R01.12)
+    ord_fore = bok.words(forsta.id)
+    insp.input_note.setPlainText("Kolla: hon har nyckeln redan här.")
+    insp._apply_note()
+    check(forsta.note.startswith("Kolla"), f"scenanteckningen sparas ({forsta.note!r})")
+    check(bok.words(forsta.id) == ord_fore,
+          f"och ordantalet rörs inte ({bok.words(forsta.id)} mot {ord_fore})")
+    check(Bok.load(projektmapp).by_id(forsta.id).note.startswith("Kolla"),
+          "anteckningen ligger på disk")
+    check(win._current_note_title() == forsta.title,
+          f"valvpanelen slår upp scenens namn ({win._current_note_title()!r})")
+
     # kortet visar statusen, och ett klick på kortet öppnar scenen
     check("Bearbetning" in kort.list.item(0).text(),
           f"kortet visar statusen ({kort.list.item(0).text()!r})")

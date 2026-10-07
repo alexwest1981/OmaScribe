@@ -557,5 +557,7 @@
   "scene_material_link": "Attach research material to the scene",
   "scene_material_unlink": "Remove the link",
   "scene_material_open": "Double-click to open",
-  "scene_material_left": "{count} to attach"
+  "scene_material_left": "{count} to attach",
+  "scene_note": "Note",
+  "scene_note_hint": "Your own note about the scene. Stays in the project, never in the text."
 }

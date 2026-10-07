@@ -94,6 +94,7 @@ class ProjectNode:
     parent: str | None = None
     order: int = 0
     synopsis: str = ""
+    note: str = ""                     # författarens egen anteckning om scenen (R01.12)
     status: str = ""
     labels: list[str] = field(default_factory=list)
     target_words: int = 0
@@ -109,6 +110,7 @@ class ProjectNode:
             "parent": self.parent,
             "order": self.order,
             "synopsis": self.synopsis,
+            "note": self.note,
             "status": self.status,
             "labels": list(self.labels),
             "target_words": self.target_words,
@@ -128,6 +130,7 @@ class ProjectNode:
             parent=d.get("parent"),
             order=int(d.get("order", 0)),
             synopsis=d.get("synopsis", ""),
+            note=d.get("note", ""),
             status=d.get("status", ""),
             labels=list(d.get("labels") or []),
             target_words=int(d.get("target_words", 0)),
@@ -791,6 +794,17 @@ def _self_check() -> int:
             check(False, "okänt samlings-id skall ge KeyError")
         except KeyError:
             check(True, "okänt samlings-id ger KeyError")
+
+        # scenanteckningen hör till scenen, inte till manuset (R01.12)
+        fore_ord = book.words(scene.id)
+        book.set_meta(scene.id, note="Kolla kapitel 3: hon har nyckeln redan här.")
+        check(book.by_id(scene.id).note.startswith("Kolla kapitel 3"), "scenanteckningen sparas")
+        check(book.words(scene.id) == fore_ord,
+              f"och räknas inte in i prosan ({book.words(scene.id)} mot {fore_ord})")
+        book.save()
+        med_anteckning = Project.load(root)
+        check(med_anteckning.by_id(scene.id).note.startswith("Kolla kapitel 3"),
+              "scenanteckningen följer med till disk")
 
         # borttagning tar barnen med sig och filen försvinner
         scene_file = book.path_of(book.by_id(scene.id))

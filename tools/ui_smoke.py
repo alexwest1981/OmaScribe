@@ -1031,6 +1031,45 @@ def main() -> int:
     check(not win.topbar.btn_undo.icon().isNull(), "Ångra i topbaren har en ikon")
     check(win.topbar.btn_file.icon().isNull() is False, "och dokumentknappen med")
 
+    # Arkets slut: brytningen ritas vid papprets innermått, mätt i en riktig
+    # rendering. Egen yta med temats färger (fönstret i rökprovet har ingen
+    # utlagd geometri) — falsifierbart: ingenting ritas när sidvisningen är av.
+    from ui.editor_view import DocumentCanvas
+    from PyQt6.QtCore import QRect as QtRect
+    theme_mgr.apply_theme_to_app(app)
+    ark = DocumentCanvas()
+    ark.resize(646, 1200)
+    ark.show()
+    mening = "En mening med några ord, så att raden blir lagom lång. "
+    for stycken in (60, 240):                       # säkert över två sidor
+        ark.setHtml("<p>" + mening * stycken + "</p>")
+        for _ in range(3):
+            app.processEvents()
+        if ark.document().size().height() > ark.PAGE_HEIGHT_PX + 60:
+            break
+    brytningsrad = 150                              # mitten av den avlånga bilden
+
+    def gråa_i_marginalen(bild, rad: int) -> int:
+        """Gråa pixlar i papprets vänstermarginal (x < textkolumnens kant, så
+        bokstäverna aldrig räknas in). -1 om raden ligger utanför bilden."""
+        if not (0 <= rad < bild.height()):
+            return -1
+        return sum(1 for x in range(4, 30) if bild.pixelColor(x, rad).lightness() < 250)
+
+    rutan = QtRect(0, ark.PAGE_HEIGHT_PX - brytningsrad, ark.width(), 300)
+    bild = ark.grab(rutan).toImage()
+    vid = gråa_i_marginalen(bild, brytningsrad)
+    ovan = gråa_i_marginalen(bild, brytningsrad - 60)
+    check(vid > 0 and ovan == 0,
+          f"arkets slut syns som en brytning i papprets marginal ({vid} gråa px, {ovan} ovanför)")
+
+    ark.paged_view_enabled = False
+    for _ in range(2):
+        app.processEvents()
+    utan = gråa_i_marginalen(ark.grab(rutan).toImage(), brytningsrad)
+    ark.paged_view_enabled = True
+    check(utan == 0, "och ingenting ritas när sidvisningen är avstängd")
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

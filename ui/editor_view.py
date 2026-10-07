@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
     QApplication, QLabel, QSizePolicy, QListWidget, QListWidgetItem, QMessageBox
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QRectF, QPointF, QByteArray, QBuffer, QIODevice, QUrl
+from PyQt6.QtGui import QLinearGradient, QFontMetricsF
 from PyQt6.QtGui import (
     QTextDocument, QTextCursor, QTextCharFormat, QTextBlockFormat,
     QTextTableFormat, QTextTableCellFormat, QTextFrameFormat, QTextLength,
@@ -374,93 +375,129 @@ class DocumentCanvas(QTextEdit):
         self.setTextCursor(cursor)
 
     # ---------------------------------------------------------------- Siduppdelning & Sidnummer
+    #
+    # Pappret är en sammanhängande yta och texten flödar fritt över den (som i
+    # en vanlig editor), så en sida ritas som ett märke vid papprets innermått:
+    # sidnumret i foten och — mellan två ark — en synlig brytning. Brytningen
+    # tonar över texten i stället för att dölja den: orden som korsar den är
+    # kvar och läsbara, men det syns att arket tar slut och nästa börjar.
+    PAGE_SEAM_PX = 9            # brytningens halva höjd
+    SEAM_ALPHA_TEXT = 100       # över textkolumnen (texten ska synas igenom)
+    SEAM_ALPHA_MARGIN = 235     # i sidmarginalen (där finns ingen text)
+
+    def _page_geometry(self):
+        """(antal sidor, sidhöjd, skrolläge, viewportens bredd, höjd) eller None."""
+        doc = self.document()
+        vp = self.viewport()
+        if doc is None or vp is None:
+            return None
+        page_h = self.PAGE_HEIGHT_PX
+        count = max(1, int(math.ceil(doc.size().height() / float(page_h))))
+        sb = self.verticalScrollBar()
+        return count, page_h, (sb.value() if sb is not None else 0), vp.width(), vp.height()
+
     def paintEvent(self, e):
         super().paintEvent(e)
 
-        # Rita siduppdelning, sidbrytningslinjer och sidnummer i editorn
+        # Sidnummer och arkens brytningar ritas ovanpå texten
         if not self.paged_view_enabled:
             return
-
-        doc = self.document()
-        if doc is None:
+        geo = self._page_geometry()
+        if geo is None:
             return
-        doc_height = doc.size().height()
-        page_h = self.PAGE_HEIGHT_PX
-        page_count = max(1, int(math.ceil(doc_height / float(page_h))))
+        count, page_h, scroll_y, vp_w, _vp_h = geo
 
-        vp = self.viewport()
-        if vp is None:
-            return
-        viewport_w = vp.width()
-        sb = self.verticalScrollBar()
-        scroll_y = sb.value() if sb is not None else 0
-
-        painter = QPainter(vp)
+        painter = QPainter(self.viewport())
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
-
         try:
-            for i in range(page_count):
-                page_num = i + 1
+            for i in range(count):
                 page_bottom_y = int((i + 1) * page_h - scroll_y)
-                page_top_y = int(i * page_h - scroll_y)
-
-                # 1. Rita sidfot med sidnummer
-                if self.page_settings.get("page_numbering", True):
-                    skip_first = bool(self.page_settings.get("skip_first_page", False)) and (i == 0)
-                    if not skip_first:
-                        fmt_type = self.page_settings.get("page_number_format", "page_of_total")
-                        if fmt_type == "number":
-                            page_str = str(page_num)
-                        elif fmt_type == "hyphen":
-                            page_str = f"— {page_num} —"
-                        elif fmt_type == "slash":
-                            page_str = f"{page_num} / {page_count}"
-                        else:
-                            page_str = _("pdf_page_n_of_total", n=page_num, total=page_count)
-
-                        num_pos = str(self.page_settings.get("page_number_pos", "bottom-center"))
-                        if num_pos in ("bottom-alternating", "top-alternating"):
-                            is_right = (page_num % 2 == 1)
-                            align = Qt.AlignmentFlag.AlignRight if is_right else Qt.AlignmentFlag.AlignLeft
-                        elif "right" in num_pos:
-                            align = Qt.AlignmentFlag.AlignRight
-                        elif "left" in num_pos:
-                            align = Qt.AlignmentFlag.AlignLeft
-                        else:
-                            align = Qt.AlignmentFlag.AlignHCenter
-
-                        painter.setFont(QFont("sans-serif", 9))
-                        painter.setPen(QColor(print_style.PAPER_MUTED))
-                        
-                        # Footer-yta
-                        footer_rect = QRectF(24, page_bottom_y - 28, viewport_w - 48, 20)
-                        painter.drawText(footer_rect, align | Qt.AlignmentFlag.AlignVCenter, page_str)
-
-                # 2. Rita tydlig sidseparation mellan sidorna
-                if i < page_count - 1:
-                    # Skuggad separationslinje
-                    pen_sep = QPen(QColor(print_style.PAPER_RULE), 1.0, Qt.PenStyle.DashLine)
-                    painter.setPen(pen_sep)
-                    painter.drawLine(18, page_bottom_y, viewport_w - 18, page_bottom_y)
-
-                    # Bricka med sidmarkör i mitten
-                    badge_text = f" {_('editor_page_badge', n=page_num + 1)} "
-                    painter.setFont(QFont("sans-serif", 8, QFont.Weight.Bold))
-                    painter.setPen(Qt.PenStyle.NoPen)
-                    painter.setBrush(QBrush(QColor(print_style.PAPER_TINT)))
-
-                    # Sidmärket ligger i papprets högermarginal — där finns
-                    # plats, och då klipper det inte texten.
-                    bw = len(badge_text) * 7.5 + 16
-                    bx = max(6.0, viewport_w - bw - 8)
-                    by = page_bottom_y - 9
-                    painter.drawRoundedRect(QRectF(bx, by, bw, 18), 9, 9)
-
-                    painter.setPen(QColor(print_style.PAPER_MUTED))
-                    painter.drawText(QRectF(bx, by, bw, 18), Qt.AlignmentFlag.AlignCenter, badge_text)
+                self._paint_page_number(painter, i, count, page_bottom_y, vp_w)
+                if i < count - 1:
+                    self._paint_page_seam(painter, page_bottom_y, vp_w)
         finally:
             painter.end()
+
+    def _paint_page_seam(self, painter: QPainter, y: int, vp_w: int) -> None:
+        """Brytningen mellan två ark: ett grått band över hela pappret, tydligt
+        i sidmarginalerna (där ingen text finns) och tonat över textkolumnen."""
+        h = self.PAGE_SEAM_PX
+        kolumn = max(1, int(self.document().documentMargin()))
+        band = (
+            (0, kolumn, self.SEAM_ALPHA_MARGIN),
+            (kolumn, vp_w - 2 * kolumn, self.SEAM_ALPHA_TEXT),
+            (vp_w - kolumn, kolumn, self.SEAM_ALPHA_MARGIN),
+        )
+        for x, w, alpha in band:
+            if w <= 0:
+                continue
+            ton = QLinearGradient(0.0, float(y - h), 0.0, float(y + h))
+            genomskinlig = QColor(print_style.PAPER_TINT_STRONG)
+            genomskinlig.setAlpha(0)
+            mitt = QColor(print_style.PAPER_RULE)
+            mitt.setAlpha(alpha)
+            ton.setColorAt(0.0, genomskinlig)
+            ton.setColorAt(0.5, mitt)
+            ton.setColorAt(1.0, genomskinlig)
+            painter.fillRect(QRectF(float(x), float(y - h), float(w), float(2 * h)), QBrush(ton))
+
+        # Arkets kant: en tunn linje över pappret
+        kant = QColor(print_style.PAPER_RULE)
+        kant.setAlpha(140)
+        painter.setPen(QPen(kant, 1.0))
+        painter.drawLine(0, y, vp_w, y)
+
+    def _paint_page_number(self, painter: QPainter, i: int, count: int,
+                           page_bottom_y: int, vp_w: int) -> None:
+        """Sidnumret vid arkets slut, som en bricka i papprets sidmarginal.
+
+        Texten flödar fritt över pappret, så det finns ingen tom fot att sätta
+        siffran i — därför ligger den i marginalen, där ingen text finns. Ett
+        långt format ("Sida 38 av 39") får inte plats där och kortas då till
+        siffran; inställningen gäller oförändrat för utskrift och export.
+        """
+        if not self.page_settings.get("page_numbering", True):
+            return
+        page_num = i + 1
+        if bool(self.page_settings.get("skip_first_page", False)) and i == 0:
+            return
+
+        fmt_type = self.page_settings.get("page_number_format", "page_of_total")
+        if fmt_type == "number":
+            page_str = str(page_num)
+        elif fmt_type == "hyphen":
+            page_str = f"— {page_num} —"
+        elif fmt_type == "slash":
+            page_str = f"{page_num} / {count}"
+        else:
+            page_str = _("pdf_page_n_of_total", n=page_num, total=count)
+
+        num_pos = str(self.page_settings.get("page_number_pos", "bottom-center"))
+        if num_pos in ("bottom-alternating", "top-alternating"):
+            höger = (page_num % 2 == 1)
+        elif "left" in num_pos:
+            höger = False
+        else:
+            höger = True          # center/right: högermarginalen (där är närmast)
+
+        font = QFont("sans-serif", 9)
+        painter.setFont(font)
+        marginal = max(20.0, float(self.document().documentMargin()))
+        for kand in (page_str, str(page_num)):
+            bredd = QFontMetricsF(font).horizontalAdvance(kand) + 12.0
+            if bredd <= marginal - 4.0:
+                page_str = kand
+                break
+        y = float(page_bottom_y - 26)
+        x = (vp_w - bredd - 2.0) if höger else 2.0
+
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QBrush(QColor(print_style.PAPER_TINT)))
+        painter.drawRoundedRect(QRectF(x, y, bredd, 18.0), 9.0, 9.0)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.setPen(QColor(print_style.PAPER_MUTED))
+        painter.drawText(QRectF(x, y, bredd, 18.0), Qt.AlignmentFlag.AlignCenter, page_str)
 
     # ---------------------------------------------------------------- markeringar
 

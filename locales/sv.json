@@ -475,7 +475,6 @@
   "callout_warning": "Observera",
   "callout_quote": "Citat",
   "callout_placeholder": "Skriv din text här...",
-  "editor_page_badge": "Sida {n}",
   "templates_dialog_title": "Dokumentmallar",
   "templates_dialog_sub": "Välj en färdig mall — rena svartvita dokument som går direkt till PDF, utskrift eller Word.",
   "template_loaded": "Mall inläst",

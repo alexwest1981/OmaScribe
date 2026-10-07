@@ -475,7 +475,6 @@
   "callout_warning": "Caution",
   "callout_quote": "Quote",
   "callout_placeholder": "Type your text here...",
-  "editor_page_badge": "Page {n}",
   "templates_dialog_title": "Document Templates",
   "templates_dialog_sub": "Pick a ready-made template — clean black-and-white documents that go straight to PDF, print, or Word.",
   "template_loaded": "Template loaded",

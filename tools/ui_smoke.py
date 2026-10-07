@@ -984,6 +984,53 @@ def main() -> int:
     check(chip("x").objectName() == "Chip" and kbd("F8").objectName() == "Kbd",
           "chip- och kbd-hjälparna ger rätt stilnamn")
 
+    # Pappret: A4 krymper inte, ytan skrollar i stället
+    from ui.editor_view import (PAGE_WIDTH_PX, PAGE_HEIGHT_PX, PAGE_MARGIN_TOP,
+                                PAGE_MARGIN_BOTTOM, CANVAS_PAGE_PX, DocumentCanvas)
+    check(win.editor.page_frame.width() == PAGE_WIDTH_PX,
+          f"pappret har fast A4-bredd ({win.editor.page_frame.width()})")
+    check(win.editor.page_frame.minimumWidth() == win.editor.page_frame.maximumWidth() == PAGE_WIDTH_PX,
+          "samma minimum och maximum — det går inte att krympa")
+    check(abs(PAGE_HEIGHT_PX / PAGE_WIDTH_PX - 1.414) < 0.01,
+          f"och A4-förhållande ({PAGE_HEIGHT_PX / PAGE_WIDTH_PX:.3f})")
+    check(DocumentCanvas.PAGE_HEIGHT_PX == CANVAS_PAGE_PX ==
+          PAGE_HEIGHT_PX - PAGE_MARGIN_TOP - PAGE_MARGIN_BOTTOM,
+          f"sidmärkena räknar papprets innermått ({DocumentCanvas.PAGE_HEIGHT_PX})")
+    check(win.editor.scroll_area.horizontalScrollBarPolicy() == QtNS.ScrollBarPolicy.ScrollBarAsNeeded,
+          "och ytan får skrolla i sidled när fönstret är smalare än pappret")
+
+    # Panelen är infälld från början (den tar 312px av texten)
+    from core.config import DEFAULT_CONFIG
+    check(DEFAULT_CONFIG["show_ai_sidebar"] is False,
+          "AI-panelen är infälld i standardinställningen")
+    check(win.rail.btn_settings.width() == 40, "inställningarna når panelen igen")
+
+    # Menyraden sitter centrerad i topbaren, inte klistrad i överkanten
+    check(win.menu_bar.height() == 34, f"menyraden är 34px i en 64px-rad ({win.menu_bar.height()})")
+    check(win.menu_bar.height() < win.topbar.height(), "alltså centreras den av layouten")
+
+    # Ikoner
+    from PyQt6.QtCore import Qt as QtNS
+    from ui import icons
+    check(icons.has("file-text"), "lucide-ikonerna ligger i resources/icons")
+    ikon = icons.icon("file-text", "#3366ff", 18)
+    check(not ikon.isNull(), "och går att rita")
+    if not ikon.isNull():
+        bild = ikon.pixmap(18, 18).toImage()
+        px = [bild.pixelColor(x, y) for x in range(0, bild.width(), 2)
+              for y in range(0, bild.height(), 2)]
+        synliga = [c for c in px if c.alpha() > 40]
+        check(bool(synliga) and synliga[0].name().lower().startswith("#3"),
+              f"i den färg som efterfrågades ({synliga[0].name() if synliga else '-'})")
+    check(icons.icon("finns-inte", "#000000", 16).isNull(),
+          "och en saknad ikon ger tom ikon (knappen behåller sin text)")
+    check(not win.rail._buttons["document"].icon().isNull(),
+          "railens knappar bär ikoner")
+    check(win.rail._buttons["document"].text() == "",
+          "och ingen dubbel text bredvid")
+    check(not win.topbar.btn_undo.icon().isNull(), "Ångra i topbaren har en ikon")
+    check(win.topbar.btn_file.icon().isNull() is False, "och dokumentknappen med")
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

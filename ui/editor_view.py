@@ -18,6 +18,17 @@ from core import directives, richtext, print_style
 from core.doc_manager import DEFAULT_PAGE_SETTINGS
 from ui.chrome import set_tracking
 
+# Papprets mått. Referensen har 750px bred sida; A4 är 1:√2, alltså 750 × 1060.
+# Ramens inre marginal är papprets marginal, och den synliga sidan inuti pappret
+# är det som sidmärkena räknar — därför räknas CANVAS_PAGE_PX fram ur dem i
+# stället för att skrivas som ett eget tal någon annanstans.
+PAGE_WIDTH_PX = 750
+PAGE_MARGIN_X = 52
+PAGE_MARGIN_TOP = 34
+PAGE_MARGIN_BOTTOM = 42
+PAGE_HEIGHT_PX = 1060
+CANVAS_PAGE_PX = PAGE_HEIGHT_PX - PAGE_MARGIN_TOP - PAGE_MARGIN_BOTTOM
+
 
 class WikiLinkHighlighter(QSyntaxHighlighter):
     """Färgar [[wikilänkar]] så att de syns som länkar och inte som vanlig text.
@@ -71,8 +82,9 @@ class DocumentCanvas(QTextEdit):
     wikilink_activated = pyqtSignal(str)         # [[mål]] följt med Ctrl+klick
     directives_converted = pyqtSignal(int)       # antal [kodblock]/[citat] som blev block
 
-    # Sidhöjd i pixlar för A4-simulering vid visning
-    PAGE_HEIGHT_PX = 1080
+    # En sidas höjd *inuti* pappret. Sidmärkena ritas vid denna höjd, så den
+    # måste vara papprets innermått — annars hamnar märkena mitt i texten.
+    PAGE_HEIGHT_PX = CANVAS_PAGE_PX
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -438,8 +450,10 @@ class DocumentCanvas(QTextEdit):
                     painter.setPen(Qt.PenStyle.NoPen)
                     painter.setBrush(QBrush(QColor(print_style.PAPER_TINT)))
 
+                    # Sidmärket ligger i papprets högermarginal — där finns
+                    # plats, och då klipper det inte texten.
                     bw = len(badge_text) * 7.5 + 16
-                    bx = (viewport_w - bw) / 2.0
+                    bx = max(6.0, viewport_w - bw - 8)
                     by = page_bottom_y - 9
                     painter.drawRoundedRect(QRectF(bx, by, bw, 18), 9, 9)
 
@@ -707,6 +721,9 @@ class EditorView(QWidget):
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        # Pappret är alltid 750px brett; krymper fönstret får ytan skrolla.
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
         # Dokumentytan enligt referensen: en metarad ovanför papperet, och
         # papperet så brett referensen har det (750) i A4-höjd.
@@ -742,15 +759,17 @@ class EditorView(QWidget):
         # Page Container (Simulating A4 paper)
         self.page_frame = QFrame()
         self.page_frame.setObjectName("PageFrame")
-        self.page_frame.setMinimumWidth(360)
-        self.page_frame.setMaximumWidth(750)              # referensen: max-width 750
-        self.page_frame.setMinimumHeight(1060)            # A4 vid 750px
-        self.page_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        # A4 tar A4-plats: bredden är fast, den krymper inte med fönstret —
+        # blir fönstret smalare får ytan skrolla i stället.
+        self.page_frame.setFixedWidth(PAGE_WIDTH_PX)
+        self.page_frame.setMinimumHeight(PAGE_HEIGHT_PX)
+        self.page_frame.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
 
         page_layout = QVBoxLayout(self.page_frame)
         # Referensens inre marginal är 70px upp och 88px i sidled. Dokumentet
         # har redan 36px egen marginal, så ramen lägger till resten.
-        page_layout.setContentsMargins(52, 34, 52, 42)
+        page_layout.setContentsMargins(PAGE_MARGIN_X, PAGE_MARGIN_TOP,
+                                       PAGE_MARGIN_X, PAGE_MARGIN_BOTTOM)
 
         self.canvas = DocumentCanvas(self.page_frame)
         page_layout.addWidget(self.canvas)

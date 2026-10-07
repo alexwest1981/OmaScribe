@@ -134,7 +134,7 @@ class MainWindow(QMainWindow):
         self.splitter.addWidget(self.editor)
 
         self.sidebar = SidebarInspector(self.ai, self.theme_mgr, self)
-        self.sidebar.setVisible(self.config.get("show_ai_sidebar", True))
+        self.sidebar.setVisible(self.config.get("show_ai_sidebar", False))
 
         # Anteckningspanelen som egen flik bredvid granskning/disposition
         self.vault.scan()
@@ -182,7 +182,7 @@ class MainWindow(QMainWindow):
 
         # Appskalet: topbaren läggs i fönstrets menyplats (då hamnar den över
         # verktygsraden, som referensen), och railen + stacken blir innehållet.
-        self.topbar = TopBar(self)
+        self.topbar = TopBar(self.theme_mgr, self)
         self.topbar.undo_requested.connect(lambda: self.active_canvas.undo())
         self.topbar.redo_requested.connect(lambda: self.active_canvas.redo())
         self.topbar.help_requested.connect(self._show_about)
@@ -192,7 +192,7 @@ class MainWindow(QMainWindow):
         self.topbar.set_menu_bar(self.menu_bar)
         self.setMenuWidget(self.topbar)
 
-        self.rail = LeftRail(self)
+        self.rail = LeftRail(self.theme_mgr, self)
         self.rail.view_requested.connect(self._on_rail_view)
         self.rail.settings_requested.connect(self._open_settings)
 
@@ -489,7 +489,7 @@ class MainWindow(QMainWindow):
     def show_editor_screen(self):
         self.stack.setCurrentIndex(1)
         self.toolbar.setVisible(True)
-        self.sidebar.setVisible(self.config.get("show_ai_sidebar", True))
+        self.sidebar.setVisible(self.config.get("show_ai_sidebar", False))
         self.status_bar.setVisible(True)
         self._update_window_title()
         self._update_stats()
@@ -719,7 +719,7 @@ class MainWindow(QMainWindow):
             self.status_bar.setVisible(True)
             if self.stack.currentIndex() == 1:
                 self.toolbar.setVisible(True)
-                self.sidebar.setVisible(self.config.get("show_ai_sidebar", True))
+                self.sidebar.setVisible(self.config.get("show_ai_sidebar", False))
         else:
             self.showFullScreen()
             self.menu_bar.setVisible(False)

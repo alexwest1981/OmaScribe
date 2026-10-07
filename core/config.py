@@ -34,7 +34,9 @@ DEFAULT_CONFIG = {
     "default_font_family": "DejaVu Serif",
     "default_font_size": 12,
     "zoom_level": 100,
-    "show_ai_sidebar": True,
+    # Panelen är infälld från början: den tar 312px och texten ska ha dem.
+    # Verktygsradens "Inspector"-knapp fäller ut den igen.
+    "show_ai_sidebar": False,
     "sidebar_active_tab": 0,
     # Neutral standard för den som installerar appen. Ingen privat slutpunkt
     # bakas in — användaren anger sin egen leverantör och nyckel i

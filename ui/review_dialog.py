@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.i18n import _
-from core.revisions import apply_changes, blocks, changes, plain
+from core.revisions import apply_changes, blocks, changes, formatting_changes, plain
 
 MARK = {"added": "+", "removed": "−", "changed": "~"}
 KEPT = "✓"          # behålls
@@ -55,6 +55,14 @@ class ReviewDialog(QDialog):
             rubrik = QLabel(_("review_since", label=label))
             rubrik.setStyleSheet("color: palette(mid);")
             layout.addWidget(rubrik)
+
+        # Formateringen hålls åtskild från textändringarna (R02.15): den sägs i
+        # en rad, och läggs inte in som ändringar att ta ställning till.
+        formatering = formatting_changes(before_html, after_html)
+        if formatering:
+            lbl_format = QLabel(_("review_formatting", n=len(formatering)))
+            lbl_format.setStyleSheet("color: palette(mid);")
+            layout.addWidget(lbl_format)
 
         delad = QSplitter(Qt.Orientation.Vertical)
 

@@ -778,5 +778,8 @@
   "review_no_point": "Ingen punkt att jämföra mot än — öppna historiken och spara en",
   "review_none": "Inga ändringar sedan senaste punkten",
   "review_before": "före granskning",
-  "review_applied": "Texten är granskad"
+  "review_applied": "Texten är granskad",
+  "history_review": "Granska mot texten nu",
+  "history_review_tip": "Jämför punkten med scenen som den är nu, och besluta per stycke",
+  "review_formatting": "Samma text, annan formatering i {n} stycken — formateringen hålls åtskild från ändringarna"
 }

@@ -14,10 +14,10 @@ taget (`ui/main_window.py:663`). Se `findings.md`.
 
 ## Next Step
 
-Fas 3 punkt 3.2 (spårade ändringar som operationer med acceptera/avvisa) — den tunga
-biten — och därefter 3.4/3.5 (jämförelse av dokument och formatering) samt 3.7/3.8
-(AI-kommentarer i marginalen och acceptans per stycke). 2.7, 2.11 och 2.13 är kvar i
-fas 2 och markerade låg
+Fas 3 punkt 3.7/3.8 (AI-kommentarer i marginalen i stället för överskrivning, och
+acceptans per stycke för AI-förslag som egna undo-steg) — de kopplar ihop AI-arbetet i
+fas 2 med revisionslagret i fas 3. Kvar i fas 3 är också textdiff inom ett ändrat stycke
+(3.2) och 3.6:s historik är klar. 2.7, 2.11 och 2.13 är kvar i fas 2 och markerade låg
 (tidslinje och plot-tavla) som är nästa större punkt. Rutnätet i 2.9 bygger på
 scenmodellen och på att scenens status redan finns.
 
@@ -142,8 +142,18 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       svar går till samma citat. Kommentarer som sparades innan trådar fanns får sin tomma lista av
       `setdefault`, så gamla projekt öppnas som förut. Tråden hänger kvar under en löst kommentar.
       R02.2
-- [ ] **3.4** Jämför dokument och slå ihop versioner. R02.3
-- [ ] **3.5** Jämförelse av formatering, separat från textdiff. R02.15
+- [x] **3.4** Jämför dokument och slå ihop versioner: granskningen kan nu köras mot **vilken punkt
+      som helst**, inte bara den senaste — historiken har knappen "Granska mot texten nu", och
+      fönstret kör samma väg som för senaste punkten. Originalet förblir orört: punkten läses,
+      texten jämförs, och ingenting skrivs förrän granskningen är verkställd (forskningens
+      blackline-arbetsflöde). Provat: mot den äldsta punkten syns ändringen sedan dess, mot den
+      senaste färre och utan den äldre ändringen — det är skillnaden mellan att välja original.
+      Själva sammanslagningen är densamma som acceptans per stycke gav i 3.2. R02.3
+- [x] **3.5** Jämförelse av formatering, separat från textdiff: formateringen hålls utanför
+      ändringarna. `formatting_changes()` räknar de stycken där **texten är oförändrad men
+      markupen inte** (kursiv, indragning, rader) och rutan säger det i en rad ovanför listan i
+      stället för att göra dem till ändringar man ska ta ställning till. Provat: kursiv text ger
+      noll textändringar men en formateringsnot. R02.15
 - [x] **3.6** Versionshistorik och återställning i ett samlat flöde: historiken öppnas med
       osparade ändringar, och de sparas först — annars jämförs punkterna mot en text på disk som är
       äldre än den man ser. En återställning sparar texten som låg där **först** som en egen punkt

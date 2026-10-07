@@ -119,6 +119,10 @@ class SnapshotStore:
             items = [item for item in items if item.source == source_path]
         return sorted(items, key=lambda item: (item.created, item.id), reverse=True)
 
+    def get(self, snapshot_id: str) -> Snapshot:
+        """Punkten med det id:t. Samma uppslag som det interna, för anropare."""
+        return self._find(snapshot_id)
+
     def _find(self, snapshot_id: str) -> Snapshot:
         for item in self._load():
             if item.id == snapshot_id:

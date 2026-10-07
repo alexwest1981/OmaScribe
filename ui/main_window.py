@@ -1161,7 +1161,7 @@ class MainWindow(QMainWindow):
         self.status_bar.showMessage(_("exercise_saved"), 5000)
 
     def _open_review(self) -> None:
-        """Vad som ändrats sedan senaste punkten, med ett beslut per stycke (R02.1).
+        """Vad som ändrats sedan senaste punkten (R02.1).
 
         Ändringarna räknas ur samma jämförelse som historiken visar: punkten mot
         texten på disk nu. Finns inget att granska sägs det i statusfältet i
@@ -1179,18 +1179,46 @@ class MainWindow(QMainWindow):
         if not punkter:
             self.status_bar.showMessage(_("review_no_point"), 5000)
             return
-        senaste = punkter[0]
-        före = self.project.snapshots().read(senaste.id)
+        self._open_review_against(punkter[0].id)
+
+    def _open_review_against(self, snapshot_id: str) -> None:
+        """Granskar en vald punkt mot texten på disk nu (R02.3).
+
+        Samma väg som för den senaste punkten, och originalet förblir orört:
+        punkten läses, texten jämförs, och ingenting skrivs förrän granskningen
+        är verkställd. Är det bara formateringen som skiljer sägs det i rutan i
+        stället för att visas som ändringar (R02.15).
+        """
+        if self.project is None or not self.active_scene_id:
+            self.status_bar.showMessage(_("history_needs_scene"), 5000)
+            return
+        path = self.project.scene_path(self.active_scene_id)
+        if path is None:
+            self.status_bar.showMessage(_("history_needs_scene"), 5000)
+            return
+        self._flush_scene(quiet=True)
+        store = self.project.snapshots()
+        try:
+            punkt = store.get(snapshot_id)
+            före = store.read(snapshot_id)
+        except Exception:                                  # noqa: BLE001
+            self.status_bar.showMessage(_("review_no_point"), 5000)   # punkten är borta
+            return
         nu = self.project.read(self.active_scene_id)
-        if not revisions.changes(före, nu):
+        if not revisions.changes(före, nu) and not revisions.formatting_changes(före, nu):
             self.status_bar.showMessage(_("review_none"), 5000)
             return
-        etikett = (f"{HistoryDialog._lokal_tid(senaste.created)} · "
-                   f"{senaste.label or _('history_automatic')}")
+        etikett = (f"{HistoryDialog._lokal_tid(punkt.created)} · "
+                   f"{punkt.label or _('history_automatic')}")
         dialog = ReviewDialog(före, nu, etikett, self)
         dialog.apply_requested.connect(
             lambda beslut, f=före, n=nu: self._apply_review(f, n, beslut))
         dialog.exec()
+
+    def _review_from_history(self, dialog, snapshot_id: str) -> None:
+        """Stänger historiken och granskar punkten — en modal ruta i taget."""
+        dialog.accept()
+        self._open_review_against(snapshot_id)
 
     def _apply_review(self, before_html: str, after_html: str, decisions: list) -> None:
         """Skriver texten som granskningen beslutade — med en punkt före ingreppet."""
@@ -1219,6 +1247,8 @@ class MainWindow(QMainWindow):
         self._flush_scene(quiet=True)
         dialog = HistoryDialog(self.project.snapshots(), str(path), self)
         dialog.restore_requested.connect(self._restore_snapshot)
+        dialog.review_requested.connect(
+            lambda pid, d=dialog: self._review_from_history(d, pid))
         dialog.exec()
 
     def _restore_snapshot(self, snapshot_id: str) -> None:

@@ -778,5 +778,8 @@
   "review_no_point": "No point to compare against yet — open the history and save one",
   "review_none": "No changes since the last point",
   "review_before": "before review",
-  "review_applied": "The text has been reviewed"
+  "review_applied": "The text has been reviewed",
+  "history_review": "Review against the text now",
+  "history_review_tip": "Compare the point with the scene as it is now, and decide per paragraph",
+  "review_formatting": "Same text, different formatting in {n} paragraphs — formatting is kept apart from the changes"
 }

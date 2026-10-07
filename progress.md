@@ -384,3 +384,24 @@
   ritas svagt i den här stilen. Raden inleds nu med ✓ (behålls) eller ↩ (ångras) före ändringstecknet,
   så beslutet syns även om formen inte gör det. Sett i skärmdump: rad 1 `✓ ~`, rad 2 `↩ +`, och
   förhandsvisningen stämmer med raderna.
+
+### Fas 3.4 och 3.5: granska mot vilken punkt som helst, och formateringen för sig
+
+- **Status:** complete, grindade (476 rökprov + 54 renhetsprov + revisionernas 38 egna, GRÖNT).
+- **3.4:** historiken har knappen "Granska mot texten nu". Fönstret kör samma väg som för den
+  senaste punkten, så originalvalet är det enda som skiljer — forskningens blackline-arbetsflöde:
+  originalet förblir orört, och ingenting skrivs förrän granskningen är verkställd. Provat: mot den
+  äldsta punkten syns ändringen sedan dess, mot den senaste färre och utan den äldre ändringen.
+- **3.5:** `formatting_changes()` räknar de stycken där texten är oförändrad men markupen inte, och
+  rutan säger det i en rad i stället för att göra dem till ändringar. Provat: kursiv text ger noll
+  textändringar och en formateringsnot.
+- **Två falska ändringar hittade i användning** (samma familj som attribut-fällan i 3.2):
+  1. Qt lägger sin stilmall i `<style>`, och texten där lästes som ett stycke — en ändrad
+     standardstil blev en "ändring" att ta ställning till. `plain()` hoppar nu över dokumentets
+     huvud, och stycken utan läsbar text är varken ändringar eller formateringsnoter.
+  2. `<body>` räknades som ett block, så **inga** stycken hittades i ett Qt-dokument: hela texten
+     blev en enda enhet och styckesgranskningen tappade sin upplösning. Behållare (`html`, `body`)
+     räknas inte i djupet längre. Båda har egna prov nu.
+- **Känd kant, märkt i koden:** parningen följer `difflib`, så ett omskrivet stycke kan visas som
+  borttaget + tillagt när grannstycket också ändrats. En läsare ser det som en omskrivning. Räcker
+  för granskning; skärps med en egen kostnad för parningen om det blir störande.

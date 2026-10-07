@@ -25,6 +25,7 @@ class HistoryDialog(QDialog):
     """Punkterna för en scen, skillnaden mot texten nu, och återställning."""
 
     restore_requested = pyqtSignal(str)          # ögonblicksbildens id
+    review_requested = pyqtSignal(str)           # granska punkten mot texten nu
 
     def __init__(self, store, source: str, parent=None):
         super().__init__(parent)
@@ -68,6 +69,11 @@ class HistoryDialog(QDialog):
         self.btn_new = QPushButton(_("history_new"))
         self.btn_new.clicked.connect(self._ny_punkt)
         knappar.addWidget(self.btn_new)
+        self.btn_review = QPushButton(_("history_review"))
+        self.btn_review.setToolTip(_("history_review_tip"))
+        self.btn_review.clicked.connect(self._review_selected)
+        self.btn_review.setEnabled(False)
+        knappar.addWidget(self.btn_review)
         knappar.addStretch(1)
         self.btn_restore = QPushButton(_("history_restore"))
         self.btn_restore.clicked.connect(self._atervand)
@@ -101,6 +107,7 @@ class HistoryDialog(QDialog):
         else:
             self.visning.setPlainText(_("history_empty"))
         self.btn_restore.setEnabled(bool(rader))
+        self.btn_review.setEnabled(bool(rader))
         self.lbl_status.setText(_("history_count", n=rader))
 
     @staticmethod
@@ -162,6 +169,12 @@ class HistoryDialog(QDialog):
         if punkt is not None:
             self.lbl_status.setText(_("history_saved_point"))
             self.refresh()
+
+    def _review_selected(self) -> None:
+        """Ber fönstret granska den valda punkten mot texten som är nu (R02.3)."""
+        punkt_id = self.selected_id()
+        if punkt_id:
+            self.review_requested.emit(punkt_id)
 
     def _atervand(self) -> None:
         punkt_id = self.selected_id()

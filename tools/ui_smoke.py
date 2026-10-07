@@ -1709,6 +1709,70 @@ def main() -> int:
     win.editor.document.setModified(False)
     win.is_modified = False
 
+    print("\n34. Granska mot en vald punkt, formateringen för sig (fas 3.4 och 3.5)")
+
+    from ui.snapshot_dialog import HistoryDialog
+
+    v1 = "<p>Hon gick in i källaren.</p><p>Nyckeln låg på bordet.</p>"
+    v2 = "<p>Hon smög in i källaren.</p><p>Nyckeln låg på bordet.</p>"
+    v3 = "<p>Hon smög in i källaren.</p><p>Nyckeln låg på bordet och sken.</p>"
+    ovningsbok.write(scen.id, v1)
+    p1 = ovningsbok.snapshot_scene(scen.id, label="första")
+    ovningsbok.write(scen.id, v2)
+    ovningsbok.snapshot_scene(scen.id, label="andra")
+    ovningsbok.write(scen.id, v3)
+    win._show_scene_html(scen.id, v3)
+
+    kursiv = v3.replace("Nyckeln", "<i>Nyckeln</i>")
+    check(rev.changes(v3, kursiv) == [] and rev.formatting_changes(v3, kursiv) == [1],
+          "formateringen hålls åtskild från textändringarna")
+
+    hist = HistoryDialog(ovningsbok.snapshots(), str(ovningsbok.scene_path(scen.id)), win)
+    check(hist.btn_review.isEnabled() and hist.btn_review.text() == tr("history_review"),
+          f"historiken har en granskningsknapp ({hist.btn_review.text()!r})")
+    fangade = []
+    hist.review_requested.connect(lambda pid: fangade.append(pid))
+    for i in range(hist.lst_points.count()):
+        if hist.lst_points.item(i).data(Qt.ItemDataRole.UserRole) == p1.id:
+            hist.lst_points.setCurrentRow(i)
+    hist._review_selected()
+    check(fangade == [p1.id], "och den valda punkten skickas vidare")
+
+    oppnade = []
+    riktig_exec = ReviewDialog.exec
+    ReviewDialog.exec = lambda self: (oppnade.append(self), 0)[1]
+    win._open_review_against(p1.id)
+    ReviewDialog.exec = riktig_exec
+    check(len(oppnade) == 1, "och fönstret öppnar en granskning för just den punkten")
+    ruta2 = oppnade[0]
+    rader_aldst = [ruta2.lst_changes.item(i).text() for i in range(ruta2.lst_changes.count())]
+    check(any("smög" in t for t in rader_aldst),
+          f"mot den äldsta punkten syns ändringen sedan dess ({rader_aldst})")
+    ruta2.close()
+
+    # ... och mot den senaste punkten bara den sista ändringen — det är skillnaden
+    # mellan att välja original: det är det som är jämförelsen (R02.3)
+    oppnade2 = []
+    ReviewDialog.exec = lambda self: (oppnade2.append(self), 0)[1]
+    win._open_review()
+    ReviewDialog.exec = riktig_exec
+    rader_senast = [oppnade2[0].lst_changes.item(i).text()
+                    for i in range(oppnade2[0].lst_changes.count())]
+    check(len(rader_senast) < len(rader_aldst) and not any("smög" in t for t in rader_senast),
+          f"och mot den senaste färre, utan den äldre ändringen ({rader_senast})")
+    oppnade2[0].close()
+    hist.close()
+
+    ruta3 = ReviewDialog(v3, kursiv, "formatering", win)
+    from PyQt6.QtWidgets import QLabel as _QLabel
+    texter = [w.text() for w in ruta3.findChildren(_QLabel)]
+    check(any("formatering" in t for t in texter),
+          f"och rutan säger att det är formateringen ({texter[-1][:60]!r})")
+    check(ruta3.lst_changes.count() == 0, "utan att göra den till en ändring")
+    ruta3.close()
+    win.editor.document.setModified(False)
+    win.is_modified = False
+
     # Arken: ett ark per sida med ett mellanrum där ytan syns, och texten delad
     # mellan rader. Mätt i en riktig rendering, med temats färger.
     from PyQt6.QtCore import QPointF as QtPunkt, QRect as QtRect

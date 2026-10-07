@@ -324,6 +324,44 @@ def main() -> int:
           "panelen töms och stängs när projektet stängs")
     check(insp.lbl_hint.isHidden() is False, "och förklarar varför den är tom")
 
+    print("\n11. Dra-och-släpp och omordning")
+    win._activate_project(bok)
+    binder = win.binder
+    check(binder.tree.dragEnabled() and binder.tree.acceptDrops(),
+          "trädet tar emot drag och släpp")
+    check(binder.corkboard.list.dragEnabled() and binder.corkboard.list.acceptDrops(),
+          "kortvyn tar emot drag och släpp")
+
+    # Romanmallen börjar med en del, så föräldern hämtas ur scenen själv
+    # i stället för att antas ligga på översta nivån.
+    ett = bok.manuscript()[0]
+    tva = bok.manuscript()[1]
+    kap = bok.by_id(ett.parent)
+    check(binder.move_by_drop(tva.id, ett.id, "above") is True, "släpp ovanför en scen flyttar den")
+    check(bok.children(kap.id)[0].id == tva.id, "scen två hamnade först")
+    check(binder.move_by_drop(tva.id, ett.id, "below") is True, "släpp under en scen flyttar tillbaka")
+    check(bok.children(kap.id)[1].id == tva.id, "scen två hamnade sist igen")
+
+    kap2 = bok.add_node(project_mod.CHAPTER, "Kapitel 2")
+    binder.refresh(select_id=tva.id)
+    check(binder.move_by_drop(tva.id, kap2.id, "on") is True, "släpp på ett kapitel lägger scenen inuti")
+    check(bok.by_id(tva.id).parent == kap2.id, "föräldern byttes")
+    check([n.id for n in bok.children(kap.id)] == [ett.id], "kapitel ett har bara en scen kvar")
+
+    # det som inte får gå igenom
+    check(binder.move_by_drop(kap2.id, tva.id, "on") is False,
+          "ett kapitel kan inte flyttas in i sin egen scen")
+    check(binder.move_by_drop(tva.id, tva.id, "on") is False, "en nod kan inte flyttas in i sig själv")
+    check(binder.move_by_drop(tva.id, "", "end") is True, "släpp utanför korten lägger noden sist")
+    check(bok.by_id(tva.id).parent is None and bok.children(None)[-1].id == tva.id,
+          "scenen ligger nu sist på översta nivån")
+
+    # flytten skall ligga på disk, inte bara i minnet
+    igen3 = Bok.load(projektmapp)
+    check(igen3.by_id(tva.id).parent is None, "flytten ligger i manifestet på disk")
+    check(len(igen3.children(kap.id)) == 1, "kapitel ett har en scen i den sparade filen")
+    win._deactivate_project()
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

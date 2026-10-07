@@ -8,7 +8,9 @@ väljs.
 """
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
-from PyQt6.QtWidgets import QListWidget, QListWidgetItem, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (
+    QAbstractItemView, QListWidget, QListWidgetItem, QVBoxLayout, QWidget,
+)
 
 from core.i18n import _, i18n
 
@@ -16,10 +18,56 @@ CARD_WIDTH = 168
 CARD_HEIGHT = 112
 
 
+class _CardList(QListWidget):
+    """Kortlistan rapporterar var ett kort släpptes — den flyttar inget själv.
+
+    Ordningen ägs av projektmodellen (samma skäl som i trädet): flyttar Qt korten
+    själv skulle nästa refresh sudda ut flytten.
+    """
+
+    dropped = pyqtSignal(str, str, str)      # nod, mål, plats (above/below/end)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMovement(QListWidget.Movement.Static)   # Qt får inte flytta korten
+
+    def enable_drag(self) -> None:
+        """Slår på dragning och släpp. Måste ske EFTER setViewMode.
+
+        Qt stänger av drag och släpp när vyn byter till IconMode om movement är
+        Static ("kan inte flyttas av användaren"), så inställningarna här nollas
+        om de görs i __init__ och vyn ställs in efteråt.
+        """
+        self.setDragEnabled(True)
+        self.setAcceptDrops(True)
+        self.setDropIndicatorShown(True)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+
+    def dropEvent(self, event) -> None:
+        node_id = self.currentItem().data(Qt.ItemDataRole.UserRole) if self.currentItem() else None
+        if not node_id:
+            event.ignore()
+            return
+        pos = event.position().toPoint()
+        index = self.indexAt(pos)
+        if not index.isValid():
+            target, placement = "", "end"
+        else:
+            rect = self.visualRect(index)
+            # Korten ligger i rader: över kortsraden = före, i samma rad avgör x.
+            before = pos.y() < rect.center().y() or (
+                pos.y() <= rect.bottom() and pos.x() < rect.center().x())
+            target = index.data(Qt.ItemDataRole.UserRole) or ""
+            placement = "above" if before else "below"
+        event.accept()
+        self.dropped.emit(node_id, target, placement)
+
+
 class Corkboard(QWidget):
     """Manusets scener som kort, i läsordning."""
 
     scene_selected = pyqtSignal(str)
+    card_dropped = pyqtSignal(str, str, str)   # nod, mål, plats — videon rapporterar
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -27,15 +75,16 @@ class Corkboard(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
-        self.list = QListWidget()
+        self.list = _CardList()
         self.list.setViewMode(QListWidget.ViewMode.IconMode)
         self.list.setResizeMode(QListWidget.ResizeMode.Adjust)
-        self.list.setMovement(QListWidget.Movement.Static)   # ordningen ägs av modellen
         self.list.setWordWrap(True)
         self.list.setSpacing(6)
         self.list.setGridSize(QSize(CARD_WIDTH, CARD_HEIGHT))
         self.list.setUniformItemSizes(True)
         self.list.itemClicked.connect(self._on_clicked)
+        self.list.dropped.connect(self.card_dropped)
+        self.list.enable_drag()          # efter setViewMode — se _CardList.enable_drag
         layout.addWidget(self.list)
 
         i18n.language_changed.connect(self.refresh)
@@ -149,6 +198,31 @@ def _self_check() -> int:
     tomt.delete_node(tomt.children(tomt.children(None)[0].id)[0].id)
     board.set_project(tomt)
     check(board.list.count() == 1, "ett projekt utan scener visar förklaringen")
+
+    # släppet: vyn rapporterar var, modellen avgör om det går
+    from PyQt6.QtCore import QMimeData, QPointF
+    from PyQt6.QtGui import QDropEvent
+
+    def drop(pos=(5.0, 5.0)):
+        event = QDropEvent(QPointF(*pos), Qt.DropAction.MoveAction, QMimeData(),
+                           Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
+        board.list.dropEvent(event)
+        return event
+
+    board.set_project(book)
+    board.list.setCurrentRow(0)
+    got = []
+    board.card_dropped.connect(lambda *args: got.append(args))
+    check(board.list.dragEnabled() and board.list.acceptDrops(),
+          "korten kan dras och tar emot släpp")
+    event = drop((5.0, 5.0))                      # utanför korten (ingen yta i provet)
+    check(event.isAccepted(), "ett släpp tas emot")
+    check(got == [(forsta.id, "", "end")], f"och rapporteras som 'sist' ({got})")
+    got.clear()
+    board.list.setCurrentRow(-1)                  # inget kort markerat
+    board.list.dropEvent(QDropEvent(QPointF(5.0, 5.0), Qt.DropAction.MoveAction, QMimeData(),
+                                    Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier))
+    check(got == [], "utan markerat kort händer ingenting")
 
     print(f"corkboard: {checks - len(failures)} av {checks} kontroller gröna")
     for failure in failures:

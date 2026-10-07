@@ -14,13 +14,12 @@ taget (`ui/main_window.py:663`). Se `findings.md`.
 
 ## Next Step
 
-Fas 1 fortsätter med dra-och-släpp i träd och kortvy (1.6) — det är samma
-`move_node` som redan är provad, så det handlar om att koppla `QAbstractItemView`
-till den. Därefter sammanhängande läsvy (1.7) och summerade ordmål i trädet (1.8).
+Fas 1.7: sammanhängande läsvy — flera scener som ett manus i editorn, med
+skiljelinjer och redigerbart innehåll. Därefter summerade ordmål i trädet (1.8).
 
 ## Current Phase
 
-Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.4 klara)
+Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.6 klara)
 
 ## Arbetsregler
 
@@ -64,7 +63,7 @@ Fas 1 — Manusstruktur (fas 0 complete, 1.1–1.4 klara)
 - [x] **1.3** Korktavla och indexkort (`QListView` IconMode, titel + status + synopsis). R01.3
 - [x] **1.4** Synopsis och sammanfattning per scen, i inspector och på kortet. R01.4
 - [~] **1.5** Status och etiketter per scen, redigerbara värdelistor, färg + text. R01.5 — *text klar, färg kvar (statusar är fria strängar i projektet, färgen hör ihop med kortdelegaten)*
-- [ ] **1.6** Dra-och-släpp och omordning i träd och kortvy, atomiskt. R01.11
+- [x] **1.6** Dra-och-släpp och omordning i träd och kortvy, atomiskt. R01.11
 - [ ] **1.7** Sammanhängande läsvy (Scrivenings): flera scener som ett manus. R01.9
 - [~] **1.8** Ordräkningsmål per scen, kapitel och projekt, summerat i hierarkin. R01.10 — *mål och framsteg per scen klart, summeringen i trädet kvar*
 - [ ] **1.9** Samlingar: manuella grupper och sparade sökningar, utan att ändra binderordningen. R01.8

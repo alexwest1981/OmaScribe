@@ -30,6 +30,50 @@ ADD_KINDS = (
 )
 
 
+class _SceneTree(QTreeView):
+    """Träd som rapporterar var ett släpp skedde i stället för att flytta raden själv.
+
+    Låter Qt flytta raden skulle ge en vy som inte stämmer med projektmodellen —
+    och nästa refresh skulle sudda ut flytten. Här är modellen enda ägaren av
+    ordningen: trädet säger bara till, och bindern kör project.move_node.
+    """
+
+    dropped = pyqtSignal(str, str, str)      # nod, mål, plats (above/below/on/end)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setDragEnabled(True)
+        self.setAcceptDrops(True)
+        self.setDropIndicatorShown(True)
+        # Sätt läget sist: setDefaultDropAction(MoveAction) sätter Qt:s läge till
+        # DropOnly och stänger av dragningen — och Qt flyttar ändå inget, för
+        # dropEvent nedan låter bli att anropa super().
+        self.setDragDropMode(QTreeView.DragDropMode.DragDrop)
+
+    def dropEvent(self, event) -> None:
+        dragged = self.currentIndex()
+        if event.source() is not None and event.source() is not self:
+            dragged = event.source().currentIndex()
+        node_id = dragged.data(Qt.ItemDataRole.UserRole)
+        if not node_id:
+            event.ignore()
+            return
+        index = self.indexAt(event.position().toPoint())
+        placement, target = "end", ""
+        if index.isValid():
+            where = self.dropIndicatorPosition()
+            if where == QTreeView.DropIndicatorPosition.OnItem:
+                placement = "on"
+            elif where == QTreeView.DropIndicatorPosition.BelowItem:
+                placement = "below"
+            elif where == QTreeView.DropIndicatorPosition.AboveItem:
+                placement = "above"
+            if placement != "end":
+                target = index.data(Qt.ItemDataRole.UserRole) or ""
+        event.accept()
+        self.dropped.emit(node_id, target, placement)
+
+
 class BinderPanel(QWidget):
     """Trädet över manuset. Ett val säger till vilken scen som skall visas."""
 
@@ -92,7 +136,7 @@ class BinderPanel(QWidget):
         layout.addLayout(buttons)
         self.buttons.extend([self.btn_rename, self.btn_delete, self.btn_up, self.btn_down])
 
-        self.tree = QTreeView()
+        self.tree = _SceneTree()
         self.tree.setHeaderHidden(True)
         self.tree.setEditTriggers(QTreeView.EditTrigger.NoEditTriggers)  # namn byts via knappen
         self.tree.setSelectionMode(QTreeView.SelectionMode.SingleSelection)
@@ -100,6 +144,7 @@ class BinderPanel(QWidget):
         self.model = QStandardItemModel(self.tree)
         self.tree.setModel(self.model)
         self.tree.doubleClicked.connect(self._on_double_clicked)
+        self.tree.dropped.connect(self.move_by_drop)
         self.tree.selectionModel().currentChanged.connect(self._on_current_changed)
 
         # Trädet och korktavlan är två vyer av samma projekt. De ligger i samma
@@ -110,6 +155,7 @@ class BinderPanel(QWidget):
         self.tabs.addTab(self.tree, _("binder_tab_tree"))
         self.corkboard = Corkboard(self)
         self.corkboard.scene_selected.connect(self._on_card_clicked)
+        self.corkboard.card_dropped.connect(self.move_by_drop)
         self.tabs.addTab(self.corkboard, _("binder_tab_cards"))
         i18n.language_changed.connect(self.retranslate_ui)
         layout.addWidget(self.tabs, 1)
@@ -261,6 +307,41 @@ class BinderPanel(QWidget):
         self.project.move_node(node_id, node.parent, target)
         self.structure_changed.emit()
         self.refresh(select_id=node_id)
+
+    def move_by_drop(self, node_id: str, target_id: str, placement: str) -> bool:
+        """Flyttar en nod dit den släpptes. False om släppet avvisas.
+
+        Trädet och kortvyn rapporterar samma sak — nod, mål och plats — så båda
+        hamnar här. Modellen avgör vad som är tillåtet (t.ex. inte in i sig
+        själv); avvisas det får vyn ingen flytt, vilket är rätt svar.
+        """
+        if self.project is None or not node_id or target_id == node_id:
+            return False
+        if not target_id:
+            parent, position = None, len(self.project.children(None))
+        else:
+            try:
+                target = self.project.by_id(target_id)
+            except KeyError:
+                return False
+            if placement == "on" and target.type in project_mod.CONTAINERS:
+                parent, position = target.id, len(self.project.children(target.id))
+            else:
+                if placement == "on":          # släppt på en scen: hamnar efter den
+                    placement = "below"
+                parent = target.parent
+                siblings = [n for n in self.project.children(parent) if n.id != node_id]
+                where = next((i for i, n in enumerate(siblings) if n.id == target.id), None)
+                if where is None:
+                    return False
+                position = where + (1 if placement == "below" else 0)
+        try:
+            self.project.move_node(node_id, parent, position)
+        except ValueError:
+            return False
+        self.structure_changed.emit()
+        self.refresh(select_id=node_id)
+        return True
 
     # ---------------------------------------------------------------------- signaler
 

@@ -126,7 +126,15 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       ligger på disk nu, och en väg tillbaka. En punkt tas automatiskt **när en scen öppnas** (så
       texten finns som den såg ut när man lämnade den), och bara om den skiljer sig från den
       senaste — annars fylls historiken av kopior av samma mening. R01.6, R02.4
-- [ ] **3.2** Spårade ändringar: revisioner som operationer (ankare, gammal/ny text, typ, författare, tid), acceptera/avvisa enskilt. R02.1
+- [~] **3.2** Spårade ändringar som operationer, acceptera/avvisa enskilt: **kärnan är byggd och
+      grindad** — `core/revisions.py` gör ändringar till operationer (typ, gammal och ny text,
+      ankare, stycke) och beslutar per stycke, precis den form forskningen pekar ut. Jämförelsen
+      sker på **blocknivå och läser text**, inte HTML: en omskrivning av attributen räknas inte som
+      en ändring (Qt skriver om dem vid varje sparning, och en naiv HTML-diff vore falska ändringar
+      hela dagen — forskningen varnar för just det). Ett `<ul>` med sina `<li>` är **en** enhet, så
+      ett beslut kan aldrig lämna halv HTML. **Kvar:** rutan som visar ändringarna med Behåll/Ångra
+      per stycke, och vägen dit från menyn (snapshot mot texten nu). Textdiff *inom* ett ändrat
+      stycke är ett eget steg efter det. R02.1
 - [x] **3.3** Kommentarer i marginalen med tråd och "löst": kommentarerna, markeringarna i
       texten, hoppa-till-citatet och **löst** fanns redan färdiga i scenpanelen (kontrollerat, inte
       antaget). Det som saknades var **tråden**: `add_reply()` i projektet, en ↳-knapp i panelen och

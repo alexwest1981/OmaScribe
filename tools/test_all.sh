@@ -68,6 +68,7 @@ run "projektmodellen" "$PY" -m core.project
 run "epub-exporten" "$PY" -m core.epub
 run "snapshots" "$PY" -m core.snapshots
 run "stavningskontrollen" "$PY" -m core.spellcheck
+run "revisionerna" "$PY" -m core.revisions
 run "övningarna" "$PY" -m core.exercises
 run "läsbarheten" "$PY" -m core.document_stats
 run "pagineringen" "$PY" -m core.pagination

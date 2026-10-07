@@ -335,3 +335,26 @@
   en enda kommentar men klippte tråden. Taket följer nu antalet rader (28 + 22 per rad, kapat vid
   260 px) — sett i skärmdump: 5 rader ger 138 px och inget klipps. Två gamla trångmål i panelen
   (flikraden och etikettraden vid ~390 px) står i listan över det som skall åtgärdas senare.
+
+### Fas 3.2 (del 1 av 2): revisioner som operationer
+
+- **Status:** kärnan byggd, grindad (`revisions: 28 kontroller gröna`, plus 452 rökprov och 54
+  renhetsprov). Rutan och menyvägen är kvar.
+- `core/revisions.py`: en ändring är en **operation** — typ (added/removed/changed), gammal och ny
+  text, ett ankare (slutet av stycket före) och vilket stycke den hör till. Det är formen
+  forskningen pekar ut, och den enda som går att besluta om stycke för stycke.
+- **Jämförelsen läser text, inte HTML.** Två stycken som ser olika ut i källkoden men läser
+  likadant är oförändrade — provat: `<p style="...">` mot `<p>` ger **noll** ändringar. Det är
+  hela poängen: Qt skriver om attributen varje gång dokumentet sparas, och en naiv HTML-diff skulle
+  kalla det en ändring varenda gång. Forskningen varnar uttryckligen för falska ändringar i en naiv
+  HTML-diff.
+- **Delningen är en fullständig partition av källtexten**, och varje bit är ett komplett element:
+  ett `<ul>` med sina `<li>` är en enhet. Därför kan inget beslut lämna halv HTML — provat med
+  `"".join(blocks(...)) == html` och med en lista där ett beslut avvisas.
+- Provat: tillägg, borttagning, omskrivning, blandade beslut i rätt ordning (behåll första/avvisa
+  andra och tvärtom), två omskrivna stycken blir **två** beslut (inte en klump), okänt beslut
+  behåller, och ingen ändring ger ingen ändring.
+- **Medvetet:** ett oförändrat stycke behåller filens bytes (jämförelsen är text, filen är källan);
+  garantin är att läsningen blir densamma, och det står i docstringen.
+- **Kvar i 3.2:** rutan med Behåll/Ångra per stycke och menyvägen (senaste punkten mot texten nu),
+  samt textdiff inom ett ändrat stycke.

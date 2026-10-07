@@ -703,6 +703,10 @@ class EditorView(QWidget):
         self.page_frame = PagedPaper(self.canvas, theme_mgr)
         self.paper = self.page_frame
         self.paper.scroll_area = self.scroll_area
+        # Skrivmaskinsläge (2.6): markörens rad hålls mitt i fönstret medan man
+        # skriver. Läget slås på från Visa-menyn och kommer ihåg sig i configen.
+        self.typewriter = False
+        self.canvas.cursorPositionChanged.connect(self._typewriter_follow)
 
         sida_hall = QHBoxLayout()
         sida_hall.setContentsMargins(0, 0, 0, 0)
@@ -716,6 +720,16 @@ class EditorView(QWidget):
 
         self.apply_theme()
         self.theme_mgr.theme_changed.connect(self.apply_theme)
+
+    def set_typewriter_mode(self, on: bool) -> None:
+        """Slår skrivmaskinsläget på eller av. På: centrera markörens rad."""
+        self.typewriter = bool(on)
+        if self.typewriter:
+            self.paper.center_cursor()
+
+    def _typewriter_follow(self) -> None:
+        if self.typewriter:
+            self.paper.center_cursor()
 
     def set_stage_meta(self, left: str, right: str) -> None:
         """Metaraden över papperet: vad dokumentet är och när det ändrades."""

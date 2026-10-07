@@ -14,13 +14,14 @@ taget (`ui/main_window.py:663`). Se `findings.md`.
 
 ## Next Step
 
-Fas 2.6 (skrivmaskinsläge) och 2.8 (karaktärsblad på codex), därefter 2.9
+Fas 2.8 (karaktärsblad och story bible på codex), därefter 2.9
 (tidslinje och plot-tavla) som är nästa större punkt. Rutnätet i 2.9 bygger på
 scenmodellen och på att scenens status redan finns.
 
 ## Current Phase
 
-Fas 2 — Författarlagret (2.1–2.5 klara: skrivloggen, kvot, historik, sprintar).
+Fas 2 — Författarlagret (2.1–2.6 klara: skrivloggen, kvot, historik, sprintar,
+skrivmaskinsläget).
 Fas 0, 0b och 1 är klara. Sedan dess: appskalet följer v0-referensen, och
 pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 
@@ -84,7 +85,7 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 - [x] **2.3** Historik, diagram och svit över faktiska ord per dag: 14 dagar som stapeldiagram (`DayChart`, ritad i widgeten, inga nya beroenden), svit och längsta svit, snitt per skrivdag. R03.3
 - [x] **2.4** Sessionshistorik och skrivlogg i SQLite via `core.writing_log` (som redan fanns och nu äntligen nås): dagens rader med added/removed separat, sessioner som startar vid första ändringen och stängs vid flush/stängning, CSV-export genom en filväljare. Loggen ligger i projektmappen när ett projekt är öppet — bokens dagar hör till boken. R03.4
 - [x] **2.5** Skrivsprintar och timer: 15/25/45/60 minuter, nedräkning i panelen, avbryt, och vid slut en rad i statusfältet plus `QApplication.alert` (diskret — ingen modal). Antalet ord under sprinten räknas och rapporteras. R03.5
-- [ ] **2.6** Skrivmaskinsläge utöver befintligt helskärmsläge: centrerad markör, maxbredd. R03.6
+- [x] **2.6** Skrivmaskinsläge utöver befintligt helskärmsläge: `PagedPaper.center_cursor()` håller markörens rad mitt i fönstret medan man skriver, kopplat till markörens rörelse i `ui/editor_view.py`. Läget slås på i Visa-menyn och kommer ihåg sig i configen. Maxbredden var redan satt — arket är A4 (750 px) och texten kan inte bli bredare. Nära dokumentets slut kan ingen centrering ske (det finns ingen text att skrolla förbi), precis som i Word. R03.6
 - [ ] **2.7** Pauspåminnelser och ergonomi, valbart. R03.7 — *låg*
 - [ ] **2.8** Karaktärsblad och story bible i projektet. R03.9
 - [ ] **2.9** Tidslinje, plot-tavla och scenöversikt (Plot Grid-modellen). R03.10
@@ -96,7 +97,7 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 - [ ] **2.15** Läsbarhetsanalys och stilråd i texten (LIX finns, markeringar saknas). R03.17
 - [ ] **2.16** Projektöversikt och anteckningar (valvet som projektlager, taggar/properties). R03.18
 - [ ] **2.17** Projektinstruktioner: per-projekt kontext för AI:n. R04.18
-- **Status:** in progress (2.1–2.5 klara och grindade)
+- **Status:** in progress (2.1–2.6 klara och grindade)
 
 ### Fas 3: Revision och granskning
 

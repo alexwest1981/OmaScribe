@@ -131,6 +131,8 @@ class MainWindow(QMainWindow):
         # 2. Editor & Sidebar Container (Index 1)
         self.editor = EditorView(self.theme_mgr, self)
         self.editor.set_page_settings(self.page_settings)
+        # Skrivmaskinsläget är ett val användaren gjort förut, inte ett påhitt
+        self.editor.set_typewriter_mode(bool(self.config.get("typewriter_mode", False)))
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
         self.splitter.addWidget(self.editor)
 
@@ -346,6 +348,10 @@ class MainWindow(QMainWindow):
         self.menu_view = mb.addMenu(_("menu_view"))
         self.act_view_sidebar = self._add_action(self.menu_view, _("menu_view_ai_sidebar"), self._toggle_sidebar, "Ctrl+Shift+I")
         self.act_view_focus = self._add_action(self.menu_view, _("menu_view_focus_mode"), self._toggle_focus_mode, "F11")
+        self.act_view_typewriter = self._add_action(
+            self.menu_view, _("menu_view_typewriter"), self._toggle_typewriter)
+        self.act_view_typewriter.setCheckable(True)
+        self.act_view_typewriter.setChecked(bool(self.config.get("typewriter_mode", False)))
         self.act_view_scrivenings = self._add_action(
             self.menu_view, _("menu_view_scrivenings"), self._toggle_scrivenings, "Ctrl+Shift+L")
         self.act_view_scrivenings.setEnabled(False)     # bara i projektläge
@@ -741,6 +747,15 @@ class MainWindow(QMainWindow):
         vis = not self.sidebar.isVisible()
         self.sidebar.setVisible(vis)
         self.config.set("show_ai_sidebar", vis)
+
+    def _toggle_typewriter(self) -> None:
+        """Skrivmaskinsläge: markörens rad står stilla mitt i fönstret."""
+        på = not self.editor.typewriter
+        self.editor.set_typewriter_mode(på)
+        self.act_view_typewriter.setChecked(på)
+        self.config.set("typewriter_mode", på)
+        if på:
+            self.status_bar.showMessage(_("typewriter_on"), 4000)
 
     def _toggle_focus_mode(self):
         """Distraktionsfritt läge: bort med allt utom texten, och tillbaka igen.

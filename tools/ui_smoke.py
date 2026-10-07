@@ -1072,6 +1072,52 @@ def main() -> int:
     check(len(rader) >= 2 and rader[0].startswith("day,"),
           f"och loggen går att exportera som CSV ({len(rader)} rader)")
 
+    print("\n23. Skrivmaskinsläget")
+
+    # Mätningen kräver en riktig vy: fönstret måste vara stort nog att lägga ut
+    # pappret, annars är skrollfältet 22 px högt och "mitten" betyder ingenting.
+    win.resize(1150, 900)
+    win.show()
+    win.show_editor_screen()
+    for _ in range(3):
+        app.processEvents()
+
+    editor = win.editor
+    stycke = "En mening med några ord, så att raden blir lagom lång. " * 240
+    editor.canvas.setHtml("<p>" + stycke + "</p>")
+    editor.paper.refresh()
+    for _ in range(3):
+        app.processEvents()
+    markör = editor.canvas.textCursor()
+    markör.setPosition(int(editor.canvas.document().characterCount() * 0.5))
+    editor.canvas.setTextCursor(markör)
+    editor.set_typewriter_mode(True)
+    for _ in range(3):
+        app.processEvents()
+    avstånd = editor.paper.cursor_from_center()
+    check(abs(avstånd) <= 10,
+          f"markörens rad hamnar mitt i fönstret ({avstånd} px från mitten)")
+
+    # En bit ned i texten, inte sista tecknet: vid dokumentets slut finns ingen
+    # text kvar att skrolla förbi, och då kan ingen centrering ske (som i Word).
+    markör.setPosition(int(editor.canvas.document().characterCount() * 0.8))
+    editor.canvas.setTextCursor(markör)
+    for _ in range(3):
+        app.processEvents()
+    check(abs(editor.paper.cursor_from_center()) <= 10,
+          f"och följer med dit man skriver, oavsett ark ({editor.paper.cursor_from_center()} px)")
+
+    editor.set_typewriter_mode(False)
+    check(not editor.typewriter, "läget går att slå av igen")
+    check(win.config.get("typewriter_mode") in (True, False),
+          f"och valet sparas i configen ({win.config.get('typewriter_mode')})")
+
+    # Tillbaka till provets vanliga läge: fönstret dolt och dokumentet orört, så
+    # att stängningen i slutet inte stannar i en fråga om att spara.
+    editor.canvas.document().setModified(False)
+    win.is_modified = False
+    win.hide()
+
     # Arken: ett ark per sida med ett mellanrum där ytan syns, och texten delad
     # mellan rader. Mätt i en riktig rendering, med temats färger.
     from PyQt6.QtCore import QPointF as QtPunkt, QRect as QtRect

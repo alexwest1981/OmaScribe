@@ -185,6 +185,35 @@ class PagedPaper(QWidget):
         self.scroll_area.ensureVisible(int(rect.x() + 40),
                                        int(rect.y() + syns_pa), 60, 80)
 
+    def center_cursor(self) -> bool:
+        """Skrivmaskinsläge: markörens rad skall stå mitt i fönstret.
+
+        Avståndet räknas fram i skrollområdets koordinater, så det stämmer även
+        om arket ligger en bit ned (metaraden ovanför) och oavsett vilket ark
+        markören står i.
+        """
+        if self.scroll_area is None or not self.isVisible():
+            return False
+        rad = self.canvas.cursorRect(self.canvas.textCursor())
+        stage = self.scroll_area.widget()
+        y = self.canvas.mapTo(stage, rad.center()).y()
+        bar = self.scroll_area.verticalScrollBar()
+        mål = int(y - self.scroll_area.viewport().height() / 2)
+        mål = max(bar.minimum(), min(bar.maximum(), mål))
+        if bar.value() != mål:
+            bar.setValue(mål)
+        return True
+
+    def cursor_from_center(self) -> int:
+        """Hur långt markörens rad står från mitten av fönstret, i pixlar."""
+        if self.scroll_area is None:
+            return -1
+        rad = self.canvas.cursorRect(self.canvas.textCursor())
+        stage = self.scroll_area.widget()
+        y = self.canvas.mapTo(stage, rad.center()).y()
+        return int(y - self.scroll_area.verticalScrollBar().value()
+                   - self.scroll_area.viewport().height() / 2)
+
     def set_page_settings(self, settings: dict) -> None:
         self.page_settings = dict(settings or {})
         self.update()

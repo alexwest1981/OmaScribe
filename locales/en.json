@@ -656,5 +656,7 @@
   "log_csv_failed": "Could not save the writing log: {error}",
   "log_status": "🖋 {n} words today · 🔥 {streak} days",
   "log_status_solo": "🖋 {n} words today",
-  "log_deadline_tip": "Daily quota until {deadline}"
+  "log_deadline_tip": "Daily quota until {deadline}",
+  "menu_view_typewriter": "Typewriter mode",
+  "typewriter_on": "The caret line stays centred"
 }

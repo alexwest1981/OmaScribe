@@ -656,5 +656,7 @@
   "log_csv_failed": "Kunde inte spara skrivloggen: {error}",
   "log_status": "🖋 {n} ord idag · 🔥 {streak} dagar",
   "log_status_solo": "🖋 {n} ord idag",
-  "log_deadline_tip": "Dagskvot fram till {deadline}"
+  "log_deadline_tip": "Dagskvot fram till {deadline}",
+  "menu_view_typewriter": "Skrivmaskinsläge",
+  "typewriter_on": "Markörens rad hålls mitt i fönstret"
 }

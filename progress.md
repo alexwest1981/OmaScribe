@@ -121,3 +121,15 @@
   Grinden och rökprovet pekar om den med `OMASCRIBE_DATA_DIR` till en temp-mapp, så att deras
   skrivande inte hamnar i Alex riktiga logg.
 - Grinden kör nu även `core.pagination`.
+
+### Fas 2.6: skrivmaskinsläge
+
+- **Status:** complete, grindad (348 rökprov + 54 renhetsprov, GRÖNT).
+- `PagedPaper.center_cursor()` håller markörens rad mitt i fönstret; läget slås på i
+  Visa-menyn och kommer ihåg sig i configen. Maxbredden var redan satt (arket är A4).
+- Mätt: 0 px från mitten både mitt i texten och en bit ned, oavsett vilket ark markören
+  står i. Vid dokumentets slut kan ingen centrering ske — det finns ingen text att skrolla
+  förbi, precis som i Word.
+- Rökprovet fick lära sig visa fönstret för den mätningen (skrollfältet är 22 px högt utan
+  utläggning) och sedan städa efter sig: dolt fönster och orört dokument, annars stannar
+  provets egen stängning i en fråga om att spara — 25 minuter utan ett ord på skärmen.

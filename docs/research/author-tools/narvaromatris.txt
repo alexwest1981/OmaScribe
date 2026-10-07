@@ -1,0 +1,27 @@
+track_changes                          0  -
+comment                                5  core/research.py(3) core/ghostwriter.py(2) 
+footnote                               0  -
+cross_ref                              0  -
+toc                                    1  core/doc_manager.py(1) 
+stylesheet                             2  ui/widgets.py(2) 
+spell                                  4  ui/inline_ai_popup.py(1) core/vault.py(1) core/directives.py(1) 
+thesaurus                              0  -
+autocorrect                            0  -
+section_break                         15  ui/chart_dialog.py(7) ui/toolbar.py(3) ui/editor_view.py(3) 
+hyphen                                 3  core/vault.py(3) 
+epub                                   0  -
+snapshot                               0  -
+binder                                 1  core/templates.py(1) 
+goal                                  22  core/vault.py(8) core/templates.py(6) ui/editor_view.py(4) 
+regex                                  0  -
+equation                               0  -
+compare                                9  core/document_stats.py(4) core/ghostwriter.py(3) ui/chart_dialog.py(1) 
+character                              1  core/templates.py(1) 
+ordantal                              11  core/document_stats.py(7) ui/sidebar_inspector.py(2) core/vault.py(2) 
+focus_mode                             0  -
+plugin                                12  ui/main_window.py(9) core/vault.py(2) core/doc_manager.py(1) 
+bibliography                          38  core/directives.py(11) ui/editor_view.py(5) core/templates.py(4) 
+index_                                 1  core/google_fonts_manager.py(1) 
+page_number_style                    136  ui/page_setup_dialog.py(31) core/doc_manager.py(29) ui/chart_dialog.py(12) 
+inklistring                            2  ui/main_window.py(2) 
+ai_                                   54  ui/main_window.py(21) ui/inline_ai_popup.py(17) ui/toolbar.py(4) 

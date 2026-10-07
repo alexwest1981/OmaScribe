@@ -32,6 +32,7 @@ from ui.scene_inspector import SceneInspector
 from ui.writing_log_panel import WritingLogPanel
 from ui.codex_panel import CodexPanel
 from ui.plot_grid import PlotGrid
+from ui.exercise_dialog import ExerciseDialog
 from core.font_manager import install_dropdown_style
 from ui.scrivenings import ScriveningsView
 from core.project import Project
@@ -454,6 +455,8 @@ class MainWindow(QMainWindow):
         self.act_ins_link = self._add_action(self.menu_ai, "🔗 " + _("menu_ai_insert_link"), self._insert_wikilink_dialog, "Ctrl+L")
         self.act_gen_para = self._add_action(self.menu_ai, "✎ " + _("menu_ai_paragraph"), self._open_generate_paragraph, "Ctrl+Shift+A")
         self.act_code = self._add_action(self.menu_ai, "⌨ " + _("menu_ai_code"), self._open_code_analysis, "Ctrl+Shift+K")
+        self.act_exercise = self._add_action(self.menu_ai, "🧩 " + _("menu_ai_exercise"),
+                                             self._open_exercises, "Ctrl+Shift+E")
         self.menu_ai.addSeparator()
         self.act_settings = self._add_action(self.menu_ai, _("menu_ai_settings"), self._open_settings)
 
@@ -1087,6 +1090,47 @@ class MainWindow(QMainWindow):
         self._update_window_title()
         self._update_stats()
         self.editor.canvas.setFocus()
+
+    def _open_exercises(self) -> None:
+        """Fastnat? En fråga, tre förslag, och en väg tillbaka till skrivandet.
+
+        Rutan vet inget om editorn: den ber om sammanhanget och lämnar tillbaka
+        ett valt förslag, som hamnar i scenens anteckning — inte i manuset.
+        Förslagen är vägar in, inte text att klistra in.
+        """
+        if self.project is None or not self.active_scene_id:
+            self.status_bar.showMessage(_("exercise_needs_scene"), 5000)
+            return
+        dialog = ExerciseDialog(self.ai, self)
+        self._exercise_dialog = dialog                 # hålls vid liv medan den visas
+        dialog.ask_requested.connect(lambda kategori: self._ask_exercise(dialog, kategori))
+        dialog.insert_requested.connect(self._insert_exercise)
+        dialog.exec()
+        self._exercise_dialog = None
+
+    def _ask_exercise(self, dialog, category: str) -> None:
+        """Skickar scenens sammanhang — markerad text om det finns, annars raden."""
+        markerat = self.editor.textCursor().selectedText().strip()
+        if not markerat:
+            markerat = self.editor.textCursor().block().text().strip()
+        node = self.project.by_id(self.active_scene_id) if self.active_scene_id else None
+        self.ai.suggest(
+            category,
+            selection=markerat,
+            scene_note=(node.note if node else ""),
+            chapter=(node.title if node else ""),
+            lang=("svenska" if getattr(i18n, "language", "sv") == "sv" else "English"),
+        )
+
+    def _insert_exercise(self, suggestion: str) -> None:
+        """Förslaget hamnar i scenens anteckning, där författaren ser det igen."""
+        node = self.project.by_id(self.active_scene_id) if self.project and self.active_scene_id else None
+        if node is None or not suggestion.strip():
+            return
+        self.project.set_meta(node.id, note=(node.note.strip() + "\n\n" + suggestion.strip()).strip())
+        self._save_project_manifest()
+        self.scene_inspector.set_scene(self.project, self.project.by_id(node.id))
+        self.status_bar.showMessage(_("exercise_saved"), 5000)
 
     def _save_project_manifest(self):
         if self.project is None:
@@ -1905,6 +1949,7 @@ class MainWindow(QMainWindow):
         self.act_view_focus.setText(_("menu_view_focus_mode"))
         self.act_view_grid.setText(_("menu_view_grid"))
         self.act_view_readability.setText(_("menu_view_readability"))
+        self.act_exercise.setText("🧩 " + _("menu_ai_exercise"))
         self.act_zoom_in.setText(_("menu_view_zoom_in"))
         self.act_zoom_out.setText(_("menu_view_zoom_out"))
         self.act_zoom_reset.setText(_("menu_view_zoom_reset"))

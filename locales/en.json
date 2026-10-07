@@ -711,5 +711,17 @@
   "grid_draft_all": "All",
   "grid_count_draft": "{n} of {total} scenes in draft {draft}",
   "menu_view_readability": "Mark heavy sentences",
-  "readability_on": "Heavy sentences are marked — shorten where you can"
+  "readability_on": "Heavy sentences are marked — shorten where you can",
+  "menu_ai_exercise": "Stuck? What happens now?",
+  "exercise_title": "Stuck?",
+  "exercise_intro": "Pick a question. The suggestions are ways in, not finished prose — the one you choose lands in the scene's own note.",
+  "exercise_ask": "Suggest",
+  "exercise_insert": "Save in the scene's note",
+  "exercise_close": "Close",
+  "exercise_waiting": "Asking…",
+  "exercise_empty": "No suggestions came back — try again.",
+  "exercise_failed": "Could not ask",
+  "exercise_inserted": "Saved in the scene's note.",
+  "exercise_saved": "The suggestion is in the scene's note",
+  "exercise_needs_scene": "Open a scene first — the exercise needs a context"
 }

@@ -232,3 +232,21 @@
   den prickade linjen, de korta gör det inte.
 - Skärmdumpen avslöjade en gammal skönhetsfläck som nu står i listan: teckensnittsväljaren visar
   menyrubriken "—— ⭐ Popular Writing Fonts ——" i stället för typsnittet tills man väljer ett.
+
+### Fas 2.14: övningar mot skrivblock
+
+- **Status:** complete, grindad (399 rökprov + 54 renhetsprov + övningarnas eget självprov).
+- Forskningens arbetsflöde satt rakt av: markera text eller välj scen, välj en fråga, granska
+  förslagen, välj eller ignorera, återgå till skrivandet. Fyra kategorier efter Sparks:
+  Vad händer nu?, Dialog, Handling, Sinnesintryck.
+- `core/exercises.py` bygger frågan (vald text om det finns en, annars scenens rad) och tolkar
+  svaret (numrerade eller punktade rader, inledningsrader bort) — rent och provbart, 11 kontroller.
+- `ui/exercise_dialog.py` visar de tre förslagen. Det valda förslaget hamnar i **scenens egen
+  anteckning**, inte i manuset: förslagen är vägar in, inte färdig prosa, och anteckningen är
+  samma sammanhang som AI:n läser nästa gång. Ingen ny nyckel eller leverantör — anropet går
+  genom den befintliga AI-klienten.
+- Mätt i provet: hela vägen genom menyvalet (med exec avbytt, den är modal), frågan och
+  språket skickas vidare, markörens rad blir texten, förslaget hamnar i anteckningen med den
+  gamla kvar före, manuset är tecken för tecken oförändrat, och utan förslag stängs vägen att spara.
+- **Inte mätt:** själva AI-svaret. Grinden rör aldrig nätet — den kräver en nyckel och kostar
+  pengar. Svaret från modellen går genom `parse_suggestions`, som är provad.

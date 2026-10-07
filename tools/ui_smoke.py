@@ -1323,6 +1323,82 @@ def main() -> int:
     canvas.document().setModified(False)
     win.is_modified = False
 
+    print("\n28. Fastnat? Övningar mot skrivblock (fas 2.14)")
+
+    from ui.exercise_dialog import ExerciseDialog
+    from core import exercises as exercises_mod
+
+    check(len(exercises_mod.CATEGORIES) == 4
+          and exercises_mod.category("senses")[1] == "Sinnesintryck",
+          "fyra frågor att välja mellan, som i forskningens arbetsflöde")
+    check(win.act_exercise is not None and win.act_exercise.isEnabled(),
+          "och menyn har en väg till dem")
+
+    # en egen liten scen att öva på
+    ovningsmapp = tempfile.mkdtemp(prefix="omascribe-ovning-")
+    ovningsbok = Bok.create(ovningsmapp, "Ovningen", template="roman")
+    win._activate_project(ovningsbok)
+    while not ovningsbok.manuscript():
+        ovningsbok.add_node(SCENE, f"Scen {len(ovningsbok.manuscript()) + 1}", None)
+    ovningsscen = ovningsbok.manuscript()[0]
+    ovningsbok.set_meta(ovningsscen.id, note="nyckeln ligger i lådan")
+    win._open_node(ovningsscen.id)
+    check(win.active_scene_id == ovningsscen.id,
+          "scenen är öppen i editorn innan övningen börjar")
+
+    # scenen får en rad text, så att markörens rad betyder något
+    win.editor.canvas.setPlainText("Hon stod vid dörren och lyssnade.")
+    win.editor.canvas.moveCursor(QTextCursor.MoveOperation.Start)
+    for _ in range(2):
+        app.processEvents()
+
+    # hela vägen genom menyns hanterare, med exec avbytt (den är modal)
+    fangat = {}
+    riktig_suggest = win.ai.suggest
+    win.ai.suggest = lambda category, **kw: fangat.update(kategori=category, **kw)
+    oppnade = []
+    riktig_exec = ExerciseDialog.exec
+    ExerciseDialog.exec = lambda self: (oppnade.append(self), 0)[1]
+    win._open_exercises()
+    ExerciseDialog.exec = riktig_exec
+    check(len(oppnade) == 1, "menyvalet öppnar övningsrutan")
+    dialog = oppnade[0]
+
+    dialog.combo_category.setCurrentIndex(dialog.combo_category.findData("dialogue"))
+    dialog._ask()
+    check(fangat.get("kategori") == "dialogue", "vald fråga skickas vidare")
+    check("nyckeln" in (fangat.get("scene_note") or ""),
+          "scenens egen anteckning följer med som sammanhang")
+    check(fangat.get("lang") in ("svenska", "English"),
+          f"och språket ({fangat.get('lang')!r})")
+    check("dörren" in (fangat.get("selection") or ""),
+          f"den rad markören står på blir texten som skickas "
+          f"({(fangat.get('selection') or '')[:24]!r})")
+
+    # förslagen: listan, valet och var det hamnar
+    dialog.set_suggestions(["Hon går in i rummet.", "Hon stannar på tröskeln.", "Hon ropar."])
+    check(dialog.lst_suggestions.count() == 3 and dialog.btn_insert.isEnabled(),
+          "tre förslag i listan och en väg att spara dem")
+    node_id = win.active_scene_id
+    anteckning_fore = win.project.by_id(node_id).note
+    texten = canvas.toPlainText()
+    dialog.lst_suggestions.setCurrentRow(1)
+    dialog._insert()
+    ny_anteckning = win.project.by_id(node_id).note
+    check("tröskeln" in ny_anteckning,
+          "det valda förslaget hamnar i scenens anteckning")
+    check(len(ny_anteckning) >= len(anteckning_fore) and ny_anteckning.strip().endswith("tröskeln."),
+          "och den gamla anteckningen ligger kvar före den")
+    check(canvas.toPlainText() == texten,
+          "manuset rörs inte — förslaget är en väg in, inte färdig text")
+    dialog.set_suggestions([])
+    check(not dialog.btn_insert.isEnabled(),
+          "och utan förslag stängs vägen att spara")
+    dialog.close()
+    win.ai.suggest = riktig_suggest
+    canvas.document().setModified(False)
+    win.is_modified = False
+
     # Arken: ett ark per sida med ett mellanrum där ytan syns, och texten delad
     # mellan rader. Mätt i en riktig rendering, med temats färger.
     from PyQt6.QtCore import QPointF as QtPunkt, QRect as QtRect

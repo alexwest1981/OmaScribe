@@ -711,5 +711,17 @@
   "grid_draft_all": "Alla",
   "grid_count_draft": "{n} av {total} scener i utkast {draft}",
   "menu_view_readability": "Markera tunga meningar",
-  "readability_on": "Tunga meningar är markerade — korta dem där det går"
+  "readability_on": "Tunga meningar är markerade — korta dem där det går",
+  "menu_ai_exercise": "Fastnat? Vad händer nu?",
+  "exercise_title": "Fastnat?",
+  "exercise_intro": "Välj en fråga. Förslagen är vägar in i texten, inte färdig prosa — det valda förslaget hamnar i scenens anteckning.",
+  "exercise_ask": "Föreslå",
+  "exercise_insert": "Spara i scenens anteckning",
+  "exercise_close": "Stäng",
+  "exercise_waiting": "Frågar…",
+  "exercise_empty": "Inga förslag kom tillbaka — försök igen.",
+  "exercise_failed": "Kunde inte fråga",
+  "exercise_inserted": "Sparat i scenens anteckning.",
+  "exercise_saved": "Förslaget ligger i scenens anteckning",
+  "exercise_needs_scene": "Öppna en scen först — övningen behöver ett sammanhang"
 }

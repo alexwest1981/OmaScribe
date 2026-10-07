@@ -110,6 +110,8 @@ class AIClient(QObject):
     review_completed = pyqtSignal(dict)
     review_error = pyqtSignal(str)
     transform_completed = pyqtSignal(str)
+    suggestions_ready = pyqtSignal(list)
+    suggestions_error = pyqtSignal(str)
     ai_status_changed = pyqtSignal(str)
 
     def __init__(self, config_mgr):
@@ -220,6 +222,41 @@ Instruction: {instruction}
         self._active_workers.discard(worker)
         self.ai_status_changed.emit("ready")
         self.transform_completed.emit(content.strip())
+
+    # ------------------------------------------------------------- övningar
+    def suggest(self, category_key, selection="", scene_note="", chapter="", lang="svenska"):
+        """Frågar efter tre vägar vidare när författaren har fastnat (R03.16).
+
+        Samma väg som transform_text: arbetaren hålls vid liv tills svaret
+        kommer, och ett svar som inte gick att tolka blir en tom lista i
+        stället för ett fel — dialogrutan säger då att den inte fick något.
+        """
+        from core import exercises
+
+        system, user = exercises.build_prompt(category_key, selection, scene_note,
+                                              chapter, lang)
+        endpoint = self.config.get("ai_endpoint", DEFAULT_AI_ENDPOINT)
+        api_key = self.config.get("ai_key", "")
+        model = self.config.get("ai_model", DEFAULT_AI_MODEL)
+
+        self.ai_status_changed.emit("analyzing")
+        worker = AIWorker(endpoint, api_key, model, system, user)
+        self._active_workers.add(worker)
+        worker.finished.connect(lambda res, w=worker: self._on_suggestions(res.get("content", ""), w))
+        worker.error.connect(lambda err, w=worker: self._on_suggestions_error(err, w))
+        worker.start()
+
+    def _on_suggestions(self, content, worker):
+        from core import exercises
+
+        self._active_workers.discard(worker)
+        self.ai_status_changed.emit("ready")
+        self.suggestions_ready.emit(exercises.parse_suggestions(content))
+
+    def _on_suggestions_error(self, err, worker):
+        self._active_workers.discard(worker)
+        self.ai_status_changed.emit("ready")
+        self.suggestions_error.emit(str(err))
 
 
 # ------------------------------------------------------------------ självtest

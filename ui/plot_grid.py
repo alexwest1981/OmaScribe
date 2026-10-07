@@ -36,10 +36,14 @@ COLUMNS = (
     ("grid_col_when", "when", True, 110),
     ("grid_col_words", None, False, 62),
     ("grid_col_target", "target_words", True, 62),
+    ("grid_col_revision", "revision", True, 70),
 )
-COL_TITLE, COL_PART, COL_THREAD, COL_POV, COL_STATUS, COL_WHEN, COL_WORDS, COL_TARGET = range(8)
+(COL_TITLE, COL_PART, COL_THREAD, COL_POV, COL_STATUS, COL_WHEN, COL_WORDS, COL_TARGET,
+ COL_REVISION) = range(len(COLUMNS))
 
 SORTS = ("manuscript", "timeline", "pov", "status")
+DRAFTS = (1, 2, 3, 4, 5, 6, 7, 8, 9)             # utkast 1–9, som i sceninspektören
+RANGE_DRAFTS = (0,) + DRAFTS                     # 0 = alla utkast
 
 
 class _StatusDelegate(QStyledItemDelegate):
@@ -85,6 +89,13 @@ class PlotGrid(QWidget):
             self.combo_sort.addItem(_(f"grid_sort_{key}"), key)
         self.combo_sort.currentIndexChanged.connect(lambda *_: self.refresh())
         rad.addWidget(self.combo_sort)
+        self.lbl_draft = QLabel()
+        rad.addWidget(self.lbl_draft)
+        self.combo_draft = QComboBox()
+        for utkast in RANGE_DRAFTS:
+            self.combo_draft.addItem(str(utkast), utkast)
+        self.combo_draft.currentIndexChanged.connect(lambda *_: self.refresh())
+        rad.addWidget(self.combo_draft)
         rad.addStretch(1)
         self.lbl_count = QLabel()
         rad.addWidget(self.lbl_count)
@@ -133,7 +144,13 @@ class PlotGrid(QWidget):
         for rad, (node, del_titel) in enumerate(self._rows):
             self._fill_row(rad, node, del_titel)
         self._loading = False
-        self.lbl_count.setText(_("grid_count", n=len(self._rows)))
+        valt_utkast = int(self.combo_draft.currentData() or 0)
+        if valt_utkast:
+            totalt = len(self.project.manuscript()) if self.project is not None else 0
+            self.lbl_count.setText(_("grid_count_draft", n=len(self._rows), total=totalt,
+                                     draft=valt_utkast))
+        else:
+            self.lbl_count.setText(_("grid_count", n=len(self._rows)))
 
     def _fill_row(self, rad: int, node, del_titel: str) -> None:
         varden = {
@@ -145,6 +162,7 @@ class PlotGrid(QWidget):
             COL_WHEN: node.when,
             COL_WORDS: str(self.project.words(node.id) if self.project else 0),
             COL_TARGET: str(node.target_words or ""),
+            COL_REVISION: str(node.revision or 1),
         }
         for kol, värde in varden.items():
             item = QTableWidgetItem(värde)
@@ -155,14 +173,22 @@ class PlotGrid(QWidget):
                 item.setData(Qt.ItemDataRole.UserRole, node.id)
                 if node.synopsis:
                     item.setToolTip(node.synopsis)
-            if kol in (COL_WORDS, COL_TARGET):
+            if kol in (COL_WORDS, COL_TARGET, COL_REVISION):
                 item.setTextAlignment(Qt.AlignmentFlag.AlignRight
                                       | Qt.AlignmentFlag.AlignVCenter)
             self.table.setItem(rad, kol, item)
 
     def _ordered_scenes(self) -> list:
-        """Scenerna i vald ordning, med sin närmaste del/kapitel-rubrik."""
-        scener = [(n, self._part_title(n)) for n in self.project.manuscript()]
+        """Scenerna i vald ordning, med sin närmaste del/kapitel-rubrik.
+
+        Utkastfiltret är revisionsläget: välj utkast 2 och tabellen visar bara
+        de scener som nått dit — arbetet blir en lista i stället för ett helt
+        manus.
+        """
+        valt_utkast = int(self.combo_draft.currentData() or 0)
+        manus = [n for n in self.project.manuscript()
+                 if valt_utkast == 0 or int(n.revision or 1) == valt_utkast]
+        scener = [(n, self._part_title(n)) for n in manus]
         nyckel = self.combo_sort.currentData() or "manuscript"
         if nyckel == "timeline":
             # Tom tid sist: en scen utan tid i berättelsen hör inte först.
@@ -204,14 +230,20 @@ class PlotGrid(QWidget):
         text = item.text().strip()
         if fält == "labels":
             värde = [t.strip() for t in text.split(",") if t.strip()]
-        elif fält == "target_words":
+        elif fält in ("target_words", "revision"):
             try:
                 värde = int(text or 0)
             except ValueError:
-                värde = 0
+                värde = int(getattr(node, fält) or 0)
                 self._loading = True
-                item.setText(str(node.target_words or ""))
+                item.setText(str(värde or ""))
                 self._loading = False
+            if fält == "revision":
+                värde = max(1, min(9, värde or 1))     # samma gränser som inspektören
+                if värde != int(getattr(node, fält) or 1):
+                    self._loading = True
+                    item.setText(str(värde))
+                    self._loading = False
         else:
             värde = text
         if getattr(node, fält) == värde:
@@ -232,6 +264,7 @@ class PlotGrid(QWidget):
         self.table.horizontalHeader().setSectionResizeMode(
             COL_TITLE, self.table.horizontalHeader().ResizeMode.Stretch)
         self.lbl_sort.setText(_("grid_sort"))
+        self.lbl_draft.setText(_("grid_draft"))
         valt = self.combo_sort.currentData()
         self.combo_sort.blockSignals(True)
         self.combo_sort.clear()
@@ -240,4 +273,13 @@ class PlotGrid(QWidget):
         index = self.combo_sort.findData(valt)
         self.combo_sort.setCurrentIndex(max(0, index))
         self.combo_sort.blockSignals(False)
+        valt_utkast = self.combo_draft.currentData()
+        self.combo_draft.blockSignals(True)
+        self.combo_draft.clear()
+        self.combo_draft.addItem(_("grid_draft_all"), 0)
+        for utkast in DRAFTS:
+            self.combo_draft.addItem(str(utkast), utkast)
+        utkast_index = self.combo_draft.findData(valt_utkast)
+        self.combo_draft.setCurrentIndex(max(0, utkast_index))
+        self.combo_draft.blockSignals(False)
         self.refresh()

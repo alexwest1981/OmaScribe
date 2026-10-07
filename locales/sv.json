@@ -705,5 +705,9 @@
   "menu_view_grid": "Plot-tavla",
   "grid_no_project": "Öppna ett projekt först — tavlan visar dess scener",
   "collections_read": "Läs samlingen som en text",
-  "collections_read_empty": "Samlingen är tom — inget att läsa"
+  "collections_read_empty": "Samlingen är tom — inget att läsa",
+  "grid_col_revision": "Utkast",
+  "grid_draft": "Utkast:",
+  "grid_draft_all": "Alla",
+  "grid_count_draft": "{n} av {total} scener i utkast {draft}"
 }

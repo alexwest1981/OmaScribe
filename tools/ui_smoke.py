@@ -1212,8 +1212,8 @@ def main() -> int:
     tavla = win.plot_grid
     check(win.stack.currentIndex() == win._plot_grid_index,
           "plot-tavlan är en egen sida i stacken, inte en flik i sidopanelen")
-    check(tavla.table.rowCount() == 3 and tavla.table.columnCount() == 8,
-          f"en rad per scen och åtta kolumner "
+    check(tavla.table.rowCount() == 3 and tavla.table.columnCount() == 9,
+          f"en rad per scen och nio kolumner "
           f"({tavla.table.rowCount()} × {tavla.table.columnCount()})")
     check(win.toolbar.isHidden(),
           "och formateringsraden hör till manuset, inte till tabellen")
@@ -1225,6 +1225,22 @@ def main() -> int:
     tavla.combo_sort.setCurrentIndex(0)
     check(tavla.table.item(0, 0).text() == rader[0].title,
           "och manusordningen är tillbaka")
+
+    # Revisionsläget: arbeta med ett utkast i taget (fas 2.12)
+    tavlabok.set_meta(rader[1].id, revision=2)
+    tavla.combo_draft.setCurrentIndex(tavla.combo_draft.findData(2))
+    check(tavla.table.rowCount() == 1 and tavla.table.item(0, 0).text() == rader[1].title,
+          f"revisionsläget visar bara scenerna i utkast 2 ({tavla.table.rowCount()} rad)")
+    check(f"2" in tavla.lbl_count.text() and "3" in tavla.lbl_count.text(),
+          f"och räknar dem mot hela manuset ({tavla.lbl_count.text()})")
+    tavla.combo_draft.setCurrentIndex(0)
+    check(tavla.table.rowCount() == 3, "alla utkast visar dem igen")
+    tavla.table.item(0, 8).setText("3")
+    check(int(tavlabok.by_id(rader[0].id).revision) == 3,
+          "och utkastnumret i tabellen skrivs till modellen")
+    tavla.table.item(0, 8).setText("99")
+    check(int(tavlabok.by_id(rader[0].id).revision) <= 9,
+          "utkastet hålls inom 1–9, som i sceninspektören")
 
     tavla.table.item(0, 2).setText("ny tråd")
     check(tavlabok.by_id(rader[0].id).labels == ["ny tråd"],

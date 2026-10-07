@@ -202,3 +202,16 @@
 - Mätt i provet: en sparad sökning på `status:Utkast` ger 2 av 3 scener, scenens anteckning
   ligger kvar, läsvyn visar exakt samlingens scener i manusets ordning, och vägen tillbaka går
   till manuset.
+
+### Fas 2.12: revisionsläget
+
+- **Status:** complete, grindad (381 rökprov + 54 renhetsprov, GRÖNT).
+- Plot-tavlan fick en **Utkast**-kolumn (1–9, samma gränser som sceninspektören — redigerbar
+  i tabellen, skriven till manifestet) och ett **utkastfilter**: välj utkast 2 och bara de
+  scener som nått dit visas, med räkningen "1 av 3 scener i utkast 2". Revisionsläget blir
+  en lista att arbeta igenom i stället för ett helt manus.
+- "Mål per utkast" blev räkningen i stället för ett talfält per utkast: målet för ett utkast
+  är att scenerna har nått det. Nio målfält som ingen fyller i är sämre än en siffra som
+  stämmer — egna ordmål per utkast är ett fält i projektdialogen den dag de saknas.
+- Mätt i provet: filtret ger 1 rad av 3 och rätt räkning, alla utkast visar dem igen,
+  utkastnumret skrivs till modellen, och ett skrivet 99 stannar på 9.

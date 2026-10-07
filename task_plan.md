@@ -14,15 +14,16 @@ taget (`ui/main_window.py:663`). Se `findings.md`.
 
 ## Next Step
 
-Fas 2.11 (namn- och ordförrådsgenerator) och 2.12 (revisionsläge)
+Fas 2.14 (övningar mot skrivblock) och 2.15 (läsbarhetsanalys) — 2.11 och 2.13
+är markerade låg. Därefter fas 3 (revision och granskning)
 (tidslinje och plot-tavla) som är nästa större punkt. Rutnätet i 2.9 bygger på
 scenmodellen och på att scenens status redan finns.
 
 ## Current Phase
 
-Fas 2 — Författarlagret (2.1–2.6, 2.8, 2.9 och 2.10 klara: skrivloggen, kvot,
-historik, sprintar, skrivmaskinsläget, story biblen, plot-tavlan,
-samlingen som läsvy).
+Fas 2 — Författarlagret (2.1–2.6 och 2.8–2.10, 2.12 klara: skrivloggen, kvot,
+historik, sprintar, skrivmaskinsläget, story biblen, plot-tavlan, samlingen som
+läsvy, revisionsläget).
 Fas 0, 0b och 1 är klara. Sedan dess: appskalet följer v0-referensen, och
 pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 
@@ -92,13 +93,13 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 - [x] **2.9** Tidslinje, plot-tavla och scenöversikt: `ui/plot_grid.py` visar manuset som en tabell — en rad per scen med del/kapitel, tråd (etiketter), POV, status, när i berättelsen den händer, ord och ordmål. Redigerbar direkt i tabellen (status genom en meny med projektets egna statusar), ett klick på titeln öppnar scenen, och sorteringen är poängen: manusordning, **tidslinje** (scenens egen tid, tom tid sist), POV eller status — Dabbles huvudtråd och sidotrådar sida vid sida, utan att lämna projektet. Modellen fick fältet `when` (sparas i manifestet). Tavlan är en egen sida i stacken och inte en flik i sidopanelen: åtta kolumner är ~790 px och panelen är 370. *Medvetet inte gjort:* en grafisk tidslinje (band med markörer) — texten i `when` sorterad i tid är tidslinjen en ensam författare läser, och en ritad tidslinje är en egen vy den dag någon saknar den. R03.10
 - [x] **2.10** Taggar, samlingar och anteckningar knutna till scen. Mestadels färdigt sedan tidigare —fas 1.5 (statusfärg), 1.9 (samlingar), 1.11 (scenanteckning) och 2.9 (tråd/etiketter i tavlan) hade redan byggt bitarna. Det som saknades var sista steget i arbetsflödet: samlingen gick att filtrera fram men inte att *arbeta igenom*. Nu har samlingspanelen en läs-knapp som öppnar samlingens scener i läsvyn (`▶`, "Läs samlingen som en text") — och `_show_scrivenings` är utbruten så att hela manuset och en samling går samma väg. R03.11
 - [ ] **2.11** Namn- och ordförrådsgenerator. R03.12 — *låg*
-- [ ] **2.12** Revisionsläge och mål per utkast (utkast 1/2/3). R03.13
+- [x] **2.12** Revisionsläge och mål per utkast: plot-tavlan har en **Utkast**-kolumn (1–9, samma gränser som sceninspektören, redigerbar direkt i tabellen och skriven till manifestet) och ett **utkastfilter** — välj utkast 2 och tabellen visar bara de scener som nått dit, med räkningen "1 av 3 scener i utkast 2". Det är revisionsläget: arbetet blir en lista i stället för ett helt manus. *Målet per utkast* blev räkningen i stället för ett talfält per utkast — målet för ett utkast är att scenerna har nått det, och nio målfält som ingen fyller i är sämre än en siffra som stämmer. Vill du ha egna ordmål per utkast är det ett fält i projektdialogen; säg till. R03.13
 - [ ] **2.13** Blurb och synopsis som projektfält. R03.15 — *låg*
 - [ ] **2.14** Övningar mot skrivblock ("vad händer nu?"). R03.16
 - [ ] **2.15** Läsbarhetsanalys och stilråd i texten (LIX finns, markeringar saknas). R03.17
 - [ ] **2.16** Projektöversikt och anteckningar (valvet som projektlager, taggar/properties). R03.18
 - [ ] **2.17** Projektinstruktioner: per-projekt kontext för AI:n. R04.18
-- **Status:** in progress (2.1–2.6 och 2.8–2.10 klara och grindade)
+- **Status:** in progress (2.1–2.6 och 2.8–2.10, 2.12 klara och grindade)
 
 ### Fas 3: Revision och granskning
 

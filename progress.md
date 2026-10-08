@@ -683,3 +683,16 @@
   traceback; en app som dör direkt ger en annan kod. Mätt i den här miljön: den startar och står kvar.
 - **Lärdomen är om grinden, inte om koden:** en grind ska räkna vad den *kör*, inte vad den *ser*. Att
   lista modulerna den kör mot modulerna som har prov är en rad, och den hittade fyra luckor.
+
+### Täckningskontroll: planen mot forskningens 81 punkter
+
+- **Körd av en oberoende agent, kontrollerad av mig.** Alla 81 punkter i de fem rapporterna jämfördes mot
+  planen (14 + 18 + 18 + 19 + 12). Filen ligger i `docs/research/author-tools/tackning.md`.
+- **Resultatet: ingen täckningslucka.** Varje forskningspunkt har en post i planen. De åtta rader rapporten
+  kallade "luckor" är de poster som ännu inte är *färdiga* — och de är precis de jag själv märkt `[~]`.
+- **Ett påstående var fel, och kontrollen fångade det.** Agenten skrev att R04.18 (projektinstruktioner i
+  generella assistenter) var "helt saknad i planen". Funktionen finns: `settings["ai_instructions"]` i
+  `core/project.py:175`, menyn i `ui/main_window.py:378`, och planens 2.17 är `[x]`. Det som verkligen
+  saknas är samtalshistorik och valbar retrieval — nu en egen, medvetet uppskjuten planpunkt (4.18).
+- **Lärdomen:** en underagents sammanfattning är ett *påstående*, inte ett resultat. Två grep räckte för att
+  avgöra det — och de två grepen hade jag inte gjort om jag litat på sammanfattningen.

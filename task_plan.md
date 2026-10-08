@@ -328,6 +328,11 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       **mappen öppnas** ur Arkiv → Öppna utgivningsmappen (datorns filhanterare, via Qt:s egen väg
       så att det fungerar på fler skrivbord än ett), och paketet är den mapp man sedan arbetar i.
       R05.9
+- [ ] **4.18** *Uppskjutet med flit:* samtalshistorik och valbar retrieval i AI-panelen (Claude/ChatGPT
+      Projects-mönstret, R04.18). Projektinstruktionerna (2.17) och referensmaterialet (1.10) finns och är
+      klara; det som saknas är att AI:n får *historiken* och själv får söka i materialet i stället för att
+      allt klistras in i prompten. Inte byggt — ett eget beslut, och ingen har frågat efter det än.
+      Se `docs/research/author-tools/tackning.md`.
 - [x] **5.12** Siffertabellen ur R05 in som **data med källa**: varje kanal bär sin käll-URL i
       `SOURCES`, kanalerna delar inte varandras koefficienter (bara KDP har en publicerad formel), och
       en kanal utan belagt tal säger det i stället för att låna ett. Provat: trappans gränser steg för

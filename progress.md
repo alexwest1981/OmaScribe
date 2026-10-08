@@ -480,3 +480,36 @@
   (tabeller med formler) — de tre som var markerade låga, och en författare skriver inte formler.
   4.7 (avsnittsbrytningar med egna sidhuvuden) flyttad till **5.5**: den kräver sidvis layout i
   utskriftsvägen, samma sak som 0.2 pekar på, och hör till tryckningen.
+
+### Fas 5 påbörjad: publiceringsprofilen och en isolerad provning
+
+- **Status:** delvis klar och grindad (577 rökprov + 54 renhetsprov + modulernas egna, GRÖNT).
+- **`core/publishing.py`** (34 egna kontroller): kanalernas siffror som **data med källa** — KDP:s
+  gutter-trappa (9,6 → 22,3 mm i fem steg), ryggbredden per papper (0,0572/0,0635/0,0596 mm per sida),
+  omslaget som bleed + baksida + rygg + framsida + bleed, och trim som presets. **Ingen kanal lånar
+  en annans koefficient:** forskningen kunde inte belägga en gemensam ryggformel för IngramSpark och
+  Lulu, så där står det "använd kanalens mall" i stället för ett påhittat tal. Provat: trappans
+  gränser steg för steg, ryggbredden per papper, och att Lulu får `None`.
+- **Arkiv → Publicering…** räknar fram siffrorna ur kanal, format, trim, papper, sidantal och blöd,
+  visar **källan** de kommer ifrån, varnar för det kanalen skulle klaga på (under 24 sidor, udda
+  sidantal, under 79 sidor blir det ingen ryggtext, blöd utanför KDP) och skriver trim, gutter och
+  spegelmarginaler in i sidinställningarna. Måtten visas med svenska decimaler (12,7 — inte 12.7).
+- **Två riktiga fel hittade på vägen:**
+  1. **`_on_page_settings_applied` bytte ut hela inställningen i stället för att slå samman den.**
+     En profil som bara känner till några nycklar tappade `clean_print` och de andra valen — den som
+     bytte tryckmått hade tyst tappat sin rena export. Nu slås de samman, med det nya värdet vinnande.
+  2. **`ui/variants_dialog.py` anropade `item.setEnabled(False)`** — `QListWidgetItem` har ingen
+     sådan metod, så raden kastade varje gång en scen tagits bort ur manuset men låg kvar i en variant.
+     Latent sedan tidigare; rökprovet nådde den först nu. Rättat med flaggan (`~ItemIsEnabled`).
+- **Rökprovningen skrev i Alex riktiga inställningsfil** (`~/.config/omascribe/config.json`):
+  `CONFIG_PATH` var hårdkodad, så provet sparade sina egna sidinställningar (6×9, spegelmarginaler)
+  i hans app. Åtgärdat i tre steg — `OMASCRIBE_CONFIG_PATH` respekteras nu, provet pekar om till sin
+  egen fil, och provet läser sparade val **ur filen** i stället för ur ett objekt i minnet (två prov
+  visade sig ha levt på värden ur hans config: skrivmaskinsläget och läsbarhetsmarkeringen, som nu
+  prövas genom menyvägen i stället). Hans sidinställningar är återställda till appens standard, med
+  säkerhetskopia i `config.json.bak-fore-provsid` — han hade inte satt egna, men det gick inte att
+  veta förrän filen var läst.
+- **Ny vakt i grinden:** `tools/i18n_shadow_check.py` — i18n-funktionen heter `_`, och den som
+  skriver `for _, x in …` i en metod som anropar `_()` får ett heltal i stället för en funktion.
+  Felet har dykt upp **tre gånger** i fas 4 och 5 (variants_dialog, _insert_exercise, publish_dialog).
+  Vakten är falsifierad: den larmar på det buggiga fallet och tiger om det ofarliga.

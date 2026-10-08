@@ -438,6 +438,8 @@ class MainWindow(QMainWindow):
             bool(self.config.get("readability_marks", False)))
         self.act_view_typewriter.setCheckable(True)
         self.act_view_typewriter.setChecked(bool(self.config.get("typewriter_mode", False)))
+        self.act_file_publish = self._add_action(
+            self.menu_file, _("menu_file_publish"), self.open_publish_dialog)
         self.act_view_pause = self._add_action(
             self.menu_view, _("menu_view_pause"), self._toggle_pause_reminder)
         self.act_view_pause.setCheckable(True)
@@ -1944,15 +1946,42 @@ class MainWindow(QMainWindow):
         )
         dlg.exec()
 
+    def open_publish_dialog(self) -> None:
+        """Publicerarprofilen: kanalens siffror och vad de gör med boken (R05.1).
+
+        Sidantalet hämtas ur det öppna manuset när det går — gutter, ryggbredd
+        och omslag hänger alla på det, så det är där siffrorna kommer ifrån. Att
+        använda profilen skriver in trim och marginaler i sidinställningarna, på
+        samma väg som sidinställningsrutan.
+        """
+        from ui.publish_dialog import PublishDialog
+
+        canvas = self.editor.canvas if self.editor else None
+        sidor = len(getattr(canvas, "pages", None) or [])
+        dlg = PublishDialog(sidor or 300, self.page_settings, self)
+        dlg.settings_applied.connect(self._on_page_settings_applied)
+        dlg.settings_applied.connect(
+            lambda ny: self.status_bar.showMessage(
+                _("publish_applied", gutter=f"{ny.get('margin_right_mm', 0):g}".replace(".", ","),
+                  outer=f"{ny.get('margin_left_mm', 0):g}".replace(".", ",")), 8000))
+        dlg.exec()
+
     def open_page_setup_dialog(self):
         dlg = PageSetupDialog(self.page_settings, self.theme_mgr, self)
         dlg.settings_applied.connect(self._on_page_settings_applied)
         dlg.exec()
 
     def _on_page_settings_applied(self, new_settings: dict):
-        self.page_settings = new_settings
-        self.config.set("page_settings", new_settings)
-        self.editor.set_page_settings(new_settings)
+        """Nya sidinställningar, **sammanslagna** med de gamla (R05.5).
+
+        En profil (eller en ruta) som bara känner till några av nycklarna får
+        inte tappa resten: `clean_print` och de andra valen hör till samma
+        inställning och ska överleva att man byter tryckmått. Det nya värdet
+        vinner där båda finns — annars vore sammanslagningen en bugg.
+        """
+        self.page_settings = {**DEFAULT_PAGE_SETTINGS, **self.page_settings, **new_settings}
+        self.config.set("page_settings", self.page_settings)
+        self.editor.set_page_settings(self.page_settings)
         self.status_bar.showMessage(_("pagesetup_applied"), 4000)
 
     def export_docx(self):

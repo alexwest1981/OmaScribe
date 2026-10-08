@@ -251,18 +251,34 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 
 ### Fas 5: Publiceringen
 
-- [ ] **5.1** Publiceringsprojekt och formatprofiler (KDP, IngramSpark, Lulu, Apple, Kobo). R05.1
+- [~] **5.1** Formatprofiler för KDP, IngramSpark, Lulu, Apple Books och Kobo: `core/publishing.py`
+      bär kanalerna som **data med källa** (34 egna kontroller), och Arkiv → Publicering… räknar fram
+      gutter, ryggbredd och omslagsmått ur trim, papper, sidantal och blöd — och skriver in trim och
+      marginaler i sidinställningarna. **Kvar:** ett *sparat* publiceringsprojekt per bok (kanal, trim
+      och metadata som en del av projektet, inte bara i appens inställningar). R05.1
 - [ ] **5.2** EPUB 3 med semantisk kapitelstruktur och TOC. R05.2
 - [ ] **5.3** Namngiven typografi och bokstilar, samma roller till EPUB-CSS, PDF och DOCX. R05.3
 - [ ] **5.4** Metadata, ISBN och front matter (halvtitel, titelsida, kolofon, dedikation, tack). R05.4
-- [ ] **5.5** Trycklayout: trim, spegelmarginaler, gutter, kapitelstart på rätt sida. R05.5 (+ 0.2)
-- [ ] **5.6** Blödning, omslags-PDF och ryggbredd enligt kanalens formel. R05.6
+- [~] **5.5** Trycklayout: trim, gutter och spegelmarginaler **beräknas** nu (KDP:s trappa 9,6–22,3 mm
+      efter sidantal, ytterkant 6,4 mm, +3,2 mm med blöd) och skrivs in i sidinställningarna med
+      `mirror_margins`, udda/ämn sidväxling och folio längst ner. **Kvar:** utskriftsvägen ska
+      *verkställa* speglingen (sidindex → inner/ytter, samma sak som 0.2 pekar på), kapitelstart på
+      höger sida och blanka fyllnadssidor. R05.5 (+ 0.2)
+- [~] **5.6** Ryggbredd och omslagsmått **räknas** enligt kanalens formel (KDP: sidantal × 0,0572 mm
+      för vitt papper, 0,0635 för crème, 0,0596 för premiumfärg) och omslaget blir bleed + baksida +
+      rygg + framsida + bleed — 328,36 × 235 mm för en 300-sidig 6×9-bok. För IngramSpark och Lulu
+      står det **"använd kanalens mall"** i stället för ett påhittat tal: forskningen kunde inte
+      belägga en gemensam formel, och en felaktig ryggbredd syns först i tryck. **Kvar:** rita själva
+      omslagsarket med ryggtext och streckkodszon. R05.6
 - [ ] **5.7** DOCX med redaktörsvänliga Word-stilar (namngivna stilar). R05.7
 - [ ] **5.8** EPUB-validering (EPUBCheck) och tillgänglighetsmetadata. R05.8
 - [ ] **5.9** Distributörsuppladdning och slutkontroll: exportpaket, checksummor, preflight-rapport. R05.10
 - [ ] **5.10** Svensk och engelsk boksättning: repliktankstreck, citattecken, avstavning. R05.11
 - [ ] **5.11** Efterbearbetning i Sigil/Calibre: "öppna exportmapp", checksumma. R05.9 — *låg*
-- [ ] **5.12** Siffertabellen ur R05 (KDP-marginaler, blöd, ryggkoefficienter) in som data med källa, ej hårdkodad i logik.
+- [x] **5.12** Siffertabellen ur R05 in som **data med källa**: varje kanal bär sin käll-URL i
+      `SOURCES`, kanalerna delar inte varandras koefficienter (bara KDP har en publicerad formel), och
+      en kanal utan belagt tal säger det i stället för att låna ett. Provat: trappans gränser steg för
+      steg (150/151, 300/301, 828/829), ryggbredden per papper, och att Lulu får `None`.
 - **Status:** pending
 
 ### Fas 6: AI som författarverktyg

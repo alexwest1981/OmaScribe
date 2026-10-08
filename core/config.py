@@ -3,7 +3,11 @@ import json
 import locale
 from core.i18n import i18n
 
-CONFIG_PATH = os.path.expanduser("~/.config/omascribe/config.json")
+# Prov och rökprov styr inställningsfilen med OMASCRIBE_CONFIG_PATH i stället för
+# att skriva i den riktiga: en rökprovning som ändrar användarens sidinställningar
+# är inte en provning, den är ett ingrepp.
+CONFIG_PATH = (os.environ.get("OMASCRIBE_CONFIG_PATH")
+               or os.path.expanduser("~/.config/omascribe/config.json"))
 
 def get_system_default_language():
     try:

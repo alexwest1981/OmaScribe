@@ -17,6 +17,13 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 # Skrivloggens data hamnar i en temp-mapp: rökprovet skriver riktiga ord.
 os.environ.setdefault("OMASCRIBE_DATA_DIR", tempfile.mkdtemp(prefix="omascribe-log-"))
+# Egen inställningsfil: rökprovet får aldrig röra användarens config.json.
+os.environ.setdefault("OMASCRIBE_CONFIG_PATH",
+                      os.path.join(os.environ["OMASCRIBE_DATA_DIR"], "config.json"))
+# Provet arbetar på svenska, som appen gör hos sin användare. Utan det här
+# faller provet tillbaka på systemets språk och mäter engelska texter.
+with open(os.environ["OMASCRIBE_CONFIG_PATH"], "w", encoding="utf-8") as _konf:
+    _konf.write('{"language": "sv"}')
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from typing import cast  # noqa: E402
@@ -38,6 +45,23 @@ def check(ok: bool, label: str):
     if not ok:
         failures.append(label)
     print(f"  {'✓' if ok else '✗'} {label}")
+
+
+def sparat_i_configen(nyckel):
+    """Läser värdet ur **filen**, inte ur objektet.
+
+    Provet ska mäta att valet verkligen sparades, inte att det ligger kvar i en
+    instans i minnet. Inställningsfilen är provets egen (OMASCRIBE_CONFIG_PATH),
+    så en läsning härifrån rör aldrig användarens.
+    """
+    import json as json_mod
+
+    from core import config as config_mod
+
+    try:
+        return json_mod.load(open(config_mod.CONFIG_PATH, encoding="utf-8")).get(nyckel)
+    except (OSError, ValueError):
+        return None
 
 
 def main() -> int:
@@ -864,6 +888,20 @@ def main() -> int:
     check(VarBok.load(mapp).variants[0]["nodes"] == [v2.id, v1.id],
           "och varianten ligger på disk")
 
+    # Fällan: en variant kan peka på en scen som inte längre finns. Raden för de
+    # borta scenerna byggs i `_refresh_nodes`, som både använder i18n-funktionen
+    # `_` och heter slingvariabeln `_` i samma metod — då är `_` ett heltal, och
+    # undantaget träffar en slot. PyQt6 avbryter processen när ett undantag
+    # lämnar en slot, så ett klick i panelen dödade appen.
+    vbok.variants[0]["nodes"] = [v2.id, v1.id, "finns-inte-kvar"]
+    dlg.refresh()          # samma väg som ett klick i listan tar
+    from PyQt6.QtCore import Qt as QtFlagga
+    check(dlg.lst_nodes.count() == 3
+          and not (dlg.lst_nodes.item(2).flags() & QtFlagga.ItemFlag.ItemIsEnabled),
+          "en variant med en scen som inte finns kvar ritar panelen utan krasch")
+    vbok.variants[0]["nodes"] = [v2.id, v1.id]
+    dlg.refresh()
+
     # lägg variantens ordning på manuset
     check(dlg.apply_variant() >= 1, "varianten läggs på manuset")
     check([n.id for n in vbok.children(vkap.id)] == [v2.id, v1.id],
@@ -1108,10 +1146,13 @@ def main() -> int:
     check(abs(editor.paper.cursor_from_center()) <= 10,
           f"och följer med dit man skriver, oavsett ark ({editor.paper.cursor_from_center()} px)")
 
-    editor.set_typewriter_mode(False)
+    # Avslaget går genom menyn, som författaren gör: det är den vägen som skriver
+    # till configen. Provet fick inte längre låna ett sparat värde ur en riktig
+    # konfigfil, så vägen måste prövas på riktigt.
+    win._toggle_typewriter()
     check(not editor.typewriter, "läget går att slå av igen")
-    check(win.config.get("typewriter_mode") in (True, False),
-          f"och valet sparas i configen ({win.config.get('typewriter_mode')})")
+    check(sparat_i_configen("typewriter_mode") is False,
+          f"och valet sparas i configen ({sparat_i_configen('typewriter_mode')})")
 
     # Teckensnittsmenyn: Qt gör menyn skärmhög när stilmallen styr menyvyn
     # (SH_ComboBox_Popup svarar ja) — mätt 800px meny med listen 390px på y=133.
@@ -1315,12 +1356,13 @@ def main() -> int:
           f"och den tunga meningen markeras ({len(layout.formats())} format)")
     check(canvas.toPlainText() == texten,
           "markeringen rör inte texten — inget hamnar i scenfilen")
-    win.editor.set_readability_marks(False)
+    # Avslaget går genom menyn, så att vägen som skriver till configen prövas
+    win._toggle_readability()
     for _ in range(3):
         app.processEvents()
     check(len(layout.formats()) == 0, "och markeringen försvinner när läget slås av")
-    check(win.config.get("readability_marks") in (True, False),
-          f"valet sparas i configen ({win.config.get('readability_marks')})")
+    check(sparat_i_configen("readability_marks") is False,
+          f"valet sparas i configen ({sparat_i_configen('readability_marks')})")
     canvas.document().setModified(False)
     win.is_modified = False
 
@@ -1773,6 +1815,79 @@ def main() -> int:
     ruta3.close()
     win.editor.document.setModified(False)
     win.is_modified = False
+
+    print("\n42. Publiceringsprofilen: kanalernas siffror (fas 5.1, 5.5, 5.6, 5.12)")
+
+    from core import publishing as pub42
+    from ui.publish_dialog import PublishDialog
+
+    # Tabellen: belagda tal, och ingen kanal lånar en annans formel
+    check(pub42.trim_mm("6x9") == (152.4, 228.6), "6×9 är 152,4 × 228,6 mm")
+    check(pub42.gutter_mm(300) == 12.7 and pub42.gutter_mm(301) == 15.9,
+          f"gutter-trappan följer KDP:s sidsteg (300 → {pub42.gutter_mm(300)}, "
+          f"301 → {pub42.gutter_mm(301)})")
+    check(pub42.spine_mm(300, "white") == 17.16 and pub42.spine_mm(300, "cream") == 19.05,
+          f"och ryggbredden beror på pappret ({pub42.spine_mm(300, 'white')} mot "
+          f"{pub42.spine_mm(300, 'cream')} mm vid 300 sidor)")
+    check(pub42.spine_mm(300, "white", channel="lulu") is None,
+          "men Lulu får ingen påhittad siffra — där hänvisas till kanalens mall")
+    check(all(k["source"] in pub42.SOURCES for k in pub42.CHANNELS.values()),
+          "och varje kanal bär sin källa")
+
+    # Rutan: siffrorna syns med svenska mått, och en kanal utan formel säger till
+    ruta42 = PublishDialog(300, None, win)
+    ruta42.combo_channel.setCurrentIndex(ruta42.combo_channel.findData("kdp"))
+    ruta42.combo_trim.setCurrentIndex(ruta42.combo_trim.findData("6x9"))
+    ruta42.spin_pages.setValue(300)
+    siffror42 = ruta42.lbl_numbers.text()
+    check("12,7" in siffror42 and "17,16" in siffror42,
+          f"rutan visar gutter och ryggbredd med svenska mått ({siffror42[:44]!r})")
+    check("321,96" in siffror42 and "228,6" in siffror42,
+          f"och omslagets totalmått utan blöd ({siffror42.split('<br>')[2][:34]!r})")
+    ruta42.chk_bleed.setChecked(True)
+    check("328,36" in ruta42.lbl_numbers.text() and "235" in ruta42.lbl_numbers.text(),
+          f"och med blöd växer det precis så mycket som kanalen säger "
+          f"({ruta42.lbl_numbers.text().split('<br>')[2][:30]!r})")
+    ruta42.chk_bleed.setChecked(False)
+    check("kdp.amazon.com" in siffror42, "och källan talet kommer ifrån")
+    check(ruta42.btn_apply.isEnabled(), "och profilen kan användas")
+
+    # Ett för kort manus: då säger rutan till innan filen skickas
+    ruta42.spin_pages.setValue(20)
+    check("24 sidor" in ruta42.lbl_warnings.text() and "79 sidor" in ruta42.lbl_warnings.text(),
+          f"ett för kort manus varnas för ({ruta42.lbl_warnings.text()[:40]!r})")
+    ruta42.spin_pages.setValue(300)
+    check(ruta42.lbl_warnings.text() == "", "och 300 sidor är rent")
+
+    # En kanal utan formel: inga påhittade tal, och en varning i stället
+    ruta42.combo_channel.setCurrentIndex(ruta42.combo_channel.findData("lulu"))
+    siffror42b = ruta42.lbl_numbers.text()
+    check("mall" in siffror42b and "17,16" not in siffror42b,
+          f"och Lulu hänvisar till sin mall i stället för KDP:s siffra ({siffror42b[:40]!r})")
+    check("mall" in ruta42.lbl_warnings.text(), "med varningen synlig")
+
+    # E-boken har inga tryckmått
+    ruta42.combo_channel.setCurrentIndex(ruta42.combo_channel.findData("kdp"))
+    ruta42.combo_format.setCurrentIndex(ruta42.combo_format.findData("ebook"))
+    check(not ruta42.btn_apply.isEnabled(), "e-boken har inga tryckmått att sätta")
+    check("ebook" in ruta42.lbl_numbers.text().lower() or "e-bok" in ruta42.lbl_numbers.text().lower(),
+          "och rutan säger det")
+
+    # Att använda profilen skriver in trim och marginaler i sidinställningarna
+    ruta42.combo_format.setCurrentIndex(ruta42.combo_format.findData("print"))
+    ruta42.spin_pages.setValue(300)
+    ny42 = ruta42.settings()
+    check(ny42["margin_right_mm"] == 12.7 and ny42["margin_left_mm"] == 6.4,
+          f"profilen ger innermarginal 12,7 och ytterkant 6,4 ({ny42['margin_right_mm']}/"
+          f"{ny42['margin_left_mm']})")
+    check(ny42["custom_width_mm"] == 152.4 and ny42["mirror_margins"] is True,
+          "med tryckmåttet och spegling på")
+    win._on_page_settings_applied(ny42)
+    check(win.page_settings.get("margin_right_mm") == 12.7,
+          "och fönstret tar emot dem")
+    check(win.config.get("page_settings", {}).get("custom_width_mm") == 152.4,
+          "och de sparas i inställningarna")
+    ruta42.close()
 
     print("\n41. Namn- och ordförrådsgeneratorn (fas 4.15, flyttad från 2.11)")
 

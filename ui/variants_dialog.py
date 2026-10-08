@@ -119,9 +119,14 @@ class VariantsDialog(QDialog):
                 item = QListWidgetItem(node.title)
                 item.setData(Qt.ItemDataRole.UserRole, node.id)
                 self.lst_nodes.addItem(item)
-            for _ in range(len(borta)):
+            # Slingvariabeln får inte heta `_`: i18n-funktionen `_` används i
+            # samma metod, och då blir den ett heltal i stället för en funktion.
+            for _borta in borta:
                 item = QListWidgetItem(_("variants_gone"))
-                item.setEnabled(False)
+                # En QListWidgetItem har ingen setEnabled — flaggan är rätt väg.
+                # Utan det här kastade raden varje gång en scen tagits bort ur
+                # manuset men låg kvar i en variant.
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
                 self.lst_nodes.addItem(item)
         self.lst_nodes.blockSignals(False)
         self._refresh_status()

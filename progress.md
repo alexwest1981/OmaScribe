@@ -448,3 +448,35 @@
 - **Kvar i fas 4:** 4.4 (verifiera rubriknavigatorn), 4.6 (roller/stilmallar), 4.7 (avsnittsbrytningar
   — medvetet inte gjord: hör till utskriften), 4.8 och 4.13 (låga), 4.10 (språk per avsnitt och
   LanguageTool), 4.11 (låg), samt de flyttade 4.14–4.16.
+
+### Fas 4 stängd: språk, generatorer, projektets fält och de två låga som flyttades
+
+- **Status:** complete, grindade (556 rökprov + 54 renhetsprov + modulernas egna, GRÖNT).
+- **4.10 språk och grammatik:** `core/spellcheck.py` kopplades in (Redigera → Kontrollera språket,
+  Ctrl+Shift+G, och panelens Språk-flik). **Ett språk per avsnitt** — `check(text, language)` tar
+  språket per anrop, och ett stycke märkt engelskt kontrolleras som engelskt (provat). Träffen
+  står med ordet och meddelandet; klick markerar i texten, dubbelklick tar första förslaget som
+  **ett** ångra-steg. Adressen står i panelen — texten lämnar datorn — och en tjänst som inte
+  svarar säger varför i stället för att visa en tom lista.
+- **4.14 pauspåminnelse:** en klocka (50 min, inställningsbar) som säger till i statusfältet och
+  blinkar i aktivitetsfältet. Ingen modal ruta. Kommer ihåg sig. *(Flyttad från 2.7.)*
+- **4.15 namn och ord:** två nya kategorier i "Fastnat?"-rutan som ber om tolv alternativ i stället
+  för tre — antalet står **per kategori**, och tolkningen följer kategorin, inte ett tak i koden.
+  Ett valt namn läggs i **codexet** med noten som sammanfattning; en väg vidare hamnar fortfarande i
+  scenens anteckning. *(Flyttad från 2.11.)*
+- **4.16 blurb och synopsis:** projektets egna fält i projektöversikten, sparade i `project.json`.
+  *(Flyttad från 2.13.)*
+- **4.4 och 4.6 kontrollerade mot koden, inte mot minnet:** rubriknavigatorn var redan byggd — provet
+  visar hela vägen (stilsättning → navigatorn med indrag → klick sätter markören exakt på rubriken
+  → och ett vanligt stycke hamnar inte där). Stilarna likaså: rubriknivån och teckenformatet (vikt
+  700) mätta. Det som saknades var bevisen.
+- **Två riktiga fel hittade i arbetet:**
+  1. `namn, _, noten = ...partition("—")` **skuggade i18n-funktionen `_`** i samma metod, och
+     `_insert_exercise` kraschade på nästa rad (`UnboundLocalError`). Rökprovet fångade det —
+     en tyst bugg i en menyväg ingen annan kontroll rör.
+  2. Kategori-tupeln fick ett fjärde fält, och `ui/exercise_dialog.py` packade upp tre — sedan
+     kolliderade `rad` (layouten) med `rad` (kategorin). Båda rättade.
+- **Medvetet inte gjort:** 4.8 (spalter och avstavning), 4.11 (teckentabell och tesaurus) och 4.13
+  (tabeller med formler) — de tre som var markerade låga, och en författare skriver inte formler.
+  4.7 (avsnittsbrytningar med egna sidhuvuden) flyttad till **5.5**: den kräver sidvis layout i
+  utskriftsvägen, samma sak som 0.2 pekar på, och hör till tryckningen.

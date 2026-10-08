@@ -32,8 +32,8 @@ class ExerciseDialog(QDialog):
 
         rad = QHBoxLayout()
         self.combo_category = QComboBox()
-        for nyckel, etikett, _instruktion in exercises.CATEGORIES:
-            self.combo_category.addItem(etikett, nyckel)
+        for kategori in exercises.CATEGORIES:
+            self.combo_category.addItem(kategori[1], kategori[0])
         rad.addWidget(self.combo_category, 1)
         self.btn_ask = QPushButton(_("exercise_ask"))
         self.btn_ask.clicked.connect(self._ask)

@@ -173,6 +173,8 @@ DEFAULT_SETTINGS = {
     "genre": "",
     "audience": "",
     "ai_instructions": "",      # författarens egna regler för den här boken (R03.18)
+    "blurb": "",                # baksidestexten (R03.15)
+    "synopsis": "",             # sammanfattningen till förlaget (R03.15)
 }
 
 # Statusfärger är presentation: de följer ordningen i projektets statuslista, så

@@ -9,17 +9,24 @@ from __future__ import annotations
 
 import re
 
-# (nyckel, etikett, instruktion) — fyra vägar in när det låser sig
+# (nyckel, etikett, instruktion, antal) — vägar in när det låser sig, och två
+# generatorer för namn och ord. Antalet står per kategori: tre vägar vidare är
+# lagom att välja mellan, tolv namn är lagom att välja ur.
 CATEGORIES = (
-    ("next", "Vad händer nu?", "Föreslå tre helt olika vägar vidare härifrån."),
-    ("dialogue", "Dialog", "Föreslå tre rader dialog som kan komma härnäst."),
-    ("action", "Handling", "Föreslå tre konkreta saker som kan hända just nu."),
-    ("senses", "Sinnesintryck", "Föreslå tre sinnesintryck att lägga in här."),
+    ("next", "Vad händer nu?", "Föreslå tre helt olika vägar vidare härifrån.", 3),
+    ("dialogue", "Dialog", "Föreslå tre rader dialog som kan komma härnäst.", 3),
+    ("action", "Handling", "Föreslå tre konkreta saker som kan hända just nu.", 3),
+    ("senses", "Sinnesintryck", "Föreslå tre sinnesintryck att lägga in här.", 3),
+    ("namn", "Namn", "Föreslå namn som passar i den här boken och på den här platsen. "
+                     "Skriv ett namn per rad, följt av ett tankstreck och en kort not om vem "
+                     "personen kunde vara.", 12),
+    ("ord", "Ord och uttryck", "Föreslå ord och uttryck ur den här tidens och platsens språk. "
+                               "Ett per rad, följt av ett tankstreck och en kort förklaring.", 12),
 )
 
 SYSTEM = (
-    "Du är en svensk skrivcoach åt en författare som har fastnat. Föreslå tre "
-    "korta, konkreta alternativ — ett per rad, numrerade 1–3, högst en mening "
+    "Du är en svensk skrivcoach åt en författare som har fastnat. Föreslå {n} "
+    "korta, konkreta alternativ — ett per rad, numrerade 1–{n}, högst en mening "
     "var. Ingen inledning, ingen sammanfattning, ingen färdig prosa: författaren "
     "skriver själv. Svara på {lang}."
 )
@@ -43,6 +50,7 @@ def build_prompt(category_key: str, selection: str = "", scene_note: str = "",
     finns en, annars scenens sammanhang (rubrik och anteckning).
     """
     rad = category(category_key) or CATEGORIES[0]
+    antal = rad[3] if len(rad) > 3 else 3
     bitar = [f"Uppgift: {rad[2]}"]
     if chapter.strip():
         bitar.append(f"Scen: {chapter.strip()}")
@@ -52,7 +60,13 @@ def build_prompt(category_key: str, selection: str = "", scene_note: str = "",
         bitar.append("Vald text:\n" + selection.strip())
     else:
         bitar.append("Ingen text är markerad — föreslå något som kan hända i scenen.")
-    return SYSTEM.format(lang=lang), "\n\n".join(bitar)
+    return SYSTEM.format(lang=lang, n=antal), "\n\n".join(bitar)
+
+
+def max_suggestions(key: str) -> int:
+    """Hur många alternativ en kategori ber om."""
+    rad = category(key)
+    return (rad[3] if rad and len(rad) > 3 else 3)
 
 
 def parse_suggestions(text: str, max_n: int = 3):
@@ -71,7 +85,7 @@ def parse_suggestions(text: str, max_n: int = 3):
 
 def _self_test() -> int:
     checks = 0
-    assert len(CATEGORIES) == 4 and category("next")[1] == "Vad händer nu?"; checks += 1
+    assert len(CATEGORIES) == 6 and category("next")[1] == "Vad händer nu?"; checks += 1
     assert category("finns-inte") is None; checks += 1
 
     system, user = build_prompt("dialogue", "Hon öppnade dörren.", "nyckeln ligger i lådan", "Kapitel 3")
@@ -88,6 +102,11 @@ def _self_test() -> int:
     assert förslag == ["Hon går in i rummet.", "Hon stannar på tröskeln.", "Hon ropar."], förslag; checks += 1
     assert len(parse_suggestions(svar, max_n=1)) == 1; checks += 1
     assert parse_suggestions("") == [] and parse_suggestions(None) == []; checks += 1
+    assert max_suggestions("next") == 3 and max_suggestions("namn") == 12; checks += 1
+    assert category("ord")[1] == "Ord och uttryck"; checks += 1
+    tolv = "\n".join(f"{i}. Namn {i} — kort not" for i in range(1, 15))
+    assert len(parse_suggestions(tolv, max_n=max_suggestions("namn"))) == 12; checks += 1
+    assert "Namn 1 — kort not" in parse_suggestions(tolv)[0]; checks += 1
     print(f"exercises: {checks} kontroller gröna")
     return checks
 

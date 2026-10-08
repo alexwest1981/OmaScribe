@@ -9,7 +9,8 @@ delas: en enda samling anteckningar, samma länkar mellan dem som förut.
 from __future__ import annotations
 
 from PyQt6.QtWidgets import (
-    QDialog, QDialogButtonBox, QFormLayout, QLabel, QScrollArea, QVBoxLayout, QWidget,
+    QDialog, QDialogButtonBox, QFormLayout, QLabel, QPlainTextEdit, QScrollArea,
+    QVBoxLayout, QWidget,
 )
 
 from core.i18n import _
@@ -109,7 +110,35 @@ class OverviewDialog(QDialog):
         ruta.setFrameShape(QScrollArea.Shape.Box)
         layout.addWidget(ruta)          # utan stretch: rutan krymper till innehållet
 
+        # Baksidestext och sammanfattning: projektets egna fält, inte scenens.
+        # De sparas när rutan stängs — ingen egen spar-knapp för två textrutor.
+        self.project = project
+        self.txt_blurb = QPlainTextEdit()
+        self.txt_blurb.setPlainText(project.settings.get("blurb", "") if project else "")
+        self.txt_blurb.setPlaceholderText(_("overview_blurb_hint"))
+        self.txt_blurb.setFixedHeight(64)
+        ruta_extra = QFormLayout()
+        ruta_extra.addRow(QLabel(_("overview_blurb")), self.txt_blurb)
+
+        self.txt_synopsis = QPlainTextEdit()
+        self.txt_synopsis.setPlainText(project.settings.get("synopsis", "") if project else "")
+        self.txt_synopsis.setPlaceholderText(_("overview_synopsis_hint"))
+        self.txt_synopsis.setFixedHeight(120)
+        ruta_extra.addRow(QLabel(_("overview_synopsis")), self.txt_synopsis)
+        layout.addLayout(ruta_extra)
+
         knappar = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         knappar.rejected.connect(self.reject)
         knappar.accepted.connect(self.accept)
         layout.addWidget(knappar)
+
+    def done(self, result: int) -> None:
+        """Stänger rutan — och skriver projektets två textfält först."""
+        if self.project is not None:
+            self.project.settings["blurb"] = self.txt_blurb.toPlainText().strip()
+            self.project.settings["synopsis"] = self.txt_synopsis.toPlainText().strip()
+            try:
+                self.project.save()
+            except Exception:                         # noqa: BLE001
+                pass                                  # stängningen får inte hindras av en skrivning
+        super().done(result)

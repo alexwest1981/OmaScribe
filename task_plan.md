@@ -14,11 +14,11 @@ taget (`ui/main_window.py:663`). Se `findings.md`.
 
 ## Next Step
 
-Fas 4 (sakprosan): fotnoter och slutnoter (4.1), korsreferenser (4.2), genererad
-innehållsförteckning (4.3), rubriknavigator (4.4), bildtexter och register (4.5), stilar
-(4.6), avsnittsbrytningar (4.7), autokorrigering (4.9), språk per avsnitt och
-LanguageTool (4.10) samt sök och ersätt med reguljära uttryck (4.12). 4.8 och 4.11 är
-markerade låg. Kvar i fas 2: 2.7, 2.11 och 2.13, också de låga.
+Fas 5: utskriften. Sidhuvuden och sidfötter med jämn/udda sida (0.2 och 4.7 hör hit),
+sidnumrering, marginaler per sida, formatmall för tryck och en förhandsvisning som
+visar arket som det blir. Innan dess är fas 4 stängd: 4.8 (spalter och avstavning),
+4.11 (teckentabell och tesaurus) och 4.13 (tabeller med formler) är de tre låga och
+lämnades medvetet — de står kvar som val, inte som glömda.
 (tidslinje och plot-tavla) som är nästa större punkt. Rutnätet i 2.9 bygger på
 scenmodellen och på att scenens status redan finns.
 
@@ -189,13 +189,27 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       1.1, inte 1.0.1), och listan står mellan `[innehåll]` och `[/innehåll]`. Trycker man en gång till
       **uppdateras listan i stället för att en ny läggs till** — provat (en förekomst, inte två).
       Klickbarheten ligger i panelens rubriklista, som hoppar till rubriken i texten. R02.7
-- [ ] **4.4** Snabbnavigering och rubriknavigator (utöka befintlig outline-panel). R02.17
+- [x] **4.4** Rubriknavigatorn: panelens Kapitel-flik har fyllts ur dokumentets rubriknivåer sedan
+      tidigare, och ett klick hoppar till rubriken. **Verifierat** i rökprovet hela vägen: en rubrik
+      sätts med verktygsradens stilsättning → den hamnar i navigatorn (med indrag efter nivå, ▪ för
+      nivå 2) → ett klick sätter markören exakt på rubriken (16 mot 16) → och ett vanligt stycke
+      hamnar inte där. Det som saknades var provet, inte funktionen. R02.17
 - [x] **4.5** Bildtexter med automatisk numrering + register: `[figur: …]` och `[tabell: …]` får
       egna serier (Figur 1, Tabell 1) och blir "Figur 1. Trappan från hallen." i filen. Registret är
       samma panelflik som noterna — figurerna och tabellerna med sina nummer, i textens ordning.
       Provat både i registret och i den exporterade texten. R02.8
-- [ ] **4.6** Stycke- och teckenstilar, stilinspektör och stilmallar. R02.9
-- [ ] **4.7** Avsnittsbrytningar med separata sidhuvuden/sidfötter. R02.10
+- [x] **4.6** Stycke- och teckenstilar och stilmallar: styckeformaten är blockroller (rubrik 1–3,
+      citat, kod) och sätts i verktygsraden; teckenformaten (fet, kursiv, understruken, genomstryken,
+      upphöjd, nedsänkt) likaså; och **stilmallarna** (`core/templates.py`: roman, novell, fackbok …)
+      ger ett nytt projekt sina statusar och sitt ordmål — rökprovet arbetar i ett projekt skapat med
+      mallen "roman" genom hela körningen. **Provat** rubriknivån (2) och teckenformatet (vikt 700).
+      *Medvetet inte gjort:* en stilinspektör som listar dokumentets stilar med räknare — ingen
+      författare har saknat den, och en förteckning över sina egna rubriker finns i navigatorn. R02.9
+- [~] **4.7** Avsnittsbrytningar med separata sidhuvuden/sidfötter — **flyttad till fas 5 (5.5)**.
+      Detta hör till utskriften, inte till skrivandet: det kräver sidvis layout (sidindex → inner/
+      ytter) i utskriftsvägen, samma sak som den befintliga anteckningen i 0.2 pekar på. En författare
+      märker det först när boken ska tryckas, och då är 5.5 rätt plats. Att bygga det nu hade varit
+      att bygga sidnumrering två gånger. R02.10
 - [ ] **4.8** Spalter och avstavning. R02.11 — *låg*
 - [x] **4.9** Autokorrigering och autotext: `core/autocorrect.py` har funnits sedan 0b men **nådde
       aldrig gränssnittet**. Nu ligger den i Redigera-menyn (Ctrl+Shift+K) och kör över scenen.
@@ -203,7 +217,15 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       ordet står kvar** (vikt 700) och en gång till hittar ingenting. Bara de områden som faktiskt
       skiljer skrivs om, och allt sker i ett edit block — ett ångra tar tillbaka hela körningen.
       R02.12
-- [ ] **4.10** Språk per textavsnitt, stavning/grammatik (LanguageTool) och egen ordlista. R02.13
+- [x] **4.10** Språk per textavsnitt, stavning och grammatik: `core/spellcheck.py` har funnits
+      sedan 0b (verifierad mot riktiga tjänsten, UTF-16-korrekta offset) men **nådde aldrig
+      gränssnittet** — samma mönster som sök och autokorrigering. Nu i Redigera-menyn (Ctrl+Shift+G)
+      och i panelens Språk-flik. **Ett språk per avsnitt:** stycken med egen språkmärkning skickas för
+      sig, resten med scenens språk — provat att ett stycke märkt engelskt kontrolleras som engelskt.
+      Träffarna står i panelen med ordet, meddelandet och förslagen; ett klick markerar ordet i
+      texten, ett dubbelklick tar första förslaget (**ett** ångra-steg). Adressen står i panelen —
+      texten lämnar datorn, det ska man veta om — och en tjänst som inte svarar säger *varför* i
+      stället för att visa en tom lista. Egen server ställs in med `spellcheck_endpoint`. R02.13
 - [ ] **4.11** Tecken-/symboltabell och tesaurus. R02.14 — *låg*
 - [x] **4.12** Sök och ersätt med reguljära uttryck: `core/find_replace.py` har också funnits utan
       att nås. Nu i Redigera-menyn (Ctrl+F och Ctrl+H), icke-modal (man ska kunna skriva vidare) med
@@ -211,10 +233,21 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       alla byter alla och **ett** ångra tar tillbaka hela ersättningen, mönster med bakåtreferens
       (`(skriv)en` → `\1et`). R02.16
 - [ ] **4.13** Tabeller med formler och ekvationer. R02.18 — *låg*
-- [ ] **4.14** Pauspåminnelser och ergonomi, valbart. *Flyttad från fas 2 (2.7).* R03.7
-- [ ] **4.15** Namn- och ordförrådsgenerator. *Flyttad från fas 2 (2.11).* R03.12
-- [ ] **4.16** Blurb och synopsis som projektfält. *Flyttad från fas 2 (2.13).* R03.15
-- **Status:** pending
+- [x] **4.14** Pauspåminnelser, valbart: en klocka (50 minuter, `pause_minutes` i inställningarna)
+      som säger till i **statusfältet** och blinkar i aktivitetsfältet — ingen modal ruta som avbryter
+      mitt i en mening, samma diskreta form som sprintens slut. Valet kommer ihåg sig. Provat:
+      på/av, att valet sparas, och att påminnelsen syns. *Flyttad från fas 2 (2.7).* R03.7
+- [x] **4.15** Namn- och ordförrådsgenerator: två nya kategorier i "Fastnat?"-rutan — **Namn** och
+      **Ord och uttryck** — som ber om tolv alternativ i stället för tre (antalet står per kategori,
+      och tolkningen följer kategorin, inte ett tak i koden). Ett valt **namn läggs i codexet** med
+      noten som sammanfattning — ett namn hör till boken, inte till scenen — medan en väg vidare
+      fortfarande hamnar i scenens anteckning. Provat: antalen, tolkningen, codexet och att scenens
+      anteckning inte rörs av ett namn. *Flyttad från fas 2 (2.11).* R03.12
+- [x] **4.16** Blurb och synopsis som projektfält: baksidestext och sammanfattning ligger i
+      projektöversikten (Ctrl+Shift+O) och sparas i projektfilen när rutan stängs. De hör till
+      **projektet**, inte till scenen — de beskriver boken. Provat: att båda sparas och att de står i
+      `project.json` på disk. *Flyttad från fas 2 (2.13).* R03.15
+- **Status:** complete (556 rökprov + 54 renhetsprov + modulernas egna, GRÖNT)
 
 ### Fas 5: Publiceringen
 

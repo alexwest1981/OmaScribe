@@ -1329,9 +1329,10 @@ def main() -> int:
     from ui.exercise_dialog import ExerciseDialog
     from core import exercises as exercises_mod
 
-    check(len(exercises_mod.CATEGORIES) == 4
-          and exercises_mod.category("senses")[1] == "Sinnesintryck",
-          "fyra frågor att välja mellan, som i forskningens arbetsflöde")
+    check(len(exercises_mod.CATEGORIES) == 6
+          and exercises_mod.category("senses")[1] == "Sinnesintryck"
+          and exercises_mod.category("namn")[1] == "Namn",
+          "sex vägar in: fyra frågor och två generatorer (namn och ord)")
     check(win.act_exercise is not None and win.act_exercise.isEnabled(),
           "och menyn har en väg till dem")
 
@@ -1772,6 +1773,203 @@ def main() -> int:
     ruta3.close()
     win.editor.document.setModified(False)
     win.is_modified = False
+
+    print("\n41. Namn- och ordförrådsgeneratorn (fas 4.15, flyttad från 2.11)")
+
+    from core import exercises as ex41
+
+    check(ex41.max_suggestions("namn") == 12 and ex41.max_suggestions("next") == 3,
+          f"generatorn ber om fler namn ({ex41.max_suggestions('namn')}) än vägarna vidare ber om "
+          f"alternativ ({ex41.max_suggestions('next')})")
+    check(ex41.category("ord")[1] == "Ord och uttryck", "och ordförrådet är en egen kategori")
+    svar41 = "\n".join(f"{i}. Namn {i} — kort not" for i in range(1, 15))
+    check(len(ex41.parse_suggestions(svar41, max_n=ex41.max_suggestions("namn"))) == 12,
+          "och tolv namn ryms i ett svar")
+    check(len(ex41.parse_suggestions(svar41, max_n=ex41.max_suggestions("next"))) == 3,
+          f"medan vägarna vidare stannar vid tre "
+          f"({len(ex41.parse_suggestions(svar41, max_n=ex41.max_suggestions('next')))})")
+    check("Namn 1 — kort not" in ex41.parse_suggestions(svar41)[0],
+          "och namnet läses rent ur raden")
+
+    # Ett valt namn hör till boken: det hamnar i codexet, inte i scenen
+    anteckning_fore = ovningsbok.by_id(ovningsscen.id).note
+    win._last_exercise_category = "namn"
+    win._insert_exercise("Karin Hult — grannens dotter, flyttade in 1974")
+    funna41 = win.codex.mentions("Karin Hult stod i dörren.") if win.codex else []
+    check(any(getattr(e, "name", "") == "Karin Hult" for e in funna41),
+          f"ett valt namn hamnar i codexet ({[getattr(e, 'name', e) for e in funna41]})")
+    check(ovningsbok.by_id(ovningsscen.id).note == anteckning_fore,
+          "och scenens anteckning rörs inte av ett namn")
+
+    # En väg vidare hör fortfarande till scenen
+    win._last_exercise_category = "next"
+    win._insert_exercise("Hon stannar på tröskeln.")
+    check("Hon stannar på tröskeln." in (ovningsbok.by_id(ovningsscen.id).note or ""),
+          "men en väg vidare hamnar i scenens anteckning, som förut")
+
+    print("\n40. Rubriknavigatorn och stilarna (fas 4.4 och 4.6)")
+
+    stiltext = "<p>Första stycket.</p><p>Andra stycket med en rubrik.</p>"
+    ovningsbok.write(ovningsscen.id, stiltext)
+    win._show_scene_html(ovningsscen.id, stiltext)
+
+    # En rubrik via verktygsradens stilsättning — samma väg en författare tar
+    doc40 = win.editor.document
+    andra40 = doc40.find("Andra").selectionStart()
+    markor40 = QTextCursor(doc40)
+    markor40.setPosition(andra40)
+    win.editor.setTextCursor(markor40)
+    win.toolbar._apply_heading_level(2)
+    check(doc40.findBlockByNumber(1).blockFormat().headingLevel() == 2,
+          f"rubrikstilen sätter rubriknivån på stycket "
+          f"({doc40.findBlockByNumber(1).blockFormat().headingLevel()})")
+
+    win.sidebar.update_metrics_and_outline(doc40)
+    rader40 = [win.sidebar.list_outline.item(i).text() for i in range(win.sidebar.list_outline.count())]
+    check(any("Andra stycket" in r for r in rader40),
+          f"och rubriken hamnar i navigatorn ({rader40})")
+    check(not any("Första stycket" in r for r in rader40),
+          "och ett vanligt stycke hamnar inte där")
+
+    # Ett klick i navigatorn hoppar till rubriken
+    markor40b = QTextCursor(doc40); markor40b.setPosition(0)
+    win.editor.setTextCursor(markor40b)
+    item40 = next(win.sidebar.list_outline.item(i) for i in range(win.sidebar.list_outline.count())
+                  if "Andra stycket" in win.sidebar.list_outline.item(i).text())
+    win.sidebar._on_outline_clicked(item40)
+    check(win.editor.textCursor().position() == andra40,
+          f"och ett klick hoppar till rubriken ({win.editor.textCursor().position()} mot {andra40})")
+
+    # Teckenformatet: fet stil på ett markerat ord
+    markerat40 = QTextCursor(doc40)
+    markerat40.setPosition(andra40)
+    markerat40.setPosition(andra40 + 5, QTextCursor.MoveMode.KeepAnchor)
+    win.editor.setTextCursor(markerat40)
+    win.toolbar._toggle_bold()
+    inne40 = QTextCursor(doc40); inne40.setPosition(andra40 + 1)
+    check(int(inne40.charFormat().fontWeight()) > 400,
+          f"och fetstilen sätter teckenformatet (vikt {int(inne40.charFormat().fontWeight())})")
+    # Projektmallen (stilmallen) prövas av att provet skapade projektet med en:
+    # Project.create(..., template="roman") — stilen är alltså i bruk genom hela provet.
+
+    print("\n39. Pauspåminnelse och projektets egna textfält (fas 4.14 och 4.16)")
+
+    # 4.14: påminnelsen är valbar, kommer ihåg sig och syns diskret
+    var_av39 = win.pause_timer.isActive()
+    win._toggle_pause_reminder()
+    check(win.pause_timer.isActive() and win.act_view_pause.isChecked(),
+          f"pauspåminnelsen går att slå på ({win.pause_timer.interval() // 60000} minuter)")
+    check(win.config.get("pause_reminder") is True, "och valet kommer ihåg sig")
+    win.pause_reminder_tick()
+    check("ryggen" in win.status_bar.currentMessage(),
+          f"och en påminnelse syns i statusfältet ({win.status_bar.currentMessage()[:26]!r})")
+    win._toggle_pause_reminder()
+    check(not win.pause_timer.isActive() and win.config.get("pause_reminder") is False,
+          "och den går att slå av igen")
+    if var_av39:
+        win._toggle_pause_reminder()
+
+    # 4.16: baksidestext och sammanfattning är projektets egna fält
+    from core.project import Project as Project39
+    from ui.overview_dialog import OverviewDialog
+
+    ruta39 = OverviewDialog(ovningsbok, None, win)
+    ruta39.txt_blurb.setPlainText("En källare, en nyckel och en hemlighet.")
+    ruta39.txt_synopsis.setPlainText("Hon kom tillbaka till huset för att stanna.")
+    ruta39.done(0)
+    check(ovningsbok.settings.get("blurb") == "En källare, en nyckel och en hemlighet.",
+          f"baksidestexten sparas i projektet ({ovningsbok.settings.get('blurb')!r})")
+    check(ovningsbok.settings.get("synopsis", "").startswith("Hon kom tillbaka"),
+          "och sammanfattningen")
+    from_disk39 = _json.load(open(os.path.join(str(ovningsbok.root), "project.json"), encoding="utf-8"))
+    sparade39 = from_disk39.get("settings", {})
+    check(sparade39.get("blurb", "").startswith("En källare")
+          and sparade39.get("synopsis", "").startswith("Hon kom tillbaka"),
+          f"och båda står i projektfilen på disk ({sparade39.get('blurb', '')[:24]!r})")
+
+    print("\n38. Språkkontroll mot en tjänst — och ärlig degradering (fas 4.10)")
+
+    from core.spellcheck import Issue
+
+    class ProvKontroll:
+        """En tjänst som svarar som LanguageTool, utan nät."""
+
+        language = "sv-SE"
+        endpoint = "https://prov.local/v2/check"
+        last_error = None
+
+        def __init__(self, ordlista, ok=True):
+            self.ordlista = ordlista
+            self._ok = ok
+            self.anrop = []          # (språk, text) — så att styckets språk syns
+
+        def available(self):
+            return self._ok
+
+        def check(self, text, language=None):
+            self.anrop.append((language or self.language, text))
+            if not self._ok:
+                return []
+            ut = []
+            for ordet, ny in self.ordlista:
+                plats = text.find(ordet)
+                if plats >= 0:
+                    ut.append(Issue(plats, len(ordet), f"'{ordet}' är felstavat",
+                                    [ny], "MORFOLOGIK_RULE_SV", "TYPOS", "misspelling"))
+            return ut
+
+    text38 = "<p>Hon skrev teskt i källaren.</p>"
+    ovningsbok.write(ovningsscen.id, text38)
+    win._show_scene_html(ovningsscen.id, text38)
+    win._checker = ProvKontroll([("teskt", "text")])
+
+    check(win.run_spellcheck(), "scenen kan språkkontrolleras")
+    check(win.sidebar.list_language.count() == 1,
+          f"och träffen hamnar i panelen ({win.sidebar.list_language.count()})")
+    rad38 = win.sidebar.list_language.item(0).text()
+    check("teskt" in rad38 and "felstavat" in rad38,
+          f"med ordet och meddelandet i raden ({rad38!r})")
+    check("prov.local" in win.sidebar.lbl_language_hint.text(),
+          "och adressen står i panelen — texten lämnar datorn")
+    check(win.status_bar.currentMessage() == tr("spell_done_one"),
+          f"och statusfältet säger hur många ({win.status_bar.currentMessage()!r})")
+
+    # Ett klick hoppar till ordet, ett dubbelklick tar första förslaget
+    win.sidebar._on_language_clicked(win.sidebar.list_language.item(0))
+    check(win.editor.textCursor().selectedText() == "teskt",
+          f"klicket markerar ordet i texten ({win.editor.textCursor().selectedText()!r})")
+    win.editor.document.clearUndoRedoStacks()
+    win.sidebar._on_language_double_clicked(win.sidebar.list_language.item(0))
+    check("text i källaren" in win.editor.document.toPlainText(),
+          f"och dubbelklicket tar förslaget ({win.editor.document.toPlainText()[:24]!r})")
+    win.editor.document.undo()
+    check("teskt" in win.editor.document.toPlainText(),
+          "och ett ångra tar tillbaka det")
+
+    # Språk per avsnitt: ett stycke märkt engelskt skickas som engelskt
+    from core import richtext as rt38
+    kontroll = ProvKontroll([])
+    win._checker = kontroll
+    markor38 = QTextCursor(win.editor.document)
+    markor38.setPosition(0)
+    fmt38 = markor38.blockFormat()
+    rt38.set_role(fmt38, "", "en")
+    markor38.setBlockFormat(fmt38)
+    win.run_spellcheck()
+    check(("en", "Hon skrev teskt i källaren.") in kontroll.anrop,
+          f"och ett stycke märkt engelskt kontrolleras som engelskt ({kontroll.anrop})")
+    win._checker = ProvKontroll([("teskt", "text")])
+
+    # En tjänst som inte svarar säger det i stället för att tiga
+    tyst = ProvKontroll([], ok=False)
+    tyst.last_error = "Connection refused"
+    win._checker = tyst
+    check(win.run_spellcheck(), "kontrollen går att köra även när tjänsten är borta")
+    check("Connection refused" in win.status_bar.currentMessage(),
+          f"och då står felet i statusfältet ({win.status_bar.currentMessage()!r})")
+    check(win.sidebar.list_language.count() == 0,
+          f"och listan är tom — inga påhittade träffar ({win.sidebar.list_language.count()})")
+    win._checker = None
 
     print("\n37. Fält i texten: fotnoter, bildtexter, korsreferenser och innehåll (fas 4.1–4.5)")
 

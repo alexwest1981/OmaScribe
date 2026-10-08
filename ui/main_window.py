@@ -110,6 +110,13 @@ class MainWindow(QMainWindow):
         self.review_timer.setInterval(2500)
         self.review_timer.timeout.connect(self._on_review_timer_fired)
 
+        # Pauspåminnelsen: en klocka som säger till med jämna mellanrum. Minuten
+        # är inställningsbar (pause_minutes), för en skrivare i flöde och en som
+        # sitter i möten behöver olika långa pass.
+        self.pause_timer = QTimer(self)
+        self.pause_timer.setInterval(max(1, int(self.config.get("pause_minutes", 50))) * 60 * 1000)
+        self.pause_timer.timeout.connect(self.pause_reminder_tick)
+
         self.autosave_timer = QTimer(self)
         self.autosave_timer.setInterval(self.config.get("autosave_interval_sec", 30) * 1000)
         self.autosave_timer.timeout.connect(self._on_autosave_timer_fired)
@@ -132,6 +139,9 @@ class MainWindow(QMainWindow):
         # Sidebar interactions
         self.sidebar.apply_suggestion_requested.connect(self._apply_ai_suggestion)
         self.sidebar.comment_suggestion_requested.connect(self.comment_ai_suggestion)
+        self.sidebar.check_language_requested.connect(self.run_spellcheck)
+        self.sidebar.replace_issue_requested.connect(self.apply_language_issue)
+        self.sidebar.language_issue_clicked.connect(self.show_language_issue)
         self.sidebar.outline_item_clicked.connect(self._navigate_to_position)
         self.sidebar.btn_refresh.clicked.connect(self._trigger_ai_review)
         self.sidebar.close_requested.connect(self._toggle_sidebar)
@@ -411,6 +421,7 @@ class MainWindow(QMainWindow):
         self.act_find = self._add_action(self.menu_edit, _("menu_edit_find"), self.open_find, "Ctrl+F")
         self.act_find_replace = self._add_action(self.menu_edit, _("menu_edit_find_replace"), lambda: self.open_find(with_replace=True), "Ctrl+H")
         self.act_autocorrect = self._add_action(self.menu_edit, _("menu_edit_autocorrect"), self.run_autocorrect, "Ctrl+Shift+K")
+        self.act_spellcheck = self._add_action(self.menu_edit, _("menu_edit_spellcheck"), self.run_spellcheck, "Ctrl+Shift+G")
 
         # View Menu
         self.menu_view = mb.addMenu(_("menu_view"))
@@ -427,6 +438,11 @@ class MainWindow(QMainWindow):
             bool(self.config.get("readability_marks", False)))
         self.act_view_typewriter.setCheckable(True)
         self.act_view_typewriter.setChecked(bool(self.config.get("typewriter_mode", False)))
+        self.act_view_pause = self._add_action(
+            self.menu_view, _("menu_view_pause"), self._toggle_pause_reminder)
+        self.act_view_pause.setCheckable(True)
+        self.act_view_pause.setChecked(bool(self.config.get("pause_reminder", False)))
+        self.start_pause_timer_if_enabled()
         self.act_view_scrivenings = self._add_action(
             self.menu_view, _("menu_view_scrivenings"), self._toggle_scrivenings, "Ctrl+Shift+L")
         self.act_view_scrivenings.setEnabled(False)     # bara i projektläge
@@ -483,12 +499,12 @@ class MainWindow(QMainWindow):
         self.act_gfonts = self._add_action(self.menu_format, "🌐 " + _("menu_format_google_fonts"), self._open_google_fonts_dialog)
         self.menu_format.addSeparator()
         self.act_fmt_directives = self._add_action(self.menu_format, "⌗ " + _("menu_format_directives"), self._format_directives, "Ctrl+Shift+M")
-        self.menu_format.addSeparator()
-        self.act_fld_note = self._add_action(self.menu_format, _("menu_format_note"), lambda: self.insert_field("not"), "Ctrl+Alt+F")
-        self.act_fld_figure = self._add_action(self.menu_format, _("menu_format_figure"), lambda: self.insert_field("figur"))
-        self.act_fld_table = self._add_action(self.menu_format, _("menu_format_table"), lambda: self.insert_field("tabell"))
-        self.act_fld_ref = self._add_action(self.menu_format, _("menu_format_ref"), self.insert_reference)
-        self.act_fld_toc = self._add_action(self.menu_format, _("menu_format_toc"), self.insert_toc, "Ctrl+Alt+I")
+        self.menu_insert.addSeparator()
+        self.act_fld_note = self._add_action(self.menu_insert, _("menu_format_note"), lambda: self.insert_field("not"), "Ctrl+Alt+F")
+        self.act_fld_figure = self._add_action(self.menu_insert, _("menu_format_figure"), lambda: self.insert_field("figur"))
+        self.act_fld_table = self._add_action(self.menu_insert, _("menu_format_table"), lambda: self.insert_field("tabell"))
+        self.act_fld_ref = self._add_action(self.menu_insert, _("menu_format_ref"), self.insert_reference)
+        self.act_fld_toc = self._add_action(self.menu_insert, _("menu_format_toc"), self.insert_toc, "Ctrl+Alt+I")
 
         # AI Assistant Menu
         self.menu_ai = mb.addMenu(_("menu_ai"))
@@ -858,6 +874,29 @@ class MainWindow(QMainWindow):
         self.sidebar.setVisible(vis)
         self.config.set("show_ai_sidebar", vis)
 
+    def _toggle_pause_reminder(self) -> None:
+        """Pauspåminnelsen: en rad i statusfältet var N:te minut (R03.7).
+
+        Diskret, som sprintens slut — ingen modal ruta som avbryter mitt i en
+        mening. Att ta en paus är författarens beslut; påminnelsen ska bara
+        finnas där, inte kräva ett svar.
+        """
+        på = not self.pause_timer.isActive()
+        self.act_view_pause.setChecked(på)
+        self.config.set("pause_reminder", på)
+        if på:
+            self.pause_timer.start()
+            self.status_bar.showMessage(
+                _("pause_on", minutes=self.pause_timer.interval() // 60000), 5000)
+        else:
+            self.pause_timer.stop()
+            self.status_bar.showMessage(_("pause_off"), 4000)
+
+    def pause_reminder_tick(self) -> None:
+        """En vänlig påminnelse om att räta på ryggen."""
+        self.status_bar.showMessage(_("pause_reminder"), 15000)
+        QApplication.alert(self)
+
     def _toggle_readability(self) -> None:
         """Markerar tunga meningar i texten — en läsbarhetsanalys man kan se.
 
@@ -1195,6 +1234,7 @@ class MainWindow(QMainWindow):
 
     def _ask_exercise(self, dialog, category: str) -> None:
         """Skickar scenens sammanhang — markerad text om det finns, annars raden."""
+        self._last_exercise_category = category
         markerat = self.editor.textCursor().selectedText().strip()
         if not markerat:
             markerat = self.editor.textCursor().block().text().strip()
@@ -1208,7 +1248,24 @@ class MainWindow(QMainWindow):
         )
 
     def _insert_exercise(self, suggestion: str) -> None:
-        """Förslaget hamnar i scenens anteckning, där författaren ser det igen."""
+        """Förslaget hamnar där det hör hemma (R03.12, R03.16).
+
+        En väg vidare hör till scenen — den hamnar i scenens anteckning, där
+        författaren ser den igen. Ett **namn** hör till boken: det läggs i
+        codexet, med noten som sammanfattning, så att personen finns där nästa
+        gång man undrar vad hon heter.
+        """
+        if getattr(self, "_last_exercise_category", "") == "namn" and self.codex is not None:
+            namn, _streck, noten = (suggestion or "").partition("—")
+            namn = namn.strip(" -–—\t")
+            try:
+                self.codex.add_entity(namn, type="character", summary=noten.strip())
+            except ValueError:
+                self.status_bar.showMessage(_("name_empty"), 4000)
+                return
+            self.codex_panel.refresh()
+            self.status_bar.showMessage(_("name_added", name=namn), 5000)
+            return
         node = self.project.by_id(self.active_scene_id) if self.project and self.active_scene_id else None
         if node is None or not suggestion.strip():
             return
@@ -1943,6 +2000,113 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 QMessageBox.critical(self, _("export_error_title"), str(e))
 
+    def spellchecker(self):
+        """Kontrollen. Adressen och språket kommer ur inställningarna (R02.13).
+
+        Den publika tjänsten används om inget annat är inställt; en egen server
+        ställs in med `spellcheck_endpoint`. Texten lämnar datorn, så adressen
+        står i panelen — det ska man veta om.
+        """
+        from core.spellcheck import DEFAULT_ENDPOINT, SpellChecker
+
+        if getattr(self, "_checker", None) is None:
+            self._checker = SpellChecker(
+                language=self.config.get("spellcheck_language", "sv-SE") or "sv-SE",
+                endpoint=self.config.get("spellcheck_endpoint", DEFAULT_ENDPOINT) or DEFAULT_ENDPOINT)
+        return self._checker
+
+    def run_spellcheck(self) -> bool:
+        """Stavning och grammatik över scenen (R02.13).
+
+        Ett språk per avsnitt: stycken med egen språkmärkning skickas för sig,
+        resten med scenens språk. I den vanliga boken — ett språk hela vägen —
+        blir det **ett** anrop. En trasig eller frånvarande tjänst säger vad som
+        gick fel i stället för att tiga.
+        """
+        from core import richtext
+
+        canvas = self.active_canvas
+        if canvas is None:
+            return False
+        document = canvas.document()
+        if document is None or not document.toPlainText().strip():
+            self.status_bar.showMessage(_("spell_none"), 5000)
+            return False
+
+        grund = self.spellchecker().language.split("-")[0]
+        # Stycke för stycke är den enkla, exakta vägen: varje träff får sin
+        # position i dokumentet direkt ur stycket den kom ifrån.
+        stycken: list[tuple[str, int, str]] = []
+        block = document.begin()
+        while block.isValid():
+            rent = block.text()
+            if rent.strip():
+                stycken.append((richtext.lang_of(block.blockFormat()) or grund,
+                                block.position(), rent))
+            block = block.next()
+        if not stycken:
+            self.status_bar.showMessage(_("spell_none"), 5000)
+            return False
+
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            träffar = []
+            for språk, start, rent in stycken:
+                for issue in self.spellchecker().check(rent, språk):
+                    träffar.append((start + issue.offset, issue))
+        finally:
+            QApplication.restoreOverrideCursor()
+
+        förpackade = []
+        for position, issue in träffar:
+            # Texten träffen gäller läses ur dokumentet, så raden i panelen visar
+            # vad som är fel och var — tjänsten svarar bara med position.
+            område = QTextCursor(document)
+            område.setPosition(position)
+            område.setPosition(min(position + issue.length, document.characterCount() - 1),
+                               QTextCursor.MoveMode.KeepAnchor)
+            issue.text = område.selectedText()
+            issue.offset = position
+            förpackade.append(issue)
+
+        self.sidebar.set_language_issues(förpackade, self.spellchecker().endpoint,
+                                         self.spellchecker().available())
+        if not self.spellchecker().available():
+            self.status_bar.showMessage(
+                _("spell_unavailable", error=self.spellchecker().last_error or ""), 8000)
+        elif len(förpackade) == 1:
+            self.status_bar.showMessage(_("spell_done_one"), 6000)
+        else:
+            self.status_bar.showMessage(_("spell_done", n=len(förpackade)), 6000)
+        return True
+
+    def show_language_issue(self, start: int, length: int) -> bool:
+        """Markerar träffen i texten, så att man ser vad tjänsten menar."""
+        canvas = self.active_canvas
+        if canvas is None:
+            return False
+        cursor = QTextCursor(canvas.document())
+        cursor.setPosition(int(start))
+        cursor.setPosition(min(int(start) + int(length), canvas.document().characterCount() - 1),
+                           QTextCursor.MoveMode.KeepAnchor)
+        canvas.setTextCursor(cursor)
+        canvas.setFocus()
+        return True
+
+    def apply_language_issue(self, start: int, length: int, replacement: str) -> bool:
+        """Tar tjänstens första förslag — ett steg i ångra-historiken."""
+        canvas = self.active_canvas
+        if canvas is None:
+            return False
+        cursor = QTextCursor(canvas.document())
+        cursor.setPosition(int(start))
+        cursor.setPosition(min(int(start) + int(length), canvas.document().characterCount() - 1),
+                           QTextCursor.MoveMode.KeepAnchor)
+        cursor.insertText(replacement)
+        self.is_modified = True
+        self.status_bar.showMessage(_("spell_applied", value=replacement), 4000)
+        return True
+
     def field_labels(self) -> dict:
         """Orden fälten visas med — core/fields.py är språkoberoende."""
         return {"note": _("field_name_note"), "figure": _("field_name_figure"),
@@ -2090,6 +2254,12 @@ class MainWindow(QMainWindow):
         elif ret == QMessageBox.StandardButton.Discard:
             return True
         return False
+
+    def start_pause_timer_if_enabled(self) -> None:
+        """Sätter igång klockan om påminnelsen var på sist (R03.7)."""
+        if self.config.get("pause_reminder", False):
+            self.act_view_pause.setChecked(True)
+            self.pause_timer.start()
 
     def closeEvent(self, event):
         self.writing_log.close_log()
@@ -2417,6 +2587,7 @@ class MainWindow(QMainWindow):
         self.act_find.setText(_("menu_edit_find"))
         self.act_find_replace.setText(_("menu_edit_find_replace"))
         self.act_autocorrect.setText(_("menu_edit_autocorrect"))
+        self.act_spellcheck.setText(_("menu_edit_spellcheck"))
 
         self.menu_view.setTitle(_("menu_view"))
         self.act_view_sidebar.setText(_("menu_view_ai_sidebar"))

@@ -269,16 +269,20 @@ Instruction: {instruction}
         self.ai_status_changed.emit("analyzing")
         worker = AIWorker(endpoint, api_key, model, system, user)
         self._active_workers.add(worker)
-        worker.finished.connect(lambda res, w=worker: self._on_suggestions(res.get("content", ""), w))
+        worker.finished.connect(lambda res, w=worker, c=category_key:
+                                self._on_suggestions(res.get("content", ""), w, c))
         worker.error.connect(lambda err, w=worker: self._on_suggestions_error(err, w))
         worker.start()
 
-    def _on_suggestions(self, content, worker):
+    def _on_suggestions(self, content, worker, category="next"):
         from core import exercises
 
         self._active_workers.discard(worker)
         self.ai_status_changed.emit("ready")
-        self.suggestions_ready.emit(exercises.parse_suggestions(content))
+        # Kategorin bestämmer hur många som tas emot: tre vägar vidare är lagom
+        # att välja mellan, tolv namn är lagom att välja ur.
+        self.suggestions_ready.emit(
+            exercises.parse_suggestions(content, max_n=exercises.max_suggestions(category)))
 
     def _on_suggestions_error(self, err, worker):
         self._active_workers.discard(worker)

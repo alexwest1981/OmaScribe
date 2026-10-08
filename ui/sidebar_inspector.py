@@ -15,6 +15,9 @@ class SidebarInspector(QWidget):
     apply_suggestion_requested = pyqtSignal(str, str) # (original, replacement)
     comment_suggestion_requested = pyqtSignal(str, str)  # förslaget som kommentar i marginalen
     outline_item_clicked = pyqtSignal(int) # cursor position
+    check_language_requested = pyqtSignal()
+    replace_issue_requested = pyqtSignal(int, int, str)  # start, längd, ny text
+    language_issue_clicked = pyqtSignal(int, int)        # start, längd
     close_requested = pyqtSignal()         # stängknappen i huvudet
     rewrite_requested = pyqtSignal()       # "Förbättra markeringen"
 
@@ -83,17 +86,20 @@ class SidebarInspector(QWidget):
         self.tabs.tabBar().setElideMode(Qt.TextElideMode.ElideNone)
         self.tab_review = QWidget()
         self.tab_fields = QWidget()
+        self.tab_language = QWidget()
         self.tab_outline = QWidget()
         self.tab_metrics = QWidget()
 
         self._init_review_tab()
         self._init_outline_tab()
         self._init_fields_tab()
+        self._init_language_tab()
         self._init_metrics_tab()
 
         self.tabs.addTab(self.tab_review, _("sidebar_tab_review"))
         self.tabs.addTab(self.tab_outline, _("sidebar_tab_outline"))
         self.tabs.addTab(self.tab_fields, _("sidebar_tab_fields"))
+        self.tabs.addTab(self.tab_language, _("sidebar_tab_language"))
         self.tabs.addTab(self.tab_metrics, _("sidebar_tab_metrics"))
 
         layout.addWidget(self.tabs, 1)
@@ -199,6 +205,61 @@ class SidebarInspector(QWidget):
         pos = item.data(Qt.ItemDataRole.UserRole)
         if pos is not None:
             self.outline_item_clicked.emit(int(pos))
+
+    def _init_language_tab(self):
+        layout = QVBoxLayout(self.tab_language)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
+
+        self.lbl_language_hint = QLabel()
+        self.lbl_language_hint.setWordWrap(True)
+        self.lbl_language_hint.setObjectName("LanguageHint")
+        layout.addWidget(self.lbl_language_hint)
+
+        self.btn_check_language = QPushButton()
+        self.btn_check_language.setObjectName("CheckLanguageButton")
+        self.btn_check_language.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_check_language.clicked.connect(self.check_language_requested.emit)
+        layout.addWidget(self.btn_check_language)
+
+        self.list_language = QListWidget()
+        self.list_language.setObjectName("LanguageList")
+        self.list_language.itemClicked.connect(self._on_language_clicked)
+        self.list_language.itemDoubleClicked.connect(self._on_language_double_clicked)
+        layout.addWidget(self.list_language, 1)
+
+    def set_language_issues(self, issues: list, endpoint: str, available: bool = True) -> None:
+        """Stavnings- och grammatikträffarna i scenen (R02.13).
+
+        Raden per träff bär meddelandet, och den text den gäller står i raden
+        före: vad som är fel och var. Ett klick hoppar dit, ett dubbelklick tar
+        första förslaget. Adressen står överst — texten lämnar datorn, och det
+        ska man veta om.
+        """
+        self.list_language.clear()
+        self.lbl_language_hint.setText(_("language_hint", endpoint=endpoint))
+        for issue in issues:
+            ordet = getattr(issue, "text", "") or ""
+            rad = f"{ordet}  ·  {issue.message}" if ordet else issue.message
+            item = QListWidgetItem(rad)
+            tips = [issue.message]
+            if issue.replacements:
+                tips.append(_("language_suggestions", values=", ".join(issue.replacements[:6])))
+            item.setToolTip("\n".join(tips))
+            item.setData(Qt.ItemDataRole.UserRole, (issue.offset, issue.length))
+            item.setData(Qt.ItemDataRole.UserRole + 1, issue.replacements)
+            self.list_language.addItem(item)
+
+    def _on_language_clicked(self, item):
+        data = item.data(Qt.ItemDataRole.UserRole)
+        if data:
+            self.language_issue_clicked.emit(int(data[0]), int(data[1]))
+
+    def _on_language_double_clicked(self, item):
+        data = item.data(Qt.ItemDataRole.UserRole)
+        förslag = item.data(Qt.ItemDataRole.UserRole + 1) or []
+        if data and förslag:
+            self.replace_issue_requested.emit(int(data[0]), int(data[1]), förslag[0])
 
     def _init_metrics_tab(self):
         layout = QVBoxLayout(self.tab_metrics)

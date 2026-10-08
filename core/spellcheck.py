@@ -8,6 +8,9 @@ import httpx
 
 _MAX_CHUNK_LENGTH = 19_000
 
+# Den publika tjänsten. En egen server ställs in i inställningarna.
+DEFAULT_ENDPOINT = "https://api.languagetool.org/v2/check"
+
 
 @dataclass
 class Issue:
@@ -18,6 +21,7 @@ class Issue:
     rule_id: str
     category: str
     severity: str
+    text: str = ""     # orden träffen gäller, satt av gränssnittet
 
 
 def _utf16_index(text: str, units: int) -> int:
@@ -67,7 +71,7 @@ def _split_text(text: str, limit: int = _MAX_CHUNK_LENGTH) -> list[tuple[int, st
 
 class SpellChecker:
     def __init__(self, language: str = "sv-SE",
-                 endpoint: str = "https://api.languagetool.org/v2/check",
+                 endpoint: str = DEFAULT_ENDPOINT,
                  timeout: float = 8.0):
         self.language = language
         self.endpoint = endpoint
@@ -78,7 +82,9 @@ class SpellChecker:
     def available(self) -> bool:
         return self._available
 
-    def check(self, text: str) -> list[Issue]:
+    def check(self, text: str, language: str | None = None) -> list[Issue]:
+        """Kontrollera en text. Språket kan ges per anrop — ett avsnitt kan vara
+        skrivet på ett annat språk än boken i övrigt."""
         if not text:
             return []
         issues: list[Issue] = []
@@ -87,7 +93,7 @@ class SpellChecker:
                 for global_offset, chunk in _split_text(text, _MAX_CHUNK_LENGTH):
                     response = client.post(
                         self.endpoint,
-                        data={"text": chunk, "language": self.language},
+                        data={"text": chunk, "language": language or self.language},
                     )
                     response.raise_for_status()
                     payload: Any = response.json()

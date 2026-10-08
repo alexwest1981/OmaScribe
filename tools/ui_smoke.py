@@ -2472,15 +2472,22 @@ def main() -> int:
     check(win.editor.textCursor().position() == andra40,
           f"och ett klick hoppar till rubriken ({win.editor.textCursor().position()} mot {andra40})")
 
-    # Teckenformatet: fet stil på ett markerat ord
+    # Teckenformatet: fet stil på ett markerat ord. Vikt mäts som en *ändring*:
+    # texten i en rubrik är redan fet (rubrikstilen läggs på texten), och
+    # _toggle_bold växlar — provet skall gälla växlingen, inte utgångsläget.
     markerat40 = QTextCursor(doc40)
     markerat40.setPosition(andra40)
     markerat40.setPosition(andra40 + 5, QTextCursor.MoveMode.KeepAnchor)
     win.editor.setTextCursor(markerat40)
+    inne40 = QTextCursor(doc40)
+    inne40.setPosition(andra40 + 1)
+    vikt_före40 = int(inne40.charFormat().fontWeight())
     win.toolbar._toggle_bold()
-    inne40 = QTextCursor(doc40); inne40.setPosition(andra40 + 1)
-    check(int(inne40.charFormat().fontWeight()) > 400,
-          f"och fetstilen sätter teckenformatet (vikt {int(inne40.charFormat().fontWeight())})")
+    inne40 = QTextCursor(doc40)
+    inne40.setPosition(andra40 + 1)
+    check(int(inne40.charFormat().fontWeight()) != vikt_före40,
+          f"och fetstilen växlar teckenformatet (vikt {vikt_före40} -> "
+          f"{int(inne40.charFormat().fontWeight())})")
     # Projektmallen (stilmallen) prövas av att provet skapade projektet med en:
     # Project.create(..., template="roman") — stilen är alltså i bruk genom hela provet.
 
@@ -3538,6 +3545,20 @@ def main() -> int:
         satte57 = (richtext.block_role(block57c) == roll57c if roll57c
                    else block57c.blockFormat().headingLevel() == niva57c)
         check(satte57, f"{namn57c} sätter stilen första gången")
+
+        # Alex 8/10: "Det händer inget när man har text markerad och klickar på h1, h2
+        # eller h3." Nivån sattes i blocket, men formatet nådde aldrig texten: text
+        # från en sparad scen bär sina egna teckenformat, och mergeBlockCharFormat rör
+        # bara blockets standard. Rubrikstilen skall synas i teckenformatet.
+        fmt_före57 = textformat57()
+        if niva57c in (1, 2, 3):
+            check(fmt_före57.fontPointSize() > 0
+                  and fmt_före57.fontWeight() == QFont.Weight.Bold.value,
+                  f"{namn57c} ger texten sin storlek och vikt, inte bara blocket "
+                  f"(storlek={fmt_före57.fontPointSize()} fet={fmt_före57.fontWeight()})")
+        elif roll57c == richtext.ROLE_CODE:
+            check(fmt_före57.fontFamily() == mono57,
+                  f"Kod ger texten monospace ({fmt_före57.fontFamily()!r})")
 
         knapp57c.click()          # samma knapp en gång till
         for _i in range(3):

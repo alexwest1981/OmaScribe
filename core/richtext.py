@@ -347,6 +347,24 @@ def apply_role_to_blocks(document, first: int, last: int, role: str,
     _apply_formats(document, first, last, bfmt, cfmt)
 
 
+def apply_block_formats(cursor: QTextCursor, bfmt, cfmt) -> None:
+    """Lägger givna block- och teckenformat på markeringens block.
+
+    Rubrikstilarna byggs i verktygsraden (de hör till utseendet, inte till
+    rollerna), men de måste läggas på **texten** och inte bara på blockets
+    standardformat. `mergeBlockCharFormat` når bara blockets standard, och text
+    som kommer från en sparad scen bär sina egna teckenformat — mätt: rubriken
+    fick nivå 1 medan texten stod kvar i 11 pt och vikt 400, alltså ingenting
+    som syntes. Här får varje blocks text formatet också, i en enda
+    redigeringspost så att ett Ctrl+Z ångrar hela stilbytet.
+    """
+    doc = cursor.document()
+    if doc is None:
+        return
+    first, last = _block_range(cursor)
+    _apply_formats(doc, first, last, bfmt, cfmt)
+
+
 def apply_role_and_restore(cursor: QTextCursor, role: str, colors: dict, lang: str = ""):
     """Som apply_role, men sätter tillbaka markören där den var."""
     pos = cursor.position()

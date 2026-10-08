@@ -281,6 +281,10 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
       eftersom rollerna sätter dem på *texten* och `mergeCharFormat` bara kan skriva över. Mätt:
       efter andra klicket på kod är rollen tom, fastbredden av och typsnittet tillbaka till
       dokumentets eget.
+      Rubrikstilarna nådde förut bara blockets standardformat, inte texten: text från en sparad scen
+      bär egna teckenformat, så nivån sattes medan texten stod kvar i 11 pt — "det händer inget när
+      man har text markerad och klickar på h1, h2 eller h3" (Alex 8/10). Nu läggs formatet på texten
+      genom `richtext.apply_block_formats`, mätt: 11 pt/vikt 400 blir 22 pt/700.
       *Medvetet inte gjort:* en stilinspektör som listar dokumentets stilar med räknare — ingen
       författare har saknat den, och en förteckning över sina egna rubriker finns i navigatorn. R02.9
 - [~] **4.7** Avsnittsbrytningar med separata sidhuvuden/sidfötter — **flyttad till fas 5 (5.5)**.

@@ -558,8 +558,10 @@ class FormattingToolBar(QToolBar):
             char_fmt.setFontWeight(QFont.Weight.Normal.value)
             char_fmt.setFontItalic(False)
 
-        cursor.mergeBlockFormat(block_fmt)
-        cursor.mergeBlockCharFormat(char_fmt)
+        # Formaten läggs på texten, inte bara på blockets standardformat: text som
+        # kommit från en sparad scen bär egna teckenformat, och då syns rubriken
+        # inte alls. Se richtext.apply_block_formats.
+        richtext.apply_block_formats(cursor, block_fmt, char_fmt)
         self.editor.setTextCursor(cursor)
 
     def _toggle_bold(self):

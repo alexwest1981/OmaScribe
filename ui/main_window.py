@@ -2058,6 +2058,81 @@ class MainWindow(QMainWindow):
         self.editor.set_page_settings(self.page_settings)
         self.status_bar.showMessage(_("pagesetup_applied"), 4000)
 
+    def hold_together_bad_paragraphs(self) -> int:
+        """Håller ihop de stycken som har en ensam rad över ett sidbrott (5.16).
+
+        Ett ångringssteg, inte flera: markören öppnar en redigeringsgrupp och
+        stänger den efter sig. Texten rörs inte — bara formen, så författaren
+        kan ångra och bestämma själv.
+        """
+        doc = self.editor.document if self.editor is not None else None
+        if doc is None:
+            return 0
+        from core import prepress
+
+        fynd = prepress.widows_and_orphans(doc, self.page_settings)
+        if not fynd:
+            return 0
+        nummer = {f["block"] for f in fynd}
+        markor = QTextCursor(doc)
+        markor.beginEditBlock()
+        try:
+            block = doc.begin()
+            i = 0
+            while block.isValid():
+                if i in nummer:
+                    markor.setPosition(block.position())
+                    fmt = block.blockFormat()
+                    fmt.setNonBreakableLines(True)
+                    markor.mergeBlockFormat(fmt)
+                block = block.next()
+                i += 1
+        finally:
+            markor.endEditBlock()
+        if hasattr(self, "status_bar"):
+            self.status_bar.showMessage(_("prepress_held_message", count=str(len(nummer))), 4000)
+        return len(nummer)
+
+    def export_pdfx(self) -> str:
+        """En tryckfärdig PDF/X-1a:2003: Qt ritar den, Ghostscript gör den tryckbar.
+
+        Stegen syns med flit: först en vanlig PDF genom appens egen exportväg,
+        sedan konverteringen. Misslyckas den andra finns den första kvar och
+        felet sägs rakt ut — en fil som ser färdig ut men inte är det är värre
+        än ingen fil.
+        """
+        from core import prepress
+
+        if self.editor is None or self.editor.document is None:
+            return ""
+        if not prepress.available():
+            QMessageBox.warning(self, _("prepress_pdfx"), _("prepress_no_ghostscript"))
+            return ""
+        fpath, _valt = QFileDialog.getSaveFileName(
+            self, _("prepress_pdfx"), "", "PDF (*.pdf)")
+        if not fpath:
+            return ""
+        if not fpath.lower().endswith(".pdf"):
+            fpath += ".pdf"
+        try:
+            self._save_document(fpath)
+            mål = fpath[:-4] + "-tryck.pdf"
+            prepress.to_pdfx(fpath, mål, title=self.book_metadata().get("title", ""))
+        except Exception as fel:                      # noqa: BLE001 — felet visas för användaren
+            QMessageBox.critical(self, _("export_error_title"), str(fel))
+            return ""
+        if not prepress.has_pdfx_marker(mål):
+            QMessageBox.critical(self, _("prepress_pdfx"), _("prepress_pdfx_unverified"))
+            return ""
+        teckensnitt = prepress.embedded_fonts(mål)
+        icke = [namn for namn, inbäddat in teckensnitt if not inbäddat]
+        if icke:
+            QMessageBox.warning(self, _("prepress_pdfx"),
+                                _("prepress_fonts_missing", fonts=", ".join(icke)))
+        QMessageBox.information(self, _("export_success_title"),
+                                _("prepress_pdfx_done", path=mål))
+        return mål
+
     def open_compile_dialog(self) -> None:
         """Kompilera det som är öppet, eller markeringen (5.15).
 

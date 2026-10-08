@@ -1036,5 +1036,17 @@
   "compile_no_selection": "Select text in the editor first, or choose “Everything that is open”.",
   "compile_no_folder": "The folder does not exist: {folder}",
   "menu_file_compile": "Compile…",
-  "compile_empty": "Nothing to compile."
+  "compile_empty": "Nothing to compile.",
+  "prepress_hold": "Keep solitary lines together",
+  "prepress_pdfx": "Print-ready PDF/X-1a…",
+  "prepress_clean": "No solitary lines across a page break.",
+  "prepress_found": "{widows} paragraphs end with a solitary line (widow), {orphans} begin with one (orphan).",
+  "prepress_held": "{count} paragraphs now held together — undo with Ctrl+Z.",
+  "prepress_hold_none": "Nothing to hold together.",
+  "prepress_held_message": "{count} paragraphs held together",
+  "prepress_no_ghostscript": "Ghostscript is missing — PDF/X-1a requires it. Install it with your package manager.",
+  "prepress_no_document": "No manuscript to measure.",
+  "prepress_pdfx_done": "The print file is at {path}",
+  "prepress_pdfx_unverified": "The file could not be confirmed as PDF/X — it is not print-ready.",
+  "prepress_fonts_missing": "Fonts without embedding: {fonts}"
 }

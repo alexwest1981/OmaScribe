@@ -95,6 +95,24 @@ class PublishDialog(QDialog):
         self.lbl_warnings.setObjectName("PublishWarnings")
         layout.addWidget(self.lbl_warnings)
 
+        # Tryckförberedelsen (5.16): ensamma rader och en PDF som går att trycka.
+        # Rutan mäter bara — den som ändrar något är fönstret, så ändringen blir
+        # ett ångringssteg och sparas som allt annat.
+        self.lbl_prepress = QLabel()
+        self.lbl_prepress.setWordWrap(True)
+        self.lbl_prepress.setObjectName("PublishPrepress")
+        layout.addWidget(self.lbl_prepress)
+
+        rad_prepress = QHBoxLayout()
+        self.btn_hold = QPushButton(_("prepress_hold"))
+        self.btn_hold.clicked.connect(self._hold_together)
+        rad_prepress.addWidget(self.btn_hold)
+        self.btn_pdfx = QPushButton(_("prepress_pdfx"))
+        self.btn_pdfx.clicked.connect(self._export_pdfx)
+        rad_prepress.addWidget(self.btn_pdfx)
+        rad_prepress.addStretch(1)
+        layout.addLayout(rad_prepress)
+
         self.btn_apply = QPushButton(_("publish_apply"))
         self.btn_apply.clicked.connect(self._apply)
         knappar = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
@@ -112,6 +130,7 @@ class PublishDialog(QDialog):
         self.spin_pages.valueChanged.connect(self._update)
         self.chk_bleed.stateChanged.connect(self._update)
         self._update()
+        self.refresh_prepress()
 
     # ------------------------------------------------------------------ läget
     def channel(self) -> str:
@@ -180,3 +199,68 @@ class PublishDialog(QDialog):
         if ny:
             self.settings_applied.emit(ny)
             self.accept()
+
+    # ---------------------------------------------------- tryckförberedelsen
+
+    def prepress_document(self):
+        """Manuset så som fönstret ser det, eller None om det inte går att mäta."""
+        förälder = self.parent()
+        editor = getattr(förälder, "editor", None)
+        if editor is None:
+            return None
+        return getattr(editor, "document", None)
+
+    def _measure_settings(self) -> dict:
+        förälder = self.parent()
+        inst = dict(getattr(förälder, "page_settings", {}) or {})
+        if not inst:
+            inst = self.settings() or {}
+        return inst
+
+    def refresh_prepress(self) -> list[dict]:
+        """Mäter ensamma rader i manuset och skriver vad mätningen gav."""
+        from core import prepress
+
+        doc = self.prepress_document()
+        if doc is None:
+            self.lbl_prepress.setText(_("prepress_no_document"))
+            self.btn_hold.setEnabled(False)
+            return []
+        fynd = prepress.widows_and_orphans(doc, self._measure_settings())
+        if not fynd:
+            self.lbl_prepress.setText("✓ " + _("prepress_clean"))
+        else:
+            från = sum(1 for f in fynd if f["kind"] == prepress.WIDOW)
+            till = len(fynd) - från
+            self.lbl_prepress.setText(
+                "⚠ " + _("prepress_found", widows=str(från), orphans=str(till)))
+        self.btn_hold.setEnabled(bool(fynd))
+        self.btn_pdfx.setEnabled(prepress.available())
+        if not prepress.available():
+            self.lbl_prepress.setText(
+                self.lbl_prepress.text() + "<br>" + _("prepress_no_ghostscript"))
+        return fynd
+
+    def _hold_together(self) -> int:
+        förälder = self.parent()
+        metod = getattr(förälder, "hold_together_bad_paragraphs", None)
+        if metod is None:
+            return 0
+        antal = int(metod() or 0)
+        self.refresh_prepress()
+        self.lbl_prepress.setText(
+            self.lbl_prepress.text()
+            + "<br>" + (_("prepress_held", count=str(antal)) if antal
+                        else _("prepress_hold_none")))
+        return antal
+
+    def _export_pdfx(self) -> str:
+        förälder = self.parent()
+        metod = getattr(förälder, "export_pdfx", None)
+        if metod is None:
+            return ""
+        sökväg = metod() or ""
+        if sökväg:
+            self.lbl_prepress.setText(self.lbl_prepress.text() + "<br>"
+                                      + _("prepress_pdfx_done", path=sökväg))
+        return sökväg

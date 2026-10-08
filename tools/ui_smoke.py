@@ -3026,6 +3026,77 @@ def main() -> int:
     check(profil52 is not None and profil52.get("per_chapter") is True,
           f"och kompileringsprofilen ligger i projektfilen ({profil52})")
 
+    print("\n53. Tryckförberedelsen (fas 5.16)")
+
+    import core.prepress as _prep53
+
+    from ui.publish_dialog import PublishDialog
+
+    fångad53 = []
+    ursprunglig53 = PublishDialog.exec
+    PublishDialog.exec = lambda self: (fångad53.append(self), 0)[1]
+    try:
+        win.open_publish_dialog()
+    finally:
+        PublishDialog.exec = ursprunglig53
+    check(len(fångad53) == 1, "publiceringsrutan öppnas")
+    ruta53 = fångad53[0]
+    check(ruta53.lbl_prepress.text() != "",
+          f"och tryckförberedelsen mäts när rutan öppnas ({ruta53.lbl_prepress.text()[:48]!r})")
+    check(ruta53.btn_pdfx.isEnabled() == _prep53.available(),
+          "PDF/X-knappen är på när Ghostscript finns, annars av")
+
+    # Ensamma rader: ett långt stycke och en sida som bara rymmer några rader.
+    sparat53 = dict(win.page_settings)
+    doc53 = win.editor.document
+    markor53 = win.editor.textCursor()
+    markor53.movePosition(QTextCursor.MoveOperation.End)
+    markor53.insertBlock()
+    markor53.insertText("Hon vände nyckeln i handen och lyssnade efter trappan. " * 20)
+    try:
+        win.page_settings = {**sparat53, "margin_top_mm": 380, "margin_bottom_mm": 380}
+        fynd53 = _prep53.widows_and_orphans(doc53, win.page_settings)
+        check(fynd53 != [], f"en sida med plats för få rader ger ensamma rader ({len(fynd53)})")
+        antal53 = win.hold_together_bad_paragraphs()
+        check(antal53 >= 1, f"och fönstret håller ihop dem ({antal53} stycken)")
+        sista53 = doc53.lastBlock()
+        check(sista53.blockFormat().nonBreakableLines() is True,
+              "mätt i blockformatet i manuset, inte bara i returvärdet")
+        check(doc53.isUndoAvailable(), "och ändringen går att ångra")
+    finally:
+        win.page_settings = sparat53
+
+    if _prep53.available():
+        import ui.main_window as _mw53
+
+        mapp53 = tempfile.mkdtemp(prefix="pdfx53-")
+        mål53 = os.path.join(mapp53, "boken.pdf")
+        klass53 = _mw53.QMessageBox
+        filklass53 = _mw53.QFileDialog
+        meddelanden53 = []
+        _mw53.QMessageBox = type("TystRuta", (), {
+            "information": staticmethod(lambda *a, **k: meddelanden53.append(a)),
+            "critical": staticmethod(lambda *a, **k: meddelanden53.append(a)),
+            "warning": staticmethod(lambda *a, **k: meddelanden53.append(a))})
+        _mw53.QFileDialog = type("TystVal", (), {
+            "getSaveFileName": staticmethod(lambda *a, **k: (mål53, "PDF (*.pdf)"))})
+        try:
+            klar53 = win.export_pdfx()
+        finally:
+            _mw53.QMessageBox = klass53
+            _mw53.QFileDialog = filklass53
+        check(klar53 == mål53[:-4] + "-tryck.pdf",
+              f"exporten skriver en tryckfil bredvid PDF:en ({os.path.basename(klar53 or '')})")
+        check(os.path.exists(klar53) and _prep53.has_pdfx_marker(klar53),
+              "och den bär PDF/X-versionen, läst ur filen själv")
+        teckensnitt53 = _prep53.embedded_fonts(klar53)
+        check(teckensnitt53 != [] and all(inbäddat for _, inbäddat in teckensnitt53),
+              f"med inbäddade teckensnitt ({teckensnitt53})")
+        check(len(meddelanden53) >= 1,
+              f"och fönstret säger till när filen är klar ({len(meddelanden53)} ruta/or)")
+    else:
+        print("  ..  Ghostscript saknas — PDF/X-delen prövas inte här")
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

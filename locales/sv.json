@@ -1036,5 +1036,17 @@
   "compile_no_selection": "Markera text i editorn först, eller välj ”Allt som är öppet”.",
   "compile_no_folder": "Mappen finns inte: {folder}",
   "menu_file_compile": "Kompilera…",
-  "compile_empty": "Ingenting att kompilera."
+  "compile_empty": "Ingenting att kompilera.",
+  "prepress_hold": "Håll ihop ensamma rader",
+  "prepress_pdfx": "Tryckfärdig PDF/X-1a…",
+  "prepress_clean": "Inga ensamma rader över ett sidbrott.",
+  "prepress_found": "{widows} stycken slutar med en ensam rad (änka), {orphans} börjar med en (föräldralös).",
+  "prepress_held": "{count} stycken hålls nu ihop — ångra med Ctrl+Z.",
+  "prepress_hold_none": "Ingenting att hålla ihop.",
+  "prepress_held_message": "{count} stycken hålls ihop",
+  "prepress_no_ghostscript": "Ghostscript saknas — PDF/X-1a kräver det. Installera med pakethanteraren.",
+  "prepress_no_document": "Inget manus att mäta.",
+  "prepress_pdfx_done": "Tryckfilen ligger i {path}",
+  "prepress_pdfx_unverified": "Filen kunde inte bekräftas som PDF/X — den är inte tryckfärdig.",
+  "prepress_fonts_missing": "Teckensnitt utan inbäddning: {fonts}"
 }

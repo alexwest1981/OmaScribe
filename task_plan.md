@@ -497,9 +497,25 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
       metod med å/ä/ö i namnet (`sip` klarar inte namnet). Därför bytte fem identifierare namn och
       `tools/identifier_check.py` vaktar regeln — koden skrivs på engelska, vilket råkar vara exakt
       vad PyQt kräver.
-- [ ] **5.16** Tryckförberedelsen: widow/orphan-kontroll, PDF/X-1a:2003 med CMYK och inbäddade
-      teckensnitt (Vellum publicerar exakt dessa krav i sin spec) samt en large print-utgåva
-      (Atticus). Hör ihop med 5.5 och kräver den paginerade målaren. R08
+- [~] **5.16** Tryckförberedelsen → `core/prepress.py` + knappar i **Fil ▸ Publicera…**
+
+      *Ensamma rader:* `widows_and_orphans()` mäter stycken vars första eller sista rad hamnar
+      ensam över ett sidbrott, mot **samma sidmodell som förhandsvisningen ritar med** (radens y i
+      dokumentet delat med textytans höjd, marginalerna omräknade från millimeter till punkter) —
+      siffran i rutan och sidan på skärmen säger alltså samma sak. Knappen *Håll ihop ensamma rader*
+      sätter Qts `setNonBreakableLines` på exakt de styckena, i **ett** ångringssteg; texten rörs
+      inte, och priset (ett stycke som flyttas helt kan lämna tomrum) står i docstringen.
+
+      *PDF/X-1a:2003:* Qt skriver en PDF men ingen tryckfärdig — ingen OutputIntent, ingen
+      CMYK-konvertering. `to_pdfx()` gör om den med Ghostscript (`-dPDFX`, DeviceCMYK, inbäddade
+      teckensnitt, ICC-profil ur Ghostscripts eget paket) och **verifierar resultatet i filen**:
+      PDF/X-versionen läses ur filen själv och alla teckensnitt kontrolleras med `pdffonts`. Saknas
+      Ghostscript sägs det rakt ut och knappen är avstängd; en halvfärdig fil blir aldrig liggande
+      som om den vore klar. *Mätt:* vanlig PDF (13 578 byte) → PDF/X (8 249 byte) med
+      `GTS_PDFXVersion` i filen och teckensnitten inbäddade.
+
+      **Kvar:** *large print-utgåvan* (Atticus), som kräver att tryckklonen skalar teckengrad och
+      radavstånd — hör ihop med 5.5 och den paginerade målaren. R08
 - **Status:** pending
 
 ### Fas 6: AI som författarverktyg

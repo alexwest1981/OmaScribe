@@ -2916,6 +2916,36 @@ def main() -> int:
     check(omlast50.by_id(ovningsscen.id).elements.get("pov_character") == "Anna",
           "och elementen finns kvar i projektfilen efter en sparning")
 
+    print("\n51. Händelsetabellen (fas 2.23)")
+
+    from ui.events_dialog import EventsDialog
+    from core import events as ev51
+
+    fångad51 = []
+    ursprunglig51 = EventsDialog.exec
+    EventsDialog.exec = lambda self: (fångad51.append(self), 0)[1]
+    try:
+        win.show_events()
+    finally:
+        EventsDialog.exec = ursprunglig51
+    check(len(fångad51) == 1, "händelseknappen öppnar händelsetabellen")
+    dialog51 = fångad51[0]
+    eid51 = dialog51.add_event()
+    dialog51.table.item(0, 0).setText("dag 7")
+    dialog51.table.item(0, 1).setText("Nyckeln byter ägare")
+    händelse51 = ev51.by_id(ovningsbok, eid51)
+    check(händelse51 is not None and händelse51["when"] == "dag 7",
+          f"tiden skrivs till projektet ({händelse51 and händelse51['when']})")
+    check(händelse51 is not None and händelse51["scenes"] == [win.active_scene_id],
+          "och den öppna scenen kopplas till händelsen")
+    check(ovningsscen.id in händelse51["scenes"],
+          "så scenen ser den i sin tur")
+    ovningsbok.save()
+    omlast51 = type(ovningsbok).load(ovningsbok.root)
+    check(any(e["when"] == "dag 7" and e["text"] == "Nyckeln byter ägare"
+              for e in omlast51.events),
+          f"och händelsen ligger i projektfilen ({omlast51.events})")
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

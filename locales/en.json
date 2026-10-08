@@ -994,5 +994,16 @@
   "codex_graph_tooltip": "Draw the codex as a graph",
   "codex_attributes": "Free attributes",
   "codex_attribute_add": "Add an attribute",
-  "codex_attribute_del": "Remove the selected attribute"
+  "codex_attribute_del": "Remove the selected attribute",
+  "events_title": "Events in the story",
+  "events_hint": "An event has a time in the story and the scenes it plays out in. The same event can belong to several scenes — link it with the buttons, which apply to the scene you have open.",
+  "events_col_when": "Time",
+  "events_col_text": "Event",
+  "events_col_scenes": "Scenes",
+  "events_add": "New event",
+  "events_remove": "Remove the selected event",
+  "events_attach": "Link scene",
+  "events_detach": "Unlink scene",
+  "grid_btn_events": "Events",
+  "grid_events_tooltip": "The story's events, linked to scenes"
 }

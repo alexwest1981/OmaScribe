@@ -267,6 +267,7 @@ class MainWindow(QMainWindow):
         self.plot_grid = PlotGrid(self)
         self.plot_grid.scene_selected.connect(self._open_node)
         self.plot_grid.structure_changed.connect(self._on_structure_changed)
+        self.plot_grid.events_requested.connect(self.show_events)
         self.stack.addWidget(self.plot_grid)
         self._plot_grid_index = self.stack.indexOf(self.plot_grid)
 
@@ -1576,6 +1577,22 @@ class MainWindow(QMainWindow):
         self.is_modified = False
         self.scene_inspector.set_scene(None, None)
         self._update_window_title()
+
+    def show_events(self) -> None:
+        """Händelsetabellen (2.23). Scenen som är öppen kopplas med ett klick.
+
+        Ändringarna skrivs rakt i projektet, och `changed` sparar manifestet —
+        samma väg som scenens metadata, så tavlan och trädet inte visar något
+        annat än det som ligger på disk.
+        """
+        if self.project is None:
+            return
+        from ui.events_dialog import EventsDialog
+
+        dialog = EventsDialog(self.project, current_scene_id=self.active_scene_id or "",
+                              parent=self)
+        dialog.changed.connect(self._save_project_manifest)
+        dialog.exec()
 
     def _on_scene_meta_changed(self):
         """Panelen ändrade något i scenen: spara och visa det i vyerna."""

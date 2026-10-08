@@ -20,7 +20,7 @@ både "öppna" och "ändra".
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QComboBox, QHBoxLayout, QLabel, QStyledItemDelegate, QTableWidget,
+    QComboBox, QHBoxLayout, QLabel, QPushButton, QStyledItemDelegate, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -73,6 +73,7 @@ class PlotGrid(QWidget):
 
     scene_selected = pyqtSignal(str)         # node_id
     structure_changed = pyqtSignal()         # metadata ändrad → spara manifestet
+    events_requested = pyqtSignal()          # händelsetabellen (2.23) begärs
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -98,6 +99,11 @@ class PlotGrid(QWidget):
             self.combo_draft.addItem(str(utkast), utkast)
         self.combo_draft.currentIndexChanged.connect(lambda *_: self.refresh())
         rad.addWidget(self.combo_draft)
+        # Händelsetabellen (2.23): tidslinjens datahalva, i samma vy som sorterar
+        # på tid — fönstret äger scenen som är öppen och öppnar den.
+        self.btn_events = QPushButton("📅")
+        self.btn_events.clicked.connect(self.events_requested.emit)
+        rad.addWidget(self.btn_events)
         rad.addStretch(1)
         self.lbl_count = QLabel()
         rad.addWidget(self.lbl_count)
@@ -273,6 +279,8 @@ class PlotGrid(QWidget):
             COL_TITLE, self.table.horizontalHeader().ResizeMode.Stretch)
         self.lbl_sort.setText(_("grid_sort"))
         self.lbl_draft.setText(_("grid_draft"))
+        self.btn_events.setText(_("grid_btn_events"))
+        self.btn_events.setToolTip(_("grid_events_tooltip"))
         valt = self.combo_sort.currentData()
         self.combo_sort.blockSignals(True)
         self.combo_sort.clear()

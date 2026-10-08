@@ -309,6 +309,9 @@ class Project:
         self.collections: list[Collection] = []
         self.variants: list[dict] = []      # namngivna ordningar av scener (R01.14)
         self.links: list[dict] = []               # [{"scene": id, "material": id}]
+        # Händelser (2.23): tid, beskrivning och de scener den spelas i. En
+        # händelse kan återanvändas — samma avslöjande nämns i flera scener.
+        self.events: list[dict] = []              # [{"id","when","text","scenes":[ids]}]
         self._words: dict[str, int] = {}          # cache per nod-id
 
     # ------------------------------------------------------------- skapa/ladda
@@ -360,6 +363,13 @@ class Project:
             for l in (data.get("links") or [])
             if l.get("scene") and l.get("material")
         ]
+        project.events = [
+            {"id": str(e.get("id")), "when": str(e.get("when", "")),
+             "text": str(e.get("text", "")),
+             "scenes": [str(s) for s in (e.get("scenes") or [])]}
+            for e in (data.get("events") or [])
+            if e.get("id")
+        ]
         return project
 
     def save(self) -> None:
@@ -371,6 +381,7 @@ class Project:
             "collections": [c.to_dict() for c in self.collections],
             "variants": [dict(v) for v in self.variants],
             "links": [dict(l) for l in self.links],
+            "events": [dict(e) for e in self.events],
         }
         self.root.mkdir(parents=True, exist_ok=True)
         atomic_write_text(

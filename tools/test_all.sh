@@ -101,6 +101,8 @@ run "stilreglerna" "$PY" -m core.style_rules
 run "story-elementen" "$PY" -m core.story_elements
 run "elementdialogen" "$PY" -m ui.elements_dialog
 run "relationsgrafen" "$PY" -m ui.codex_graph_dialog
+run "händelserna" "$PY" -m core.events
+run "händelsetabellen" "$PY" -m ui.events_dialog
 run "i18n-nycklarna" "$PY" tools/i18n_keys_check.py
 run "ui_smoke" "$PY" tools/ui_smoke.py
 run "print_purity" "$PY" tools/print_purity_check.py

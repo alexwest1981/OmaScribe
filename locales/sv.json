@@ -994,5 +994,16 @@
   "codex_graph_tooltip": "Rita codexet som en graf",
   "codex_attributes": "Fria attribut",
   "codex_attribute_add": "Lägg till ett attribut",
-  "codex_attribute_del": "Ta bort det valda attributet"
+  "codex_attribute_del": "Ta bort det valda attributet",
+  "events_title": "Händelser i berättelsen",
+  "events_hint": "En händelse har en tid i berättelsen och de scener den spelas i. Samma händelse kan höra till flera scener — koppla med knapparna, som gäller scenen du har öppen.",
+  "events_col_when": "Tid",
+  "events_col_text": "Händelse",
+  "events_col_scenes": "Scener",
+  "events_add": "Ny händelse",
+  "events_remove": "Ta bort den valda händelsen",
+  "events_attach": "Koppla scenen",
+  "events_detach": "Lossa scenen",
+  "grid_btn_events": "Händelser",
+  "grid_events_tooltip": "Händelserna i berättelsen, kopplade till scener"
 }

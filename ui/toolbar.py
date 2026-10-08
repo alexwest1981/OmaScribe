@@ -495,15 +495,29 @@ class FormattingToolBar(QToolBar):
     # -------------------------------------------------------------------------
     # Formatting Handlers
     # -------------------------------------------------------------------------
+    # Nivå -> blockroll. 0-3 är rubriknivåer, 4-8 är rollerna kod, citat, vers ...
+    _ROLL_FOR_LEVEL = {4: richtext.ROLE_QUOTE, 5: richtext.ROLE_CODE, 6: richtext.ROLE_BREAK,
+                       7: richtext.ROLE_VERSE, 8: richtext.ROLE_MESSAGE}
+
     def _apply_heading_level(self, level):
         cursor = self.editor.textCursor()
+
+        # Samma stil en gång till tar bort den: klickar man på kod igen skall
+        # stycket bli vanlig text, både rollen och utseendet. Pillerna är
+        # kryssbara i en exklusiv grupp, och Qt kryssar aldrig ur den som redan
+        # är vald — därför ligger avgörandet här och inte i knappens tillstånd.
+        if level != 0:
+            roll_här = self._ROLL_FOR_LEVEL.get(level)
+            if roll_här is not None and richtext.block_role(cursor.block()) == roll_här:
+                level = 0
+            elif roll_här is None and cursor.block().blockFormat().headingLevel() == level:
+                level = 0
 
         # Kod och citat får riktiga blockroller i stället för enbart utseende.
         # Det är rollen som gör att blocket överlever export till markdown och
         # kan plockas ut igen av AI-analysen.
         if level in (4, 5, 6, 7, 8) and self.theme_mgr is not None:
-            roll = {4: richtext.ROLE_QUOTE, 5: richtext.ROLE_CODE, 6: richtext.ROLE_BREAK,
-                    7: richtext.ROLE_VERSE, 8: richtext.ROLE_MESSAGE}[level]
+            roll = self._ROLL_FOR_LEVEL[level]
             lang = ""
             if roll == richtext.ROLE_CODE:
                 sample = cursor.selectedText().replace("\u2029", "\n")

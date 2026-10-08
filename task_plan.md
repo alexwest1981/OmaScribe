@@ -275,6 +275,12 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
       upphöjd, nedsänkt) likaså; och **stilmallarna** (`core/templates.py`: roman, novell, fackbok …)
       ger ett nytt projekt sina statusar och sitt ordmål — rökprovet arbetar i ett projekt skapat med
       mallen "roman" genom hela körningen. **Provat** rubriknivån (2) och teckenformatet (vikt 700).
+      Ett klick på den stil som redan gäller **tar bort den** (Alex 8/10): pillerna sitter i en
+      exklusiv QButtonGroup och Qt kryssar aldrig ur den som redan är vald, så avgörandet ligger i
+      handlern — och borttagningen skriver tillbaka dokumentets eget typsnitt, storlek och färg,
+      eftersom rollerna sätter dem på *texten* och `mergeCharFormat` bara kan skriva över. Mätt:
+      efter andra klicket på kod är rollen tom, fastbredden av och typsnittet tillbaka till
+      dokumentets eget.
       *Medvetet inte gjort:* en stilinspektör som listar dokumentets stilar med räknare — ingen
       författare har saknat den, och en förteckning över sina egna rubriker finns i navigatorn. R02.9
 - [~] **4.7** Avsnittsbrytningar med separata sidhuvuden/sidfötter — **flyttad till fas 5 (5.5)**.

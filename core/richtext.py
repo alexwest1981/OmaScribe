@@ -245,8 +245,15 @@ def _expanded_range(cursor: QTextCursor):
     return first, last
 
 
-def _formats_for(role: str, colors: dict, lang: str = ""):
-    """(blockformat, teckenformat) för en roll."""
+def _formats_for(role: str, colors: dict, lang: str = "", document=None):
+    """(blockformat, teckenformat) för en roll.
+
+    `document` behövs bara när en roll skall *bort*: kod, citat och de andra
+    rollerna sätter typsnitt, storlek och färg **på texten**, och mergeCharFormat
+    kan inte ta bort ett attribut — bara skriva över det. Utan dokumentet skulle
+    kodtexten stå kvar i monospace och 10,5 punkt fastän rollen är borta, vilket
+    är precis vad "formateringen försvinner" inte får betyda.
+    """
     if role == ROLE_CODE:
         bfmt = code_block_format(colors, lang)
         cfmt = code_char_format(colors)
@@ -274,6 +281,15 @@ def _formats_for(role: str, colors: dict, lang: str = ""):
             pass
         set_role(bfmt, "")
         cfmt = QTextCharFormat()
+        if document is not None:
+            standard = document.defaultFont()
+            if standard.family():
+                cfmt.setFontFamily(standard.family())
+            if standard.pointSizeF() > 0:
+                cfmt.setFontPointSize(standard.pointSizeF())
+        vanlig_farg = colors.get("text_color")
+        if vanlig_farg:
+            cfmt.setForeground(QColor(vanlig_farg))
         cfmt.setFontItalic(False)
         cfmt.setFontFixedPitch(False)
         cfmt.setFontWeight(QFont.Weight.Normal.value)
@@ -313,7 +329,7 @@ def apply_role(cursor: QTextCursor, role: str, colors: dict, lang: str = ""):
     if doc is None:
         return
     first, last = _expanded_range(cursor)
-    bfmt, cfmt = _formats_for(role, colors, lang)
+    bfmt, cfmt = _formats_for(role, colors, lang, doc)
     _apply_formats(doc, first, last, bfmt, cfmt)
 
 
@@ -327,7 +343,7 @@ def apply_role_to_blocks(document, first: int, last: int, role: str,
     """
     if document is None or last < first:
         return
-    bfmt, cfmt = _formats_for(role, colors, lang)
+    bfmt, cfmt = _formats_for(role, colors, lang, document)
     _apply_formats(document, first, last, bfmt, cfmt)
 
 

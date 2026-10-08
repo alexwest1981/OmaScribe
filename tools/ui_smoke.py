@@ -31,9 +31,9 @@ from typing import cast  # noqa: E402
 from core.languages import ai_name as _ai_namn  # noqa: E402
 
 from PyQt6.QtWidgets import QApplication, QTextEdit  # noqa: E402
-from PyQt6.QtGui import QImage, QColor, QTextDocument, QTextCursor  # noqa: E402
+from PyQt6.QtGui import QImage, QColor, QTextDocument, QTextCursor, QFont  # noqa: E402
 
-from core import templates, print_style  # noqa: E402
+from core import templates, print_style, richtext  # noqa: E402
 from core.charts import ChartRenderer, PALETTES  # noqa: E402
 from core.doc_manager import DocumentManager, DEFAULT_PAGE_SETTINGS  # noqa: E402
 
@@ -3500,6 +3500,60 @@ def main() -> int:
               f"({kvar57.text()!r})")
         check(kvar57.blockFormat().headingLevel() == till57,
               f"och nivån blir {till57} ({kvar57.blockFormat().headingLevel()})")
+
+    # Alex 8/10: "Om man markerat t ex kodstycke, och sen klickar på det igen, så vill
+    # jag att det tas bort och formateringen försvinner." Pillerna sitter i en exklusiv
+    # QButtonGroup och Qt kryssar aldrig ur den som redan är vald, så togglingen ligger
+    # i handlern (_apply_heading_level). Att rollen försvinner räcker inte: rollerna
+    # sätter typsnitt, storlek och färg på *texten*, och mergeCharFormat kan bara skriva
+    # över, inte ta bort — därför mäts typsnittet också.
+    mono57 = richtext.mono_family()
+
+    def textformat57():
+        """Teckenformatet som texten i stycket faktiskt bär."""
+        c = QTextCursor(win.editor.document.findBlockByNumber(1))
+        c.movePosition(QTextCursor.MoveOperation.EndOfBlock)
+        return c.charFormat()
+
+    for namn57c, knapp57c, roll57c, niva57c in (
+            ("Kod", win.toolbar.btn_style_code, richtext.ROLE_CODE, 5),
+            ("Citat", win.toolbar.btn_style_quote, richtext.ROLE_QUOTE, 4),
+            ("H1", win.toolbar.btn_style_h1, "", 1),
+            ("H2", win.toolbar.btn_style_h2, "", 2)):
+        ovningsbok.write(ovningsscen.id, stiltext57)
+        win._show_scene_html(ovningsscen.id, stiltext57)
+        for _i in range(3):
+            app.processEvents()
+        doc57c = win.editor.document
+        mark57c = QTextCursor(doc57c)
+        mark57c.setPosition(doc57c.find("Beta").selectionStart())
+        mark57c.setPosition(doc57c.find("Beta stycket").selectionEnd(),
+                            QTextCursor.MoveMode.KeepAnchor)
+        win.editor.setTextCursor(mark57c)
+        app.processEvents()
+        knapp57c.click()
+        for _i in range(3):
+            app.processEvents()
+        block57c = win.editor.document.findBlockByNumber(1)
+        satte57 = (richtext.block_role(block57c) == roll57c if roll57c
+                   else block57c.blockFormat().headingLevel() == niva57c)
+        check(satte57, f"{namn57c} sätter stilen första gången")
+
+        knapp57c.click()          # samma knapp en gång till
+        for _i in range(3):
+            app.processEvents()
+        block57c = win.editor.document.findBlockByNumber(1)
+        check(block57c.text() == "Beta stycket med text.",
+              f"texten står kvar när {namn57c} tas bort ({block57c.text()!r})")
+        check(richtext.block_role(block57c) == "" and block57c.blockFormat().headingLevel() == 0,
+              f"ett andra klick på {namn57c} tar bort stilen "
+              f"(roll={richtext.block_role(block57c)!r}, "
+              f"nivå={block57c.blockFormat().headingLevel()})")
+        fmt57 = textformat57()
+        check(not fmt57.fontFixedPitch() and fmt57.fontFamily() != mono57
+              and fmt57.fontWeight() != QFont.Weight.Bold.value,
+              f"och formateringen försvinner: fastbredd={fmt57.fontFixedPitch()} "
+              f"typsnitt={fmt57.fontFamily()!r} fet={fmt57.fontWeight()}")
 
     # Fixturen skall vara oförändrad efteråt: scenen tillbaka till sitt innehåll, och
     # inga osparade ändringar som får stängningen att fråga efter dem (i huvudlöst

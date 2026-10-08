@@ -19,6 +19,10 @@ dependencies = [
     "sounddevice>=0.4.6",
     "soundfile>=0.12.1",
     "pyphen>=0.18.1",
+    # Importeras direkt av core/epub.py (EPUB-paketet byggs med lxmls etree).
+    # Den kom tidigare bara med som python-docx' eget beroende, vilket gör en
+    # direkt import beroende av någon annans kravlista.
+    "lxml>=5.0",
 ]
 
 [project.scripts]

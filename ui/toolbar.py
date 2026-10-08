@@ -41,6 +41,12 @@ class FormattingToolBar(QToolBar):
         self.retranslate_ui()
         i18n.language_changed.connect(self.retranslate_ui)
         self.editor.canvas.cursor_format_changed.connect(self.sync_toolbar_state)
+        # Content is replaced without the cursor moving (a scene is opened, a
+        # document is loaded, a snapshot is restored), so nothing synced and the
+        # bar kept showing the previous document's format - the font menu sat on
+        # its own header row instead of the document's font. One connection
+        # covers every way text reaches the editor.
+        self.editor.canvas.textChanged.connect(self.sync_toolbar_state)
 
     def init_actions(self):
         # ---------------------------------------------------------------------
@@ -419,14 +425,19 @@ class FormattingToolBar(QToolBar):
         self.act_subscript.setChecked(fmt.verticalAlignment() == QTextCharFormat.VerticalAlignment.AlignSubScript)
         self.act_superscript.setChecked(fmt.verticalAlignment() == QTextCharFormat.VerticalAlignment.AlignSuperScript)
 
-        # Safe font family check
-        font_name = fmt.font().family()
+        # A char format that names no family and no size (fresh text, or HTML that
+        # only carries a document default) must not leave the bar on the font
+        # menu's header row or on a stale size: fall back to the document's own
+        # default, and only report a size the menu actually offers.
+        font_name = fmt.font().family() or self.editor.document.defaultFont().family()
         if font_name:
             self.combo_font.select_font_family(font_name)
 
-        if fmt.fontPointSize() > 0:
+        size = fmt.fontPointSize() or self.editor.document.defaultFont().pointSizeF()
+        size_text = str(int(round(size))) if size > 0 else ""
+        if size_text and self.combo_size.findText(size_text) >= 0:
             self.combo_size.blockSignals(True)
-            self.combo_size.setCurrentText(str(int(fmt.fontPointSize())))
+            self.combo_size.setCurrentText(size_text)
             self.combo_size.blockSignals(False)
 
         # Block heading & style sync

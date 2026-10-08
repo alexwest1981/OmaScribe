@@ -1,5 +1,5 @@
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtGui import QColor, QPalette
+from PyQt6.QtCore import QObject, Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QPalette, QTransform
 from PyQt6.QtWidgets import QApplication
 
 THEMES = {
@@ -217,6 +217,35 @@ class ThemeManager(QObject):
     def get_color(self, key, fallback="#000000"):
         return self.current.get(key, fallback)
 
+    def caret_image_path(self, symbol: str = "chevron-down", rotation: int = 0,
+                         color: str | None = None) -> str:
+        """Path to an arrow drawn in the theme's colour.
+
+        Qt draws no arrow of its own once a widget is styled by QSS, and QSS has
+        no border-triangle: that rule came out as a filled black rectangle in the
+        combo boxes, as stray lines on the spin buttons and as a corner in the
+        dialog dropdowns (measured 2026-10-08). One small PNG per arrow, rotation
+        and colour, written next to the config file.
+        """
+        from pathlib import Path
+
+        from core.config import CONFIG_PATH
+        from ui.icons import icon as theme_icon
+
+        tint = color or self.tokens()["text_muted"]
+        stamp = f"{symbol}-{rotation}-{tint.lstrip('#')}"
+        target = Path(CONFIG_PATH).parent / f"caret-{self.current_theme_id}-{stamp}.png"
+        if not target.exists():
+            pixmap = theme_icon(symbol, tint, 12).pixmap(12, 12)
+            if pixmap.isNull():
+                return ""
+            if rotation:
+                pixmap = pixmap.transformed(QTransform().rotate(rotation),
+                                            Qt.TransformationMode.SmoothTransformation)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            pixmap.save(str(target))
+        return target.as_posix()
+
     def apply_theme_to_app(self, app=None):
         if app is None:
             app = QApplication.instance()
@@ -245,6 +274,36 @@ class ThemeManager(QObject):
 
     def get_stylesheet(self):
         c = self.tokens()
+        down = self.caret_image_path("chevron-down")
+        up = self.caret_image_path("chevron-down", 180)
+        left = self.caret_image_path("chevron-down", 90)
+        right = self.caret_image_path("chevron-down", 270)
+        left_hot = self.caret_image_path("chevron-down", 90, c["text_color"])
+        right_hot = self.caret_image_path("chevron-down", 270, c["text_color"])
+        caret_rule = f"""
+        QComboBox::down-arrow, QFontComboBox::down-arrow {{
+            image: url({down});
+            width: 12px;
+            height: 12px;
+            margin-right: 4px;
+        }}
+        QSpinBox::up-button, QDoubleSpinBox::up-button {{
+            subcontrol-origin: border;
+            subcontrol-position: top right;
+            width: 18px;
+            border: 0;
+            background: transparent;
+        }}
+        QSpinBox::down-button, QDoubleSpinBox::down-button {{
+            subcontrol-origin: border;
+            subcontrol-position: bottom right;
+            width: 18px;
+            border: 0;
+            background: transparent;
+        }}
+        QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{ image: url({up}); width: 10px; height: 10px; }}
+        QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{ image: url({down}); width: 10px; height: 10px; }}
+        """ if down else ""
         return f"""
         /* Global Base */
         QWidget {{
@@ -402,27 +461,11 @@ class ThemeManager(QObject):
         QComboBox:focus, QFontComboBox:focus {{
             border: 1.5px solid {c["accent"]};
         }}
-        QComboBox::drop-down, QFontComboBox::drop-down {{
-            subcontrol-origin: padding;
-            subcontrol-position: top right;
-            width: 22px;
-            border-left: 1px solid {c["canvas_border"]};
-            border-top-right-radius: 5px;
-            border-bottom-right-radius: 5px;
-            background-color: transparent;
-        }}
-        QComboBox::down-arrow, QFontComboBox::down-arrow {{
-            image: none;
-            border-left: 4px solid transparent;
-            border-right: 4px solid transparent;
-            border-top: 5px solid {c["text_color"]};
-            width: 0px;
-            height: 0px;
-            margin-right: 2px;
-        }}
-        QComboBox::down-arrow:hover {{
-            border-top-color: {c["accent"]};
-        }}
+        /* The caret is an image (see caret_image_path): Qt draws none of its own
+           once a combo box is styled, and QSS has no border-triangle for
+           ::down-arrow — that rule came out as a filled black rectangle at the
+           right edge of the font and size boxes (measured 2026-10-08). */
+        {caret_rule}
         /* Menyns vy (QComboBox QAbstractItemView) stils INTE här med flit: en
            sådan regel får Qt att svara ja på SH_ComboBox_Popup, och då fyller
            menyn hela skärmen med skrollpilar och listan läggs mitt i (mätt:
@@ -760,29 +803,24 @@ class ThemeManager(QObject):
             background: transparent;
             border: 0;
         }}
-        /* Pilarna ritas som trianglar: stilen tar annars bort plattformens
-           egen pil och knapparna blir tomma. */
+        /* Arrows as images, for the same reason as the combo caret: Qt draws
+           none of its own once the button is styled, and the border-triangle
+           rule never rendered. */
         #InspectorTabs QTabBar QToolButton::right-arrow {{
-            image: none;
-            width: 0;
-            height: 0;
-            border-left: 5px solid {c["text_muted"]};
-            border-top: 4px solid transparent;
-            border-bottom: 4px solid transparent;
+            image: url({right});
+            width: 12px;
+            height: 12px;
         }}
         #InspectorTabs QTabBar QToolButton::left-arrow {{
-            image: none;
-            width: 0;
-            height: 0;
-            border-right: 5px solid {c["text_muted"]};
-            border-top: 4px solid transparent;
-            border-bottom: 4px solid transparent;
+            image: url({left});
+            width: 12px;
+            height: 12px;
         }}
         #InspectorTabs QTabBar QToolButton:hover::right-arrow {{
-            border-left-color: {c["text_color"]};
+            image: url({right_hot});
         }}
         #InspectorTabs QTabBar QToolButton:hover::left-arrow {{
-            border-right-color: {c["text_color"]};
+            image: url({left_hot});
         }}
 
         #SuggestionCard {{

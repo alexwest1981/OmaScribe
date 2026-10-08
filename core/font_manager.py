@@ -215,6 +215,16 @@ class FontSelectorComboBox(QComboBox):
                 self.addItem(font, font)
                 self.setItemData(self.count() - 1, font, Qt.ItemDataRole.UserRole)
 
+        # A header row is a label, not a font, and must never be the value the
+        # menu shows: on start-up the box sat on "Popular Writing Fonts" instead
+        # of a font name (measured 2026-10-08). Signals stay blocked so picking a
+        # real row here does not reach the editor.
+        if self.itemData(self.currentIndex(), Qt.ItemDataRole.UserRole + 1) == "header":
+            for i in range(self.count()):
+                if self.itemData(i, Qt.ItemDataRole.UserRole):
+                    self.setCurrentIndex(i)
+                    break
+
         self.blockSignals(False)
 
     def select_font_family(self, family):

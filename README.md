@@ -11,7 +11,9 @@
 
 A powerful, intelligent **AI-Powered Rich Text Word-Like Editor** built with Python, Qt, and real-time DSP/Whisper dictation for Linux & Omarchy.
 
-![OmaScribe Screenshot](screenshot.png)
+![OmaScribe workspace](docs/images/en/workspace.png)
+
+*The binder, the A4 page and the inspector. More: [corkboard](docs/images/en/corkboard.png) · [publishing profile](docs/images/en/publish.png).*
 
 Featuring A4 document canvas formatting, real-time AI review & style inspection, inline `Ctrl+K` rewriting, local Whisper speech-to-text dictation, and native `.docx`, `.pdf`, `.md`, and `.html` export!
 
@@ -80,6 +82,23 @@ Featuring A4 document canvas formatting, real-time AI review & style inspection,
     `File → Page Setup → Clean print & export`; `tools/print_purity_check.py`
     measures the contract page by page.
 
+* **📚 Manuscript structure — the binder:**
+  * A project is a folder: parts, chapters and scenes in a tree, a corkboard of scene cards, collections, and a scene inspector with synopsis, status, labels, POV and target. Word counts per scene and for the whole manuscript.
+  * Research material (notes, research folders) lives in the project but outside the manuscript: it is never counted and never exported.
+
+* **📖 Reading view:** `Ctrl+Shift+L` merges the scenes into one continuous scroll — read-only on purpose, so formatting can never land on a hidden scene.
+
+* **🕘 Revision and review:**
+  * Snapshots per scene, tracked changes you accept or reject one by one, margin comments with threads and *resolved*, compare-and-merge against any earlier point, and formatting compared separately from the text.
+  * An AI suggestion is filed as a margin comment on its own quote: the manuscript stays byte-identical until you accept, and accepting costs exactly one undo step.
+
+* **🔤 Non-fiction:** footnotes with automatic numbering, cross-references to headings, a generated table of contents, figure and table captions with lists, paragraph and character styles, autocorrect and autotext, spell and grammar check per language section, regex find & replace, blurb and synopsis fields, a story bible with a plot board, a writing log, and a name/word generator for when you're stuck.
+
+* **📕 Publishing:**
+  * A channel profile carrying the channel's own numbers — trim size, paper, margins and gutter, spine width, cover size (Amazon KDP and others) — each with its source.
+  * EPUB 3 with semantic chapter structure, navigation and accessibility metadata; DOCX with named Word styles; print PDF with mirrored margins, hyphenation and dialogue dashes; a cover sheet drawn in the channel's exact measurements.
+  * A release folder with checksums and a pre-flight report, and EPUBCheck offered as an option rather than a requirement.
+
 ### 🚀 Installation & Launch
 
 ```bash
@@ -100,7 +119,9 @@ uv run python main.py
 
 En kraftfull, intelligent **AI-driven textredigerare och ordbehandlare** byggd med Python, Qt och lokal Whisper-röstdiktering för Linux & Omarchy.
 
-![OmaScribe Skärmdump](screenshot.png)
+![OmaScribe arbetsyta](docs/images/sv/workspace.png)
+
+*Projektvyn, A4-sidan och sidopanelen. Mer: [korttavlan](docs/images/sv/corkboard.png) · [publiceringsprofilen](docs/images/sv/publish.png).*
 
 Med realistisk A4-sidlayout, AI-granskning och stilanalys i realtid, snabb omskrivning via `Ctrl+K`, lokal röst-diktering och direkt export till `.docx`, `.pdf`, `.md` och `.html`!
 
@@ -169,6 +190,23 @@ Med realistisk A4-sidlayout, AI-granskning och stilanalys i realtid, snabb omskr
     för skärmarbete) och inbäddade foton kan göras gråskaliga vid export.
     Stängs av och på under `Arkiv → Sidinställningar → Ren utskrift & export`;
     `tools/print_purity_check.py` mäter kontraktet sida för sida.
+
+* **📚 Manusstruktur — projektvyn:**
+  * Ett projekt är en mapp: delar, kapitel och scener i ett träd, en korttavla med sceneskort, samlingar och en sceninspektör med synopsis, status, etiketter, POV och mål. Ordantal per scen och för hela manuset.
+  * Researchmaterial (anteckningar, researchmappar) ligger i projektet men utanför manuset: det räknas aldrig in och exporteras aldrig.
+
+* **📖 Läsvyn:** `Ctrl+Shift+L` fogar ihop scenerna till en sammanhängande rulle — avsiktligt skrivskyddad, så att formatering aldrig kan landa i en dold scen.
+
+* **🕘 Revision och granskning:**
+  * Ögonblicksbilder per scen, spårade ändringar som du accepterar eller avvisar en i taget, marginalkommentarer med tråd och *löst*, jämför-och-slå-ihop mot vilken tidigare punkt som helst, och formateringen jämförd separat från texten.
+  * Ett AI-förslag läggs som en marginalkommentar på sitt eget citat: manuset står byte-identiskt tills du accepterar, och ett accepterat förslag kostar exakt ett ångra-steg.
+
+* **🔤 Sakprosan:** fotnoter med automatisk numrering, korsreferenser till rubriker, genererad innehållsförteckning, bild- och tabelltexter med register, stycke- och teckenstilar, autokorrigering och autotext, stavnings- och grammatikkontroll per språkavsnitt, sök och ersätt med reguljära uttryck, fält för blurb och synopsis, en story bible med plot-tavla, skrivlogg och en namn- och ordförrådsgenerator när det tar stopp.
+
+* **📕 Publiceringen:**
+  * En kanalprofil med kanalens egna siffror — trim, papper, marginaler och innermarginal, ryggbredd, omslagsmått (Amazon KDP med flera) — var och en med sin källa.
+  * EPUB 3 med semantisk kapitelstruktur, navigering och tillgänglighetsmetadata; DOCX med namngivna Word-stilar; tryck-PDF med speglade marginaler, avstavning och repliktankstreck; ett omslagsark ritat i kanalens exakta mått.
+  * En släppmapp med checksummor och en förhandskontroll, och EPUBCheck som ett val i stället för ett krav.
 
 ### 🚀 Installation och start
 

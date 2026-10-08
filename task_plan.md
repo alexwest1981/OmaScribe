@@ -475,6 +475,8 @@ kontrollistan när faserna är klara.
 | `python -m core.project` dör i `validate()` | 1 | Cirkelkontrollen anropade `by_id()` på en okänd förälder och kastade i stället för att rapportera. Vandringen bryter nu på okänd förälder. |
 | `move_node` dubblerar noden | 1 | `children()` räknade redan in noden med sin gamla ordning, och den sattes in en gång till. Filtreras bort före insättning. Hittades av självprovet. |
 | EPUB: kapitlens `lang` hårdkodad till engelska | 1 | Hittades av mitt oberoende prov, inte av agentens. Språket följer nu metadata; en kontroll i modulens självprov hindrar återfall. |
+| Typsnittsmenyn stod på sin rubrikrad, storleken på ett gammalt värde | 1 | Mätt 2026-10-08 när README-bilderna ritades: `sync_toolbar_state` körde bara på `cursor_format_changed`, och när en scen eller ett dokument laddas rör sig ingen markör. Formatraden synkas nu också när texten byts ut, faller tillbaka på dokumentets typsnitt och storlek, och en rubrikrad kan aldrig vara menyns värde. |
+| QSS-trianglarna för pilar ritades inte av Qt | 1 | Mätt samma dag: combons pil blev en svart rektangel, spinboxens steg streck, dialogens pil en vinkel. Qt har ingen border-modell för `::down-arrow`. Pilarna skrivs nu som små PNG-ikoner i temats färg (`caret_image_path`) — combo, spinbox och flikradens pilar. |
 
 ## Notes
 

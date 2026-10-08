@@ -1816,6 +1816,60 @@ def main() -> int:
     win.editor.document.setModified(False)
     win.is_modified = False
 
+    print("\n43. EPUB-exporten med bokens metadata (fas 5.2, 5.4, 5.8)")
+
+    import zipfile
+
+    # Bokens uppgifter sätts i projektöversikten — samma ruta som baksidestexten
+    from ui.overview_dialog import OverviewDialog as OverviewDialog43
+
+    ruta43 = OverviewDialog43(ovningsbok, None, win)
+    ruta43.txt_author.setText("Alex Lind")
+    ruta43.txt_publisher.setText("Eget förlag")
+    ruta43.txt_isbn.setText("978-91-0000000-0")
+    ruta43.txt_blurb.setPlainText("En källare, en nyckel och en hemlighet.")
+    ruta43.done(0)
+    check(ovningsbok.settings.get("author") == "Alex Lind"
+          and ovningsbok.settings.get("isbn") == "978-91-0000000-0",
+          f"bokens uppgifter sparas i projektet ({ovningsbok.settings.get('author')!r})")
+
+    meta43 = win.book_metadata()
+    check(meta43["title"] == ovningsbok.title, f"metadatan tar titeln ur boken ({meta43['title']!r})")
+    check(meta43["author"] == "Alex Lind" and meta43["identifier"] == "978-91-0000000-0",
+          "författaren och ISBN med")
+    check(meta43["language"] == "sv" and meta43["description"].startswith("En källare"),
+          f"och språket och baksidestexten som beskrivning ({meta43['language']})")
+
+    # Menyn har vägen dit
+    check(win.act_exp_epub is not None and win.act_exp_epub.isEnabled(),
+          f"exporten finns i Arkiv-menyn ({win.act_exp_epub.text()!r})")
+
+    # Och filen blir en riktig EPUB: metadata, kapitel och tillgänglighet i OPF
+    kapiteltext = ("<h1>Första kapitlet</h1><p>Hon gick in i källaren.</p>"
+                   "<h1>Andra kapitlet</h1><p>Nyckeln låg på bordet.</p>")
+    ovningsbok.write(ovningsscen.id, kapiteltext)
+    win._show_scene_html(ovningsscen.id, kapiteltext)
+    epub43 = os.path.join(tempfile.mkdtemp(prefix="epub43-"), "boken.epub")
+    from core.epub import export_epub as export_epub43
+    export_epub43(epub43, win.editor.document, win.book_metadata())
+    check(os.path.exists(epub43) and os.path.getsize(epub43) > 500,
+          f"exporten skriver en fil ({os.path.getsize(epub43)} byte)")
+    with zipfile.ZipFile(epub43) as bok43:
+        namn43 = bok43.namelist()
+        opf43 = next((n for n in namn43 if n.endswith(".opf")), None)
+        innehåll43 = bok43.read(opf43).decode("utf-8") if opf43 else ""
+        check(opf43 is not None, f"och paketet har en OPF ({opf43})")
+        check("Alex Lind" in innehåll43, "med författaren i metadatan")
+        check("978-91-0000000-0" in innehåll43, "och ISBN")
+        check("<dc:language>sv</dc:language>" in innehåll43,
+              f"och språket ({[rad for rad in innehåll43.splitlines() if 'language' in rad][:1]})")
+        check("accessMode" in innehåll43 and "accessibilityHazard" in innehåll43,
+              "och tillgänglighetsmärkningen (fas 5.8)")
+        check(any(n.endswith("nav.xhtml") or "toc" in n for n in namn43),
+              f"och en innehållsförteckning ({[n for n in namn43 if n.endswith('.xhtml')][:3]})")
+        kapitel43 = [n for n in namn43 if "chapter" in n]
+        check(len(kapitel43) >= 2, f"och kapitlen delade vid rubrikerna ({len(kapitel43)} filer)")
+
     print("\n42. Publiceringsprofilen: kanalernas siffror (fas 5.1, 5.5, 5.6, 5.12)")
 
     from core import publishing as pub42

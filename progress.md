@@ -513,3 +513,21 @@
   skriver `for _, x in …` i en metod som anropar `_()` får ett heltal i stället för en funktion.
   Felet har dykt upp **tre gånger** i fas 4 och 5 (variants_dialog, _insert_exercise, publish_dialog).
   Vakten är falsifierad: den larmar på det buggiga fallet och tiger om det ofarliga.
+
+### Fas 5: EPUB-exporten in i menyn, och bokens metadata
+
+- **Status:** delvis klar och grindad (590 rökprov + 54 renhetsprov + modulernas egna, GRÖNT).
+- **Samma mönster igen:** `core/epub.py` har exporterat EPUB 3 sedan 0b — kapitel vid rubrikerna,
+  navigation document, bilder med alt-text, tillgänglighetsmetadata — men `export_epub` nåddes
+  **inte från exportmenyn**. Ingen meny, ingen filväg, ingen väg in. Nu: Arkiv → Exportera EPUB….
+- **Bokens metadata (5.4):** författare, förlag och ISBN blev projektfält i projektöversikten, och
+  `book_metadata()` för dem till EPUB:en: `dc:creator`, `dc:publisher`, `dc:identifier` och
+  **baksidestexten som `dc:description`** — den text en läsare läser först. Titeln kommer ur projektet,
+  inte ur filnamnet.
+- **Provat ända in i filen:** EPUB:en packas upp med `zipfile`, OPF:en läses, och titel, författare,
+  språk, ISBN, tillgänglighetsmärkning, nav och de två kapitelfilerna kontrolleras. 2 386 byte, två
+  kapitel, `accessMode`/`accessibilityFeature`/`accessibilityHazard` på plats (5.8:s MUST-krav).
+- **Kvar i fas 5:** utskriftsvägen ska verkställa spegelmarginalerna och kapitelstarten (5.5), rita
+  omslagsarket (5.6), front matter som sidor (5.4), DOCX med namngivna Word-stilar (5.7), EPUBCheck
+  som val (5.8), exportpaket med checksummor och preflight (5.9), svensk/engelsk sättning (5.10) och
+  samma roller till EPUB-CSS/PDF/DOCX (5.3).

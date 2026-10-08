@@ -9,7 +9,7 @@ delas: en enda samling anteckningar, samma länkar mellan dem som förut.
 from __future__ import annotations
 
 from PyQt6.QtWidgets import (
-    QDialog, QDialogButtonBox, QFormLayout, QLabel, QPlainTextEdit, QScrollArea,
+    QDialog, QDialogButtonBox, QFormLayout, QLabel, QLineEdit, QPlainTextEdit, QScrollArea,
     QVBoxLayout, QWidget,
 )
 
@@ -118,6 +118,15 @@ class OverviewDialog(QDialog):
         self.txt_blurb.setPlaceholderText(_("overview_blurb_hint"))
         self.txt_blurb.setFixedHeight(64)
         ruta_extra = QFormLayout()
+        self.txt_author = QLineEdit(project.settings.get("author", "") if project else "")
+        self.txt_author.setPlaceholderText(_("overview_author_hint"))
+        ruta_extra.addRow(QLabel(_("overview_author")), self.txt_author)
+        self.txt_publisher = QLineEdit(project.settings.get("publisher", "") if project else "")
+        self.txt_publisher.setPlaceholderText(_("overview_publisher_hint"))
+        ruta_extra.addRow(QLabel(_("overview_publisher")), self.txt_publisher)
+        self.txt_isbn = QLineEdit(project.settings.get("isbn", "") if project else "")
+        self.txt_isbn.setPlaceholderText(_("overview_isbn_hint"))
+        ruta_extra.addRow(QLabel(_("overview_isbn")), self.txt_isbn)
         ruta_extra.addRow(QLabel(_("overview_blurb")), self.txt_blurb)
 
         self.txt_synopsis = QPlainTextEdit()
@@ -135,6 +144,9 @@ class OverviewDialog(QDialog):
     def done(self, result: int) -> None:
         """Stänger rutan — och skriver projektets två textfält först."""
         if self.project is not None:
+            self.project.settings["author"] = self.txt_author.text().strip()
+            self.project.settings["publisher"] = self.txt_publisher.text().strip()
+            self.project.settings["isbn"] = self.txt_isbn.text().strip()
             self.project.settings["blurb"] = self.txt_blurb.toPlainText().strip()
             self.project.settings["synopsis"] = self.txt_synopsis.toPlainText().strip()
             try:

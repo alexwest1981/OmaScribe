@@ -405,6 +405,7 @@ class MainWindow(QMainWindow):
         self.act_exp_docx = self._add_action(self.menu_file, _("menu_file_export_docx"), self.export_docx)
         self.act_exp_md = self._add_action(self.menu_file, _("menu_file_export_md"), self.export_markdown)
         self.act_exp_html = self._add_action(self.menu_file, _("menu_file_export_html"), self.export_html)
+        self.act_exp_epub = self._add_action(self.menu_file, _("menu_file_export_epub"), self.export_epub_book)
         self.menu_file.addSeparator()
         self.act_exit = self._add_action(self.menu_file, _("menu_file_exit"), self.close, "Ctrl+Q")
 
@@ -1998,6 +1999,49 @@ class MainWindow(QMainWindow):
                 QMessageBox.information(self, _("export_success_title"), _("export_success_text", path=fpath))
             except Exception as e:
                 QMessageBox.critical(self, _("export_error_title"), str(e))
+
+    def book_metadata(self) -> dict:
+        """Bokens metadata: ur projektet när det finns, annars ur filen (R05.4).
+
+        Titeln, författaren och ISBN hör till **boken**, inte till scenen — en
+        EPUB kan inte heta "Scen tolv". Sammalunda blir baksidestexten bokens
+        beskrivning: den text en läsare läser först.
+        """
+        if self.project is not None:
+            inst = self.project.settings
+            titel = self.project.title
+        else:
+            inst = {}
+            titel = os.path.splitext(os.path.basename(self.current_filepath or ""))[0]
+        return {
+            "title": titel or _("untitled_document"),
+            "author": inst.get("author", ""),
+            "publisher": inst.get("publisher", ""),
+            "language": "sv" if i18n.current_lang == "sv" else "en",
+            "identifier": inst.get("isbn", ""),
+            "description": inst.get("blurb", ""),
+        }
+
+    def export_epub_book(self):
+        """EPUB 3 — boken som fil, med projektets metadata (R05.2, R05.4, R05.8).
+
+        Exporten har funnits i `core/epub.py` sedan 0b men nåtts aldrig från
+        menyn. Metadata, kapitelindelning, tillgänglighetsmärkning och TOC sköts
+        av modulen; här hämtas bara bokens uppgifter och filen skrivs.
+        """
+        from core.epub import export_epub
+
+        fpath, _valt = QFileDialog.getSaveFileName(
+            self, _("menu_file_export_epub"), "", "EPUB (*.epub)")
+        if not fpath:
+            return
+        fpath = self._ensure_extension(fpath, "*.epub", ".epub")
+        try:
+            export_epub(fpath, self.editor.document, self.book_metadata())
+            QMessageBox.information(self, _("export_success_title"),
+                                    _("export_success_text", path=fpath))
+        except Exception as e:                            # noqa: BLE001
+            QMessageBox.critical(self, _("export_error_title"), str(e))
 
     def export_markdown(self):
         fpath, selected_filter = QFileDialog.getSaveFileName(

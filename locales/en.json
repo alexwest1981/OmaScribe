@@ -878,5 +878,12 @@
   "warn_over_last_gutter": "More pages than the ladder covers — check the inner margin",
   "warn_use_channel_template": "This channel refers to its own template — verify the measurements there",
   "warn_bleed_channel_specific": "Bleed differs between channels — check the channel's guide",
-  "warn_trim_unknown": "The trim size is unknown"
+  "warn_trim_unknown": "The trim size is unknown",
+  "menu_file_export_epub": "Export EPUB…",
+  "overview_author": "Author",
+  "overview_author_hint": "The name on the book",
+  "overview_publisher": "Publisher",
+  "overview_publisher_hint": "The publisher or your own name",
+  "overview_isbn": "ISBN",
+  "overview_isbn_hint": "The book's ISBN, if it has one"
 }

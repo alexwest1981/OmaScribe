@@ -256,9 +256,18 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       gutter, ryggbredd och omslagsmått ur trim, papper, sidantal och blöd — och skriver in trim och
       marginaler i sidinställningarna. **Kvar:** ett *sparat* publiceringsprojekt per bok (kanal, trim
       och metadata som en del av projektet, inte bara i appens inställningar). R05.1
-- [ ] **5.2** EPUB 3 med semantisk kapitelstruktur och TOC. R05.2
+- [x] **5.2** EPUB 3 med semantisk kapitelstruktur och TOC: `core/epub.py` har funnits sedan 0b men
+      **nåddes aldrig från exportmenyn** — samma mönster som sök, autokorrigeringen och språkkontrollen.
+      Nu i Arkiv → Exportera EPUB…, med kapitel delade vid rubrikerna (h1 → egen XHTML + nav), bilder
+      med alt-text och en navigation document. Provat ända in i filen: EPUB:en packas upp, OPF:en läses,
+      och titel, författare, språk, ISBN, tillgänglighetsmärkning, nav och båda kapitelfilerna
+      kontrolleras. R05.2
 - [ ] **5.3** Namngiven typografi och bokstilar, samma roller till EPUB-CSS, PDF och DOCX. R05.3
-- [ ] **5.4** Metadata, ISBN och front matter (halvtitel, titelsida, kolofon, dedikation, tack). R05.4
+- [~] **5.4** Metadata och ISBN: författare, förlag och ISBN är nu **projektfält** (i
+      projektöversikten, där baksidestexten bor) och går rakt in i EPUB:ens metadata — `dc:creator`,
+      `dc:publisher`, `dc:identifier` och baksidestexten som `dc:description`. Provat att de överlever
+      till filen. **Kvar:** front matter som *sidor* — halvtitel, titelsida, kolofon, dedikation och
+      tack — alltså genererade sidor i boken, inte bara metadata. R05.4
 - [~] **5.5** Trycklayout: trim, gutter och spegelmarginaler **beräknas** nu (KDP:s trappa 9,6–22,3 mm
       efter sidantal, ytterkant 6,4 mm, +3,2 mm med blöd) och skrivs in i sidinställningarna med
       `mirror_margins`, udda/ämn sidväxling och folio längst ner. **Kvar:** utskriftsvägen ska
@@ -271,7 +280,11 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       belägga en gemensam formel, och en felaktig ryggbredd syns först i tryck. **Kvar:** rita själva
       omslagsarket med ryggtext och streckkodszon. R05.6
 - [ ] **5.7** DOCX med redaktörsvänliga Word-stilar (namngivna stilar). R05.7
-- [ ] **5.8** EPUB-validering (EPUBCheck) och tillgänglighetsmetadata. R05.8
+- [~] **5.8** Tillgänglighetsmetadata finns: `accessMode`, `accessibilityFeature` och
+      `accessibilityHazard` skrivs i OPF:en (EPUB Accessibility 1.1:s MUST-krav) och provas i
+      rökprovet. **Kvar:** EPUBCheck-validering — den kräver Java och ett EPUBCheck-paket på datorn,
+      så den ska köras som ett *val* med tydligt besked när verktyget saknas, inte som ett krav i
+      exporten. R05.8
 - [ ] **5.9** Distributörsuppladdning och slutkontroll: exportpaket, checksummor, preflight-rapport. R05.10
 - [ ] **5.10** Svensk och engelsk boksättning: repliktankstreck, citattecken, avstavning. R05.11
 - [ ] **5.11** Efterbearbetning i Sigil/Calibre: "öppna exportmapp", checksumma. R05.9 — *låg*

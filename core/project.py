@@ -173,6 +173,9 @@ DEFAULT_SETTINGS = {
     "genre": "",
     "audience": "",
     "ai_instructions": "",      # författarens egna regler för den här boken (R03.18)
+    "author": "",               # författarnamnet på omslag och titelsida (R05.4)
+    "publisher": "",            # förlaget eller det egna namnet, för kolofonen (R05.4)
+    "isbn": "",                 # bokens ISBN, om den har ett (R05.4)
     "blurb": "",                # baksidestexten (R03.15)
     "synopsis": "",             # sammanfattningen till förlaget (R03.15)
 }

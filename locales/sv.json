@@ -878,5 +878,12 @@
   "warn_over_last_gutter": "Fler sidor än trappan täcker — kontrollera innermarginalen",
   "warn_use_channel_template": "Kanalen hänvisar till sin egen mall — räkna om måtten där",
   "warn_bleed_channel_specific": "Blöd skiljer sig mellan kanaler — kontrollera kanalens guide",
-  "warn_trim_unknown": "Trimmets mått är okänt"
+  "warn_trim_unknown": "Trimmets mått är okänt",
+  "menu_file_export_epub": "Exportera EPUB…",
+  "overview_author": "Författare",
+  "overview_author_hint": "Namnet som står på boken",
+  "overview_publisher": "Förlag",
+  "overview_publisher_hint": "Förlaget eller det egna namnet",
+  "overview_isbn": "ISBN",
+  "overview_isbn_hint": "Bokens ISBN, om den har ett"
 }

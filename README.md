@@ -292,7 +292,7 @@ accepterar, och ett accepterat förslag kostar exakt ett ångra-steg.
 **Sakprosan.** Fotnoter med automatisk numrering, korsreferenser till rubriker, genererad
 innehållsförteckning, bild- och tabelltexter med register, stycke- och teckenstilar,
 autokorrigering och autotext, stavnings- och grammatikkontroll per språkavsnitt, sök och
-ersätt med reguljära uttryck, fält för blurb och synopsis, skrivlogg och en norm­sida för
+ersätt med reguljära uttryck, fält för blurb och synopsis, skrivlogg och en normsida för
 förlag som kräver en.
 
 **AI — din leverantör, din nyckel.** Skrivstudio levereras utan nycklar och utan

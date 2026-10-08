@@ -130,8 +130,9 @@ och juridiska: vad de öppna verktygen gör och vilken licens som gäller.
 | `luckor.md` | **sammanställningen**: vad de betalda har, vad vi har, vad som saknas | min jämförelse av 01–09 mot planen och koden |
 | `VERIFIERING.md` | vilka källor och belopp jag kontrollerade själv, och vad jag inte gjorde | 95 URL:er, 9 punktkontroller |
 
-Kort: **23 luckor** står nu som poster i planen (2.18–2.23, 4.17, 4.19–4.21,
-5.13–5.16, 6.16–6.18), och nio funktionsområden är förkastade med skäl. Det vi har
-som de betalda inte har — projektmodellen, snapshots per scen, förslag i marginalen
-med accept som ett ångra-steg, publiceringskedjan hela vägen till EPUB-validering —
-behålls; inget av det byts bort mot deras funktionslistor.
+Kort: **29 funktionsluckor** är mätta och sammanställda i `luckor.md` — 17 av dem står
+nu som poster i planen (2.18–2.23, 4.17, 4.19–4.21, 5.13–5.16, 6.16–6.18), och nio
+funktionsområden är förkastade med skäl. Det vi har som de betalda inte har —
+projektmodellen, snapshots per scen, förslag i marginalen med accept som ett
+ångra-steg, publiceringskedjan hela vägen till EPUB-validering — behålls; inget av det
+byts bort mot deras funktionslistor.

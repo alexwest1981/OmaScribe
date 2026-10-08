@@ -5,7 +5,8 @@
 Allt som ett professionellt författarverktyg har skall in i OmaScribe — manusstruktur,
 författarlagret, revision, sakprosa, publicering och AI — utan att något glöms mellan sessionerna.
 
-Underlaget är `docs/research/author-tools/` (**nio** agentrapporter i två pass, 214 källor,
+Underlaget är `docs/research/author-tools/` (**nio** agentrapporter i två pass; 119
+källänkar i det första, 95 i det andra, överlappet dem emellan inte avräknat, och
 alla kodpåståenden verifierade mot fil och rad — det andra passets källor i
 `VERIFIERING.md`). Varje punkt nedan bär sin källa som `R<xx>.<n>` = rapportens
 avsnittsnummer, `R06`–`R09` = det andra passet, så inget är påhittat här.
@@ -25,12 +26,14 @@ lämnades medvetet — de står kvar som val, inte som glömda.
 (tidslinje och plot-tavla) som är nästa större punkt. Rutnätet i 2.9 bygger på
 scenmodellen och på att scenens status redan finns.
 
-**Tillagt 2026-10-08 efter det andra researchpasset:** 23 luckor mot de betalda
-verktygen står nu som poster (2.18–2.23, 4.17, 4.19–4.21, 5.13–5.16, 6.16–6.18).
-`luckor.md` rankar dem: normsidan, textelementen, repetitions-/konsistensanalysen,
-scenstatistiken, beat-mallarna, kontextvisaren, uppläsningen och karaktärsintervjun är
-de billiga och avgörande. Ordningen är min rekommendation, inte ett beslut — säg till om
-fas 5 fortsätter först eller om någon av de billiga går före.
+**Tillagt 2026-10-08 efter det andra researchpasset:** 29 funktionsluckor mätta mot de
+betalda verktygen i `luckor.md`; 17 av dem står nu som numrerade poster
+(2.18–2.23, 4.17, 4.19–4.21, 5.13–5.16, 6.16–6.18) — flera luckor ryms i en post, och
+några är förkastade med skäl i stället för att bli poster. `luckor.md` rankar dem:
+normsidan, textelementen, repetitions-/konsistensanalysen, scenstatistiken,
+beat-mallarna, kontextvisaren, uppläsningen och karaktärsintervjun är de billiga och
+avgörande. Ordningen är min rekommendation, inte ett beslut — säg till om fas 5
+fortsätter först eller om någon av de billiga går före.
 
 ## Current Phase
 
@@ -553,7 +556,7 @@ frågan inte behöver ställas igen:
 | `core/project.py` utan Qt | Självprovet skall kunna köras utan skärm, och modellen skall kunna läsas av kommandoradsverktyg senare |
 | Nya moduler får engelska kommentarer | Alex regel 23/9 är kod på engelska; äldre moduler lämnas i fred (ingen storskalig omskrivning) |
 | Licensen är GPL-3.0-only | PyQt6 distribueras under GPL v3 endast (mätt ur paketmetadatan i `.venv`), så ett program som länkar den kan inte vara MIT — vilket README påstod. Copyleft var dessutom önskat: en bearbetning måste förbli öppen och bära upphovsrätten |
-| Fyra nya rapporter per PRODUKT, inte per tema | Det första passet var tematiskt och missade de betalda specialistverktygen (ProWritingAid, AutoCrit, Fictionary, Plottr, Campfire, bibisco, Papyrus). Funktionslista per produkt gav 23 luckor som de fem första rapporterna inte hade |
+| Fyra nya rapporter per PRODUKT, inte per tema | Det första passet var tematiskt och missade de betalda specialistverktygen (ProWritingAid, AutoCrit, Fictionary, Plottr, Campfire, bibisco, Papyrus). Funktionslista per produkt gav 29 mätta luckor som de fem första rapporterna inte hade, varav 17 blev nya planposter (`luckor.md`) |
 | Ritad tidslinje fortfarande inte byggd, men händelsetabellen är en post (2.23) | Tre betalda verktyg har tidslinjen och Fictionary rankar scenkopplade händelser högt. Datadelen är billig och vyn är ett eget steg — beslutet väntar på Alex |
 
 ## Errors Encountered

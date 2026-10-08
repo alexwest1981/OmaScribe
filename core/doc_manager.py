@@ -293,6 +293,7 @@ class DocumentManager:
                 doc_clone, grayscale_images=bool(cfg.get("grayscale_images", False))
             )
 
+        DocumentManager._hyphenate_clone(doc_clone, cfg.get("language", "sv"))
         doc_clone.setPageSize(QSizeF(content_w, content_h))
         page_count = max(1, doc_clone.pageCount())
 
@@ -401,6 +402,35 @@ class DocumentManager:
 
         finally:
             painter.end()
+
+    @staticmethod
+    def _hyphenate_clone(doc, lang: str = "sv") -> int:
+        """Sätter mjuka bindestreck i den tryckta kopian (R05.11).
+
+        Görs *före* sidantalet räknas, annars hamnar avstavningen utanför
+        måtten. Fragment för fragment, så att fet och kursiv står kvar — och
+        aldrig i bilder. Returnerar antalet stycken som ändrades.
+        """
+        from core.autocorrect import soft_hyphenate
+
+        ändrade = 0
+        block = doc.begin()
+        while block.isValid():
+            iterator = block.begin()
+            while not iterator.atEnd():
+                fragment = iterator.fragment()
+                if fragment.isValid() and not fragment.charFormat().isImageFormat():
+                    mjuk = soft_hyphenate(fragment.text(), lang)
+                    if mjuk != fragment.text():
+                        markör = QTextCursor(doc)
+                        markör.setPosition(fragment.position())
+                        markör.setPosition(fragment.position() + fragment.length(),
+                                           QTextCursor.MoveMode.KeepAnchor)
+                        markör.insertText(mjuk, fragment.charFormat())
+                        ändrade += 1
+                iterator += 1
+            block = block.next()
+        return ändrade
 
     @staticmethod
     def _docx_style(doc, stil: str) -> str:

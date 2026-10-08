@@ -12,7 +12,8 @@ dependencies = [
     "diff-match-patch>=20230430",
     "numpy>=1.26.0",
     "sounddevice>=0.4.6",
-    "soundfile>=0.12.1"
+    "soundfile>=0.12.1",
+    "pyphen>=0.18.1",
 ]
 
 [project.scripts]

@@ -309,7 +309,16 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       Provat: fyra filer i mappen, summan är filens egen (omräknad i provet), rapporten bär titeln ur
       projektet och PDF:en är 9 109 byte. **Kvar:** själva uppladdningen till distributören (KDP:s
       API), som kräver kontouppgifter och hör till ett eget beslut. R05.10
-- [ ] **5.10** Svensk och engelsk boksättning: repliktankstreck, citattecken, avstavning. R05.11
+- [x] **5.10** Svensk och engelsk boksättning: repliktankstreck och citattecken har funnits i
+      `autocorrect.apply_typography` sedan fas 4 (som ett *medvetet* menyval — exporten rör aldrig
+      författarens text i smyg). **Avstavningen är ny:** mjuka bindestreck (U+00AD) sätts i löptexten
+      vid export till EPUB och i den tryckta kopian, med pyphens ordlistor (LibreOffice-mönstren) och
+      bokens språk — `verklighetsuppfattningen` blir `verk-lig-hets-upp-fatt-nin-gen`. Ett mjukt
+      bindestreck syns bara om raden faktiskt bryts där, och texten är förlustfri utan dem. Aldrig i
+      kod, och aldrig i Word-exporten: redaktörens Word avstavar själv. Provat i den skrivna EPUB:en
+      (i löptexten, inte i koden, och ordet intakt utan bindestrecken) och på den tryckta kopian.
+      **Qt 6 har ingen avstavning** — `QTextOption.setHyphenationFactor` finns inte i PyQt6, mätt i
+      den här miljön; därför pyphen. R05.11
 - [~] **5.11** Efterbearbetning i Sigil/Calibre: **checksumman finns** (i rapporten, per fil), och
       mappen är den man öppnar i Sigil eller Calibre. **Kvar:** "öppna exportmappen" direkt ur
       programmet (`xdg-open`) — en rad, men *låg* prioritet precis som planen säger. R05.9

@@ -15,6 +15,7 @@ from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QTextDocument, QTextFrame, QTextImageFormat
 
 from core import richtext
+from core.autocorrect import soft_hyphenate
 
 _XHTML = "http://www.w3.org/1999/xhtml"
 _XML = "http://www.w3.org/XML/1998/namespace"
@@ -42,7 +43,7 @@ def _escape_text(text):
     return text.replace("\u2028", "\n")
 
 
-def _render_block(block, doc, images):
+def _render_block(block, doc, images, language="sv"):
     fmt = block.blockFormat()
     level = fmt.headingLevel()
     role = richtext.block_role(block)
@@ -60,6 +61,11 @@ def _render_block(block, doc, images):
             continue
         f = fragment.charFormat()
         text = fragment.text()
+        # Mjuka bindestreck i löptext: svenskans långord är det som ger glapp i
+        # en justerad spalt, och ett mjukt bindestreck syns bara om raden bryts
+        # där. Aldrig i kod (pre) — den ska vara exakt som den skrevs. (R05.11)
+        if tag in ("p", "blockquote"):
+            text = soft_hyphenate(text, language)
         if f.isImageFormat():
             image_fmt = QTextImageFormat(f)
             name = image_fmt.name()
@@ -204,7 +210,7 @@ def export_epub(path: str, document: QTextDocument, metadata: dict, page_setting
             while block.isValid() and block.position() <= end_position:
                 block = block.next()
             continue
-        node = _render_block(block, document, image_data)
+        node = _render_block(block, document, image_data, language)
         if node.tag == _tag("h1"):
             if current_nodes or chapter_no:
                 chapters.append((f"chapter-{chapter_no:03d}.xhtml", current_title or title, current_nodes))

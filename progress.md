@@ -606,3 +606,26 @@
      och använder samma väg som användaren.
 - **En tredje gång samma familj:** `export_epub46` fanns inte — avsnitt 43 importerar sin EPUB-export
   *inuti* `main()`, så namnet var inte synligt i avsnitt 46. Funktionslokal bindning, igen.
+
+### Fas 5: avstavningen — bokens långord (5.10)
+
+- **Vad som blev gjort:** mjuka bindestreck (U+00AD) i löptexten vid export till EPUB och i den tryckta
+  kopian, före sidantalet räknas (annars hamnar avstavningen utanför måtten). Ett mjukt bindestreck syns
+  bara om raden faktiskt bryts där — osynligt i allt utom en marginaljusterad spalt, vilket är precis
+  vad en bok är. Svenskans långord är det som annars ger glapp i en justerad text.
+- **Ordlistorna kommer från `pyphen`** (LibreOffice-mönstren), med bokens språk: `sv` → `sv_SE`, `en` →
+  `en_US` och så vidare. **Ny beroende i `pyproject.toml`** — motiverad: Qt 6 har ingen avstavning alls
+  (`QTextOption.setHyphenationFactor` finns inte i PyQt6, mätt i den här miljön), och en egen svensk
+  avstavningsalgoritm är inte "några rader". Saknas pyphen faller funktionen tillbaka på oförändrad
+  text i stället för att krascha.
+- **Aldrig i kod** (`pre`), och **aldrig i Word-exporten**: redaktörens Word avstavar själv, och att
+  stoppa in osynliga tecken i en fil någon annan ska redigera är att be om besvär.
+- **Två fel fångade av att mäta i stället för att tro:**
+  1. Första versionen kallade `pyphen.inserted(word)` utan `hyphen`-argument — den satte **vanliga**
+     bindestreck. `oänd-lig-hets-käns-lan` hade blivit tryckt i boken. Provet såg det direkt.
+  2. En av mina egna kontroller i rökprovet skrevs med argumenten i omvänd ordning (`check(etikett,
+     villkor)` i stället för `check(villkor, etikett)`) och **passerade på en icke-tom sträng** — en
+     tom kontroll som såg grön ut. Den rättades och *föll* då direkt, vilket visade att den mätte fel
+     stycke; nu mäter den stycket.
+- **Kvar:** inget i 5.10 — menyvalet för typografin fanns sedan fas 4, och exporten rör fortfarande
+  aldrig författarens text i smyg.

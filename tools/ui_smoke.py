@@ -1830,7 +1830,7 @@ def main() -> int:
     markor46.insertHtml("<h1>Ett kapitel</h1>")
     markor46.movePosition(QTextCursor.MoveOperation.End)
     markor46.insertBlock(QTextBlockFormat())
-    markor46.insertText("Ett vanligt stycke.")
+    markor46.insertText("Ett vanligt stycke om verklighetsuppfattningen och oändligheten.")
     markor46.insertBlock()
     markor46.insertText("Ett citat ur en annan bok.")
     markor46.insertBlock()
@@ -1871,6 +1871,31 @@ def main() -> int:
           "och EPUB:ens CSS stilar samma roller")
     check("<blockquote>" in kropp46 and "<pre>" in kropp46,
           "och texten blir blockquote och pre, inte div:ar")
+
+    # Avstavningen (5.10): mjuka bindestreck i löptext, aldrig i kod
+    löptext46 = kropp46.split("<p>", 1)[-1].split("</p>")[0] if "<p>" in kropp46 else ""
+    kodtext46 = kropp46.split("<pre>")[-1] if "<pre>" in kropp46 else ""
+    check("\u00ad" in löptext46,
+          "och svenskans långord får mjuka bindestreck i löptexten")
+    check("\u00ad" not in kodtext46,
+          f"medan koden står exakt som den skrevs ({kodtext46[:24]!r})")
+    check("verklighetsuppfattningen" in löptext46.replace("\u00ad", ""),
+          "och ordet är oförändrat utan bindestrecken")
+
+    # Utskriftens kopia avstavas före sidantalet räknas
+    kopia46 = QTextDocument()
+    kopia46.setPlainText("Kort text.")
+    check(_dm46._hyphenate_clone(kopia46, "sv") == 0,
+          "en kort rad rörs inte i den tryckta kopian")
+    kopia46.setPlainText("Verklighetsuppfattningen och oändlighetskänslan.")
+    ändrade46 = _dm46._hyphenate_clone(kopia46, "sv")
+    check(ändrade46 == 1 and "\u00ad" in kopia46.toPlainText(),
+          f"och den långa raden avstavas i den tryckta kopian ({ändrade46} stycke)")
+
+    # Och bokens språk styr mönstren
+    from core.autocorrect import soft_hyphenate as _avstava46
+    check(_avstava46("extraordinary", "en") != _avstava46("extraordinary", "sv"),
+          "och bokens språk väljer ordlista, inte en fast")
 
     print("\n45. Släpp boken: paketet med checksummor (fas 5.9)")
 

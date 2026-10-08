@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 import json
 import difflib
 import re
@@ -138,6 +139,42 @@ class Autocorrect:
         self.rules_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+# Appens språkkoder -> pyphens ordlistor (LibreOffice-mönstren).
+_HYPHEN_LANGS = {
+    "sv": "sv_SE", "en": "en_US", "de": "de_DE", "es": "es_ES", "fr": "fr_FR",
+}
+
+
+@lru_cache(maxsize=8)
+def _hyphenator(lang: str):
+    """Ordboken för språket, eller None om pyphen inte är installerat."""
+    try:
+        import pyphen
+    except ImportError:
+        return None
+    return pyphen.Pyphen(lang=_HYPHEN_LANGS.get(lang, "sv_SE"))
+
+
+def soft_hyphenate(text: str, lang: str = "sv") -> str:
+    """Sätter mjuka bindestreck (U+00AD) där orden får delas.
+
+    Ett mjukt bindestreck syns bara om raden faktiskt bryts där, och är därför
+    osynligt i allt utom en marginaljusterad spalt — precis vad en bok är.
+    Svenskans långord ("verklighetsuppfattningen") är annars det som ger glapp i
+    en justerad text.
+
+    Blanksteg och radbrytningar står kvar orörda, och funktionen är förlustfri:
+    text.replace("\u00ad", "") är originalet.
+
+    ponytail: pyphens ordlistor, ingen egen avstavningsalgoritm — och ingen
+    avstavning i Word-exporten, där redaktörens Word avstavar själv.
+    """
+    ordbok = _hyphenator(lang)
+    if not text or ordbok is None:
+        return text
+    return re.sub(r"\S+", lambda träff: ordbok.inserted(träff.group(0), hyphen="\u00ad"), text)
+
+
 def changed_spans(before: str, after: str) -> list[tuple[int, int, str]]:
     """Varje sammanhängande ändring som (start, slut, ny text) — tom om lika.
 
@@ -194,6 +231,13 @@ def _self_test() -> int:
     once = autocorrect.apply("teskt")
     check(autocorrect.apply(once) == once)
     check(not Autocorrect._valid_rule("a", "aa", "word"))
+    check("\u00ad" in soft_hyphenate("oändlighetskänslan", "sv"))
+    check(soft_hyphenate("oändlighetskänslan", "sv").replace("\u00ad", "")
+          == "oändlighetskänslan")
+    check(soft_hyphenate("och den", "sv") == "och den")
+    check(soft_hyphenate("extraordinary", "en").count("\u00ad") > 1)
+    check(soft_hyphenate("en\n\nrad  med   luft", "sv") == "en\n\nrad  med   luft")
+    check(soft_hyphenate("", "sv") == "")
     print(f"autocorrect: {checks} kontroller gröna")
     return checks
 

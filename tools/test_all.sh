@@ -91,6 +91,10 @@ if proc.returncode != 0:
     raise SystemExit(f"appen dog utan ljudbibliotek: {proc.stderr.strip()[-300:]}")
 PYEOF
 
+# Skal skripten är det första en ny maskin kör, och grinden såg dem inte alls.
+# En syntaxmiss där är osynlig för varje annat prov i den här filen.
+run "skalsyntaxen" bash -c 'for f in install.sh update.sh tools/test_all.sh; do bash -n "$f" || exit 1; done; echo "install.sh, update.sh och test_all.sh är syntaktiskt hela"'
+
 run "projektmodellen" "$PY" -m core.project
 run "epub-exporten" "$PY" -m core.epub
 run "snapshots" "$PY" -m core.snapshots

@@ -539,18 +539,25 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
       kräva "fler sidor" gick igenom även med dubbelskalningen. R08 → **klart**.
 - **Status:** pending
 
-- [x] **5.17** Installation på andra distributioner än den här maskinen. `install.sh` **kontrollerar
-      i stället för att anta**: ingen `uv` behövs (skriptet skapar `.venv` och installerar med pip
-      själv, och lägger in pip med `ensurepip` när venven kommer från en uv-installation), Qt:s
-      X11-klientbibliotek läses med `ldd` på plattformspluginen och paketnamnet skrivs ut för
-      Arch/CachyOS, Debian och Fedora, och applikationen **provstartas huvudlöst i åtta sekunder** så
-      att en installation som inte kan starta programmet inte rapporteras som lyckad. `--check` och
-      `--uninstall` finns. Tre fel som var verkliga, inte befarade: systemets `python3` saknade PyQt6
-      när `uv` inte fanns, `sounddevice` kastar `OSError` (inte `ImportError`) när PortAudio saknas och
-      dödade appen vid start, och hjulet innehöll inte `locales/`, `resources/`, `main.py` eller
-      `icon.png` — `packages = [...]` i hatchling betyder "bara de mapparna", så en pip-installerad
-      kopia skulle visa i18n-nycklar i stället för text. Provat i färsk venv (översättningarna läses ur
-      paketet) och i fejkad hemkatalog med `desktop-file-validate`. **Kvar:** AUR/CachyOS-paket eller
+- [x] **5.17** Installation på andra distributioner än den här maskinen. `install.sh` **installerar
+      det som saknas i stället för att bara tala om det**: pythonpaketen i `.venv` (och skapar
+      miljön själv med pip när `uv` inte finns — pip läggs in med `ensurepip` när venven kommer från
+      en uv-installation), och systembiblioteken via maskinens egen pakethanterare (pacman/apt/dnf/
+      zypper, med sudo). Ordningen är rättad: Qt:s behov mäts med `ldd` på `libqxcb.so`, och den
+      filen kommer med PyQt6 — mätte man före beroendena tittade kontrollen på en fil som inte fanns
+      och sa att allt var bra, vilket är varför en ren maskin aldrig upptäckte de saknade
+      X11-biblioteken. PortAudio kontrolleras på samma sätt (det saknades på den här maskinen).
+      Applikationen **provstartas huvudlöst i åtta sekunder** så att en installation som inte kan
+      starta programmet inte rapporteras som lyckad, och frivilliga paket (Ghostscript, Java) listas
+      i stället för att installeras. `--check` och `--uninstall` finns, och `update.sh` hämtar nyare
+      version från GitHub och kör om installationen — men **vägrar** över ocommittade ändringar i
+      spårade filer eller lokala commits som GitHub inte har. Tre fel som var verkliga, inte
+      befarade: systemets `python3` saknade PyQt6 när `uv` inte fanns, `sounddevice` kastar `OSError`
+      (inte `ImportError`) när PortAudio saknas och dödade appen vid start, och hjulet innehöll inte
+      `locales/`, `resources/`, `main.py` eller `icon.png` — `packages = [...]` i hatchling betyder
+      "bara de mapparna", så en pip-installerad kopia skulle visa i18n-nycklar i stället för text.
+      Provat i färsk venv (översättningarna läses ur paketet), i fejkad hemkatalog med
+      `desktop-file-validate`, och uppdateringsvägen i en klon. **Kvar:** AUR/CachyOS-paket eller
       Flatpak, och en fryst beroendelista.
 
 ### Fas 6: AI som författarverktyg

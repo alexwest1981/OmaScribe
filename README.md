@@ -45,14 +45,25 @@ provider for you.
 ```
 
 `install.sh` puts a launcher in `~/.local/bin`, an icon and a `.desktop` entry in place,
-and then verifies the three things a fresh machine gets wrong. It needs no `uv` — without
-it, it creates `.venv` and installs the dependencies with pip itself. It checks that Qt's
-X11 client libraries are present instead of assuming them. And it starts the application
-headless for eight seconds at the end, so an install that cannot start the app is not
-reported as successful. It refuses to run if document files (`*.docx`, `*.pdf`, `*.odt`,
-`*.key`, `*.pem` …) are lying in the project folder — API keys end up in documents people
-save next to their code. `--check` runs the checks without changing anything;
-`--uninstall` removes the launcher, the icon and the menu entry.
+and **installs what is missing** rather than telling you about it: the Python packages into
+`.venv` (without `uv` it creates the environment and uses pip itself) and the system
+libraries Qt and the microphone need, through your distribution's own package manager — it
+asks for sudo. `--check` runs every check without changing anything, `--uninstall` removes
+the launcher, the icon and the menu entry. Everything optional (Ghostscript for PDF/X-1a,
+Java for EPUBCheck) is listed at the end instead of installed behind your back. The last
+step is the application itself: it starts headless for eight seconds, so an install that
+cannot start the app is not reported as successful. It refuses to run if document files
+(`*.docx`, `*.pdf`, `*.odt`, `*.key`, `*.pem` …) are lying in the project folder — API keys
+end up in documents people save next to their code.
+
+```bash
+./update.sh            # fetch from GitHub and install what is new
+./update.sh --check    # only say whether there is anything newer
+```
+
+`update.sh` refuses to update over uncommitted changes in tracked files, or over local
+commits GitHub does not have — those are the two ways an automatic update loses work. It
+says what it sees and stops instead.
 
 | | |
 |---|---|
@@ -310,14 +321,25 @@ betyder att programmet säger att ingenting skickades i stället för att välja
 ```
 
 `install.sh` lägger en startare i `~/.local/bin`, en ikon och en `.desktop`-fil, och
-kontrollerar sedan de tre saker en ren maskin brukar falla på. Den kräver ingen `uv` —
-finns den inte skapar skriptet `.venv` och installerar beroendena med pip själv. Den
-kontrollerar att Qt:s X11-klientbibliotek finns i stället för att anta det. Och den
-startar programmet huvudlöst i åtta sekunder på slutet, så en installation som inte kan
-starta programmet rapporteras inte som lyckad. Den vägrar köra om dokumentfiler (`*.docx`,
-`*.pdf`, `*.odt`, `*.key`, `*.pem` …) ligger i projektmappen — API-nycklar hamnar i
-dokument som folk sparar bredvid sin kod. `--check` gör kontrollerna utan att ändra något;
-`--uninstall` tar bort startaren, ikonen och menyvalet.
+**installerar det som saknas** i stället för att bara tala om det: pythonpaketen i `.venv`
+(utan `uv` skapar skriptet miljön och använder pip själv) och de systembibliotek Qt och
+mikrofonen behöver, via din distributions egen pakethanterare — den frågar efter sudo.
+`--check` gör alla kontroller utan att ändra något, `--uninstall` tar bort startaren, ikonen
+och menyvalet. Allt frivilligt (Ghostscript för PDF/X-1a, Java för EPUBCheck) listas på
+slutet i stället för att installeras bakom ryggen på dig. Sista steget är programmet självt:
+det startas huvudlöst i åtta sekunder, så en installation som inte kan starta programmet
+rapporteras inte som lyckad. Den vägrar köra om dokumentfiler (`*.docx`, `*.pdf`, `*.odt`,
+`*.key`, `*.pem` …) ligger i projektmappen — API-nycklar hamnar i dokument som folk sparar
+bredvid sin kod.
+
+```bash
+./update.sh            # hämta från GitHub och installera det som är nytt
+./update.sh --check    # bara tala om ifall det finns något nyare
+```
+
+`update.sh` vägrar uppdatera över ocommittade ändringar i spårade filer, eller över lokala
+commits som GitHub inte har — det är de två sätten en automatisk uppdatering tappar arbete.
+Den säger vad den ser och stannar.
 
 | | |
 |---|---|

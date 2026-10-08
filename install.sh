@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# install.sh — sätter upp Scribentia på den här maskinen.
+# install.sh — gör maskinen redo och installerar Scribentia.
 #
-# Tre saker den här filen INTE får göra, för det var de som gick sönder när
-# någon annan än utvecklaren körde den:
+# Ordningen är inte godtycklig, och den var fel förut: Qt:s behov mäts med ldd
+# på libqxcb.so, och den filen kommer med PyQt6. Mätte man innan beroendena
+# fanns tittade kontrollen på en fil som inte fanns och sa att allt var bra —
+# på en ren maskin upptäcktes aldrig de saknade X11-biblioteken. Alltså:
 #
-#   1. anta att `uv` finns. Utan uv skapas en egen .venv med python3 -m venv och
-#      beroendena installeras dit. Att falla tillbaka på systemets python utan
-#      att installera något gav "ModuleNotFoundError: PyQt6" på en ren maskin.
-#   2. anta att Qt:s systembibliotek finns. PyQt6-hjulet bär sina egna Qt-bibliotek,
-#      men inte X11-klienterna (libxcb-cursor, libxkbcommon-x11, libGL). Saknas de
-#      startar appen aldrig, och felet ser ut som en Qt-krasch utan förklaring.
-#   3. lämna en trasig installation. Efteråt startas appen huvudlöst i åtta
-#      sekunder; en app som dör direkt ger en annan kod än en som står kvar.
+#   1. python 3.11+ (och venv-modulen, som är ett eget paket på Debian)
+#   2. .venv med beroendena (uv om det finns, annars python3 -m venv + pip)
+#   3. systembiblioteken Qt och mikrofonen behöver — ldd säger vilka, och de
+#      installeras med maskinens egen pakethanterare i stället för att skrivas ut
+#   4. startare, ikon och menyval
+#   5. provstart i åtta sekunder: en app som inte startar rapporteras inte som klar
 #
-#   ./install.sh              installera (eller uppdatera)
-#   ./install.sh --uninstall  ta bort startaren, ikonen och menyvalet
+#   ./install.sh              installera eller uppdatera
 #   ./install.sh --check      bara kontrollera, ändra ingenting
+#   ./install.sh --uninstall  ta bort startaren, ikonen och menyvalet
 #
 # Variabelnamnen är ASCII med flit: bash kör en rad med "sökväg=..." som ett
 # kommando i stället för en tilldelning, och felet ser ut som något annat.
@@ -68,6 +68,44 @@ case "$DISTRO $ID_LIKE" in
 esac
 echo "Distribution: $DISTRO ($FAMILY)"
 
+# Vad systemet behöver, per familj. Hela listan installeras när något saknas —
+# den är kort, pakethanteraren hoppar över det som redan finns, och en
+# bibliotek-till-paket-tabell för hand blir fel så snart en distribution byter
+# namn. python3-venv ligger med av samma skäl: steg 2 kan behöva den.
+case "$FAMILY" in
+    arch)   PACKAGES="python libxcb xcb-util-cursor xcb-util-wm libxkbcommon-x11 libglvnd fontconfig dbus portaudio"
+            PM="pacman -S --needed --noconfirm" ;;
+    debian) PACKAGES="python3 python3-venv python3-pip libxcb1 libxcb-cursor0 libxcb-icccm4 libxkbcommon-x11-0 libgl1 libfontconfig1 libdbus-1-3 libxcb-xinerama0 libportaudio2"
+            PM="apt-get install -y" ;;
+    fedora) PACKAGES="python3 python3-pip libxcb xcb-util-cursor xcb-util-wm libxkbcommon-x11 mesa-libGL fontconfig dbus-libs portaudio"
+            PM="dnf install -y" ;;
+    suse)   PACKAGES="python3 libxcb1 libxkbcommon-x11-0 libglvnd fontconfig libdbus-1-3 portaudio"
+            PM="zypper install -y" ;;
+    *)      PACKAGES=""; PM="" ;;
+esac
+
+SUDO=""
+if [ "$(id -u)" -ne 0 ]; then
+    command -v sudo >/dev/null 2>&1 && SUDO="sudo"
+fi
+
+install_packages() {
+    # $1: vad som saknades, till beskedet när det inte går att installera.
+    if [ -z "$PM" ]; then
+        echo "  Okänt paketsystem ($DISTRO). Installera själv: $1" >&2
+        return 1
+    fi
+    if [ "$(id -u)" -ne 0 ] && [ -z "$SUDO" ]; then
+        echo "  Behöver root eller sudo för att installera: $1" >&2
+        return 1
+    fi
+    echo "  Saknas, installerar: $PACKAGES"
+    [ "$FAMILY" = "debian" ] && $SUDO apt-get update -qq
+    # shellcheck disable=SC2086
+    $SUDO $PM $PACKAGES || return 1
+    return 0
+}
+
 # --------------------------------------------------------- dokumentlackage
 # Dokumentfiler i projektmappen kan innehålla API-nycklar. Inget sådant får
 # följa med till en installation, och ingen ska behöva upptäcka det i efterhand.
@@ -84,10 +122,8 @@ fi
 # ----------------------------------------------------------------- python
 PY_BASE="${SCRIBENTIA_PY_BASE:-python3}"
 if ! command -v "$PY_BASE" >/dev/null 2>&1; then
-    echo "AVBRYTER: hittar ingen python3. Installera python först." >&2
-    [ "$FAMILY" = "arch" ]   && echo "  sudo pacman -S python" >&2
-    [ "$FAMILY" = "debian" ] && echo "  sudo apt install python3 python3-venv" >&2
-    [ "$FAMILY" = "fedora" ] && echo "  sudo dnf install python3" >&2
+    echo "AVBRYTER: hittar ingen python3." >&2
+    [ -n "$PM" ] && echo "  Försök: $SUDO $PM python" >&2
     exit 1
 fi
 PY_VERSION="$("$PY_BASE" -c 'import sys; print("%d.%d" % sys.version_info[:2])')"
@@ -98,55 +134,32 @@ if [ "$KORT" -lt 3 ] || { [ "$KORT" -eq 3 ] && [ "$LANG" -lt 11 ]; }; then
 fi
 echo "Python: $PY_VERSION"
 
-# --------------------------------------------------------- Qt:s systembibliotek
-# PyQt6-hjulen bär Qt men inte X11-klienterna. ldd på plattformspluginen är det
-# enda svar som gäller den här maskinen — listan över "vanliga" bibliotek är inte
-# samma sak som listan över vad som saknas här.
-QTBIB=$(find "$VENV_DIR" /usr/lib/python3*/site-packages -name 'libqxcb.so' 2>/dev/null | head -1)
-if [ -z "$QTBIB" ]; then
-    QTBIB=$(find "$HOME" -path '*PyQt6/Qt6/plugins/platforms/libqxcb.so' 2>/dev/null | head -1)
-fi
-SYSTEM_MISSING=""
-if [ -n "$QTBIB" ]; then
-    SYSTEM_MISSING="$(ldd "$QTBIB" 2>/dev/null | awk '/not found/ {print $1}')"
-fi
-if [ -n "$SYSTEM_MISSING" ]; then
-    echo "Saknade systembibliotek:"
-    echo "$SYSTEM_MISSING" | sed 's/^/  /'
-    case "$FAMILY" in
-        arch)   echo "  sudo pacman -S xcb-util-cursor xcb-util-wm libxkbcommon-x11 libglvnd fontconfig dbus libxcb" ;;
-        debian) echo "  sudo apt install libxcb-cursor0 libxcb-icccm4 libxkbcommon-x11-0 libgl1 libfontconfig1 libdbus-1-3 libxcb-xinerama0" ;;
-        fedora) echo "  sudo dnf install xcb-util-cursor xcb-util-wm libxkbcommon-x11 mesa-libGL fontconfig dbus-libs xcb-util" ;;
-        *)      echo "  Leta upp paketen: apt-file search <bibliotek> | dnf provides <bibliotek> | pacman -F <bibliotek>" ;;
-    esac
-    echo "  (Qt startar inte utan dem. Installera och kör om.)"
-elif [ -n "$QTBIB" ]; then
-    echo "Qt:s systembibliotek: alla finns"
-else
-    echo "Qt:s systembibliotek: libqxcb.so hittades inte än (installeras nedan)"
+# venv-modulen är ett eget paket på Debian och Ubuntu.
+if ! "$PY_BASE" -m venv --help >/dev/null 2>&1; then
+    echo "Python: venv-modulen saknas"
+    if [ "$MODE" != "check" ]; then
+        install_packages "python3-venv"
+        "$PY_BASE" -m venv --help >/dev/null 2>&1 \
+            || { echo "AVBRYTER: utan venv-modulen går ingen egen miljö att skapa." >&2; exit 1; }
+    fi
 fi
 
 # --------------------------------------------------------------- miljön
+# Beroendena först: Qt:s systembibliotek går inte att mäta förrän PyQt6 finns,
+# och PyQt6 kommer med dem. Motsatt ordning mäter en fil som inte finns.
 if [ "$MODE" = "install" ]; then
     if command -v uv >/dev/null 2>&1; then
         echo "Miljö: uv sync"
         uv sync --directory "$SCRIPT_DIR" >/dev/null || { echo "uv sync misslyckades" >&2; exit 1; }
-        PY="$VENV_DIR/bin/python"
-        [ -x "$PY" ] || PY="$SCRIPT_DIR/.venv/bin/python"
     else
         if [ ! -x "$VENV_DIR/bin/python" ]; then
             echo "Miljö: skapar .venv (uv finns inte på den här maskinen)"
-            if ! "$PY_BASE" -m venv "$VENV_DIR"; then
-                echo "AVBRYTER: kunde inte skapa en virtuell miljö." >&2
-                [ "$FAMILY" = "debian" ] && echo "  sudo apt install python3-venv" >&2
-                exit 1
-            fi
+            "$PY_BASE" -m venv "$VENV_DIR" || { echo "AVBRYTER: kunde inte skapa en virtuell miljö." >&2; exit 1; }
         fi
         PY="$VENV_DIR/bin/python"
         echo "Miljö: installerar beroendena i .venv"
-        # En venv skapad av uv har inget pip. Det är samma venv som användaren
-        # kan ha från en tidigare installation med uv, så den kan inte antas ha
-        # pip bara för att den finns.
+        # En venv skapad av uv har inget pip, och samma .venv kan komma från en
+        # tidigare installation med uv — pip kan inte antas bara för att den finns.
         if ! "$PY" -m pip --version >/dev/null 2>&1; then
             echo "  (venven saknar pip — lägger in det)"
             "$PY" -m ensurepip --upgrade >/dev/null 2>&1 \
@@ -159,10 +172,61 @@ if [ "$MODE" = "install" ]; then
             exit 1
         }
     fi
-else
-    PY="$VENV_DIR/bin/python"
-    [ -x "$PY" ] || PY="$PY_BASE"
 fi
+
+PY="$VENV_DIR/bin/python"
+[ -x "$PY" ] || PY="$PY_BASE"
+
+# ------------------------------------------------- Qt och mikrofonen
+# PyQt6-hjulet bär Qt men inte X11-klienterna, och sounddevice paketerar inte
+# PortAudio. ldd på plattformspluginen är det enda svar som gäller den här
+# maskinen — en lista över vad som är vanligt att saknas är inte samma sak som
+# vad som saknas här. Båda kontrolleras, båda installeras, och svaret mäts om.
+QTBIB=""
+for kandidat in "$VENV_DIR"/lib/python*/site-packages/PyQt6/Qt6/plugins/platforms/libqxcb.so \
+                /usr/lib/python3*/site-packages/PyQt6/Qt6/plugins/platforms/libqxcb.so \
+                "$HOME"/.local/lib/python3*/site-packages/PyQt6/Qt6/plugins/platforms/libqxcb.so; do
+    if [ -f "$kandidat" ]; then QTBIB="$kandidat"; break; fi
+done
+
+saknat_bibliotek() {
+    [ -n "$QTBIB" ] && ldd "$QTBIB" 2>/dev/null | awk '/not found/ {print $1}' | tr '\n' ' '
+}
+har_portaudio() {
+    ldconfig -p 2>/dev/null | grep -q "libportaudio.so"
+}
+
+forsok=1
+while :; do
+    MISSING="$(saknat_bibliotek)"
+    if har_portaudio; then PORTAUDIO="ja"; else PORTAUDIO="nej"; fi
+
+    if [ -n "$QTBIB" ] && [ -z "$MISSING" ] && [ "$PORTAUDIO" = "ja" ]; then
+        echo "Systembibliotek: Qt:s klienter och PortAudio finns"
+        break
+    fi
+    if [ -z "$QTBIB" ]; then
+        echo "Systembibliotek: går inte att mäta (PyQt6 saknas i miljön)"
+        break
+    fi
+
+    SAKNAS="${MISSING# }"
+    [ "$PORTAUDIO" = "nej" ] && SAKNAS="${SAKNAS:+$SAKNAS }libportaudio.so.2"
+    echo "Systembibliotek: $SAKNAS"
+
+    if [ "$MODE" = "check" ]; then
+        echo "  Skulle installeras: $PACKAGES"
+        break
+    fi
+    if [ "$forsok" -gt 1 ]; then
+        echo "  De installerades inte (se felet ovan). Startar appen ändå går det" >&2
+        echo "  bra att använda den — men dikteringen behöver PortAudio, och Qt:s" >&2
+        echo "  X11-klienter behövs för att ett fönster skall komma upp alls." >&2
+        break
+    fi
+    install_packages "$SAKNAS" || true
+    forsok=2
+done
 
 # ------------------------------------------------------------ startare och meny
 if [ "$MODE" = "install" ]; then
@@ -202,7 +266,7 @@ fi
 
 # ------------------------------------------------------------- startar den?
 # Samma kontroll som grinden kör: appen ska leva efter åtta sekunder, utan
-# traceback. En app som dör direkt ger en annan kod.
+# traceback. En app som dör direkt ger en annan kod än en som står kvar.
 START_LOG="$(mktemp)"
 timeout 8 env QT_QPA_PLATFORM=offscreen SCRIBENTIA_CONFIG_PATH="$(mktemp)" "$PY" "$SCRIPT_DIR/main.py" >"$START_LOG" 2>&1
 START_CODE=$?
@@ -216,6 +280,14 @@ else
 fi
 rm -f "$START_LOG"
 
+# --------------------------------------------------------------- frivilligt
+# Inte installerat utan vidare: Ghostscript är stort, Java behövs bara för
+# EPUB-validering, och faster-whisper hämtar en modell vid första användningen.
+FRIVILLIGA=""
+command -v gs   >/dev/null 2>&1 || FRIVILLIGA="$FRIVILLIGA ghostscript(PDF/X-1a)"
+command -v java >/dev/null 2>&1 || FRIVILLIGA="$FRIVILLIGA java(EPUBCheck)"
+[ -n "$FRIVILLIGA" ] && echo "Frivilligt, för fler funktioner:$FRIVILLIGA"
+
 if [ "$MODE" = "check" ]; then
     [ "$START_OK" = "1" ] && { echo "Kontrollen är grön."; exit 0; }
     exit 1
@@ -223,6 +295,7 @@ fi
 
 if [ "$START_OK" = "1" ]; then
     echo "Klart. Starta med 'scribentia' eller från menyn."
+    echo "Uppdatera senare med ./update.sh"
 else
     echo "Installationen ligger på plats men appen startar inte — se felet ovan." >&2
     exit 1

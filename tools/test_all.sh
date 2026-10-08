@@ -76,6 +76,9 @@ run "stavningskontrollen" "$PY" -m core.spellcheck
 run "revisionerna" "$PY" -m core.revisions
 run "övningarna" "$PY" -m core.exercises
 run "läsbarheten" "$PY" -m core.document_stats
+run "analysen" "$PY" -m core.analysis
+run "statistiken" "$PY" -m core.story_stats
+run "normsidan" "$PY" -m core.normsida
 run "pagineringen" "$PY" -m core.pagination
 run "skrivloggen" "$PY" -m core.writing_log
 run "storybible" "$PY" -m core.storybible
@@ -93,6 +96,7 @@ run "korktavlan" "$PY" -m ui.corkboard
 run "läsvyn" "$PY" -m ui.scrivenings
 run "samlingarna" "$PY" -m core.collections
 run "samlingspanelen" "$PY" -m ui.collections_panel
+run "analyspanelen" "$PY" -m ui.insight_panel
 run "ui_smoke" "$PY" tools/ui_smoke.py
 run "print_purity" "$PY" tools/print_purity_check.py
 

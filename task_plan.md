@@ -44,6 +44,13 @@ projektinstruktionerna (2.17) och projektöversikten (2.16)).
 Fas 0, 0b och 1 är klara. Sedan dess: appskalet följer v0-referensen, och
 pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 
+**Senaste passet (2026-10-08, efter det andra researchpasset):** de billiga och
+avgörande luckorna mot de betalda verktygen byggdes först — **4.17** (repetitions-
+och konsistensanalys över hela boken med en panel där klicket markerar textstället,
+`core/analysis.py` + `ui/insight_panel.py`), **2.20** (fyra beat sheet-mallar som
+data) och **5.13** (normalsidan, modulen klar). `core/story_stats.py` (2.18) är
+byggd och grindad. Grinden GRÖNT med 659 kontroller i rökprovet.
+
 ## Arbetsregler
 
 - En agent = en git-worktree = ett område. Nya moduler framför ändringar i
@@ -127,17 +134,23 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       projekt som är öppet just nu i stället för att kopiera texten. Menyväg: Arkiv →
       Projektinstruktioner. Alla tre AI-vägarna (granskning, omskrivning, övningar) går genom samma
       `_system_prompt`, så regeln bor på ett ställe. R03.18
-- [ ] **2.18** Scenstatistik ur modellen: scener per karaktär, karaktärernas inträde och utträde
-      genom berättelsen, POV-fördelning och ord per scen. Allt underlag finns redan i scenens
-      metadata och codexets kopplingar — det är en rapport, inte en ny datamodell. R06 (Fictionary,
-      bibisco)
+- [~] **2.18** Scenstatistik ur modellen: **modulen är byggd och grindad**
+      (`core/story_stats.py`, 13 egna kontroller): scener per karaktär, karaktärernas inträde och
+      utträde, POV-fördelning, ord per scen och kapitelsummering som bara räknar sina egna scener.
+      Panelen visar POV-fördelningen i sin sammanfattningsrad, och per-scen-siffrorna finns redan i
+      plot-tavlan (2.9). **Kvar:** karaktärstabellen (scener, ord, första/sista scen, nämnd vs
+      kopplad) nås inte i gränssnittet — den är byggd och provad men har ingen egen vy. R06
+      (Fictionary, bibisco)
 - [ ] **2.19** Scenens story-element-checklista och Story Map: Fictionarys 38 element per scen
       (POV-karaktär och mål, scenfunktion, hook, tension, revelation, action/sequel, läsarens
       vetande, plats/tid, sinnen, emotion) som en checklista på scenen, samlad i en Story Map.
       Scenmodellen finns; elementen är data. R06
-- [ ] **2.20** Beat sheet-mallar som data: Save the Cat, tre akter och mysterieformeln som
-      strukturkort i samma form som projektmallarna (1.12), inte som hårdkodade flöden. R07 (Plottr
-      har 20+, Campfire fler)
+- [x] **2.20** Beat sheet-mallar som data: fyra nya projektmallar i `PROJECT_TEMPLATES` — Save the
+      Cat (15 beat), Tre akter, Hjältens resa (12 steg) och Mysteriet (9 beat) — där varje beat blir
+      ett kapitel med en scen, så beatens namn står i trädet och kortet bär scenens synopsis. Namnen
+      visas på båda språken (nya i18n-nycklar). Provat i `core.project`: rätt antal beat, en scen per
+      beat, egna filer trots att flera scener heter samma sak, och att varje beat har en scen under
+      sig. R07 (Plottr har 20+, Campfire fler)
 - [ ] **2.21** Karaktärsintervjun: en frågesvit per codexpost som fyller posten, genom den
       befintliga AI-klienten. R07 (bibisco)
 - [ ] **2.22** Relationsgraf i codexet: entiteter och relationer ritade som noder och kanter.
@@ -282,11 +295,20 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       **projektet**, inte till scenen — de beskriver boken. Provat: att båda sparas och att de står i
       `project.json` på disk. *Flyttad från fas 2 (2.13).* R03.15
 - **Status:** complete (556 rökprov + 54 renhetsprov + modulernas egna, GRÖNT)
-- [ ] **4.17** Repetitions- och konsistensanalys över **hela boken**: upprepade ord och fraser
-      ("Echoes"), och namn/stavning/versalisering som glider mellan scener. Ren lokal kod —
-      scenerna indexeras, codexets namn ger konsistensreglerna — och resultatet är en **klickbar
-      rapport** som sätter markören vid träffen. Den största enskilda funktionsluckan mot
-      ProWritingAid och AutoCrit (båda har den; vi har 0 träffar i koden). R06
+- [x] **4.17** Repetitions- och konsistensanalys över **hela boken**, med klickbar rapport:
+      `core/analysis.py` (13 egna kontroller) hittar upprepade ord och fraser, namnvarianter ett
+      tecken från ett codexnamn, versal/gemen som glider och codexnamn som aldrig nämns — och
+      `ui/insight_panel.py` (11 egna kontroller) visar dem som en lista där ett klick öppnar scenen
+      och **markerar textstället** (citat + förekomst), med filtret per fyndtyp och
+      POV/siffror i sammanfattningsraden. `ui_smoke` avsnitt 49 kör hela kedjan och kräver att
+      markören står på ordet efter klicket.
+      **Mätt, och det ändrade konstruktionen:** ren förekomst-räkning gav **10 336 fynd** på
+      120 000 ord (7 429 av dem tvåordsfraser som "ord0000 ord0001" — vanliga ordföljder som råkar
+      stå tre gånger i en hel bok). Det går inte att visa en författare. Rapporten mäter därför
+      **närhet**, som ProWritingAids "Echoes": ett fynd måste återkomma inom ett fönster (30 ord,
+      `window * n` för en fras av n ord). Efter det: **723 fynd** på samma text, och 376 enskilda
+      ord. Analysen tar 1,8 s på 120 000 ord, alltså körs den när författaren ber om den.
+      R06 (ProWritingAid, AutoCrit)
 - [ ] **4.19** Ordklasser och stilvarningar i texten: fyllnadsord, adverb, passiv form, klichéer
       och dialogtaggar. Listbaserat och lokal körning; LanguageTool (4.10) täcker grammatiken men
       inte stilklasserna. R06 (ProWritingAid, AutoCrit, Papyrus)
@@ -294,7 +316,9 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       TTS — örat hittar det ögat hoppar över. Dabble, AutoCrit och NovelAI har det; vår diktering
       (Whisper) är bara tal→text. R06, R09
 - [ ] **4.21** Analysrapport per kapitel: LIX, repetitioner, stilvarningar och ordräkning samlade
-      per kapitel med länkar in i texten, i stället för en siffra i sidopanelen. R06 (ProWritingAid
+      per kapitel med länkar in i texten, i stället för en siffra i sidopanelen. Siffrorna finns
+      redan per kapitel i `core.story_stats.chapter_rows` (2.18), och fynden i `core.analysis`;
+      det som fattas är att gruppera listan per kapitel i panelen. R06 (ProWritingAid
       Chapter Critique, AutoCrit Summary Report)
 
 ### Fas 5: Publiceringen
@@ -385,9 +409,14 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       `SOURCES`, kanalerna delar inte varandras koefficienter (bara KDP har en publicerad formel), och
       en kanal utan belagt tal säger det i stället för att låna ett. Provat: trappans gränser steg för
       steg (150/151, 300/301, 828/829), ryggbredden per papper, och att Lulu får `None`.
-- [ ] **5.13** Normsidan: 30 rader × max 60 tecken, för förlagsinlämning. Papyrus har den och
-      beskriver den som "von Verlagen erwünscht" (ordagrant belagt hos leverantören);
-      `core/pagination.py` räknar redan rader och ark, så detta är en sidmall, inte en ny motor. R08
+- [~] **5.13** Normsidan: **modulen är byggd och grindad** (`core/normsida.py`, 12 egna kontroller).
+      30 rader × max 60 tecken ur A4, med marginalerna **räknade** ur teckenbredden (12 pt Courier =
+      2,54 mm/tecken → 60 tecken kräver 152,4 mm, alltså 28,8 mm marginal) och radhöjden ur
+      radavståndet, plus `fits()` som förklarar på svenska varför det inte ryms (A5 och Letter klarar
+      inte 30 rader — beskedet säger det i stället för att tiga). Avstavning av, som normalsidan
+      kräver. Papyrus har funktionen och beskriver den som "von Verlagen erwünscht" (ordagrant
+      belagt hos leverantören). **Kvar:** ingen knapp och ingen meny — ingen väg från gränssnittet
+      till profilen ännu. R08
 - [ ] **5.14** Typografiska textelement i alla tre kanaler: scenbrytning som ornament, versblock
       och meddelandeblock (sms/chatt). Vellum har dem, och Vellum är det verktyg våra egna böcker
       jämförs med. R08
@@ -559,6 +588,7 @@ frågan inte behöver ställas igen:
 | Fyra nya rapporter per PRODUKT, inte per tema | Det första passet var tematiskt och missade de betalda specialistverktygen (ProWritingAid, AutoCrit, Fictionary, Plottr, Campfire, bibisco, Papyrus). Funktionslista per produkt gav 29 mätta luckor som de fem första rapporterna inte hade, varav 17 blev nya planposter (`luckor.md`) |
 | Ritad tidslinje fortfarande inte byggd, men händelsetabellen är en post (2.23) | Tre betalda verktyg har tidslinjen och Fictionary rankar scenkopplade händelser högt. Datadelen är billig och vyn är ett eget steg — beslutet väntar på Alex |
 | Inget externt typsättningsprogram (Pandoc, Typst, Calibre) som backend | R10 föreslår det och kallar det billigt. Kedjan finns redan och grinden läser tillbaka EPUB/DOCX/PDF; ett externt program är dessutom ett nytt krav på användarens maskin. Kvar som *val* för PDF/X-1a (5.16) om det visar sig kräva en riktig typsättningsmotor |
+| Analysen mäter **närhet**, inte totalsumma | Mätt: ren förekomst-räkning gav 10 336 fynd på 120 000 ord, de flesta vanliga ordföljder som råkar stå tre gånger i en bok. Ett fönster på 30 ord (`window * n` för fraser) gav 723 — och det är samma sak som ProWritingAids "Echoes" mäter. En lista en författare kan arbeta igenom slår en fullständig lista |
 
 ## Errors Encountered
 

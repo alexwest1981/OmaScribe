@@ -223,6 +223,73 @@ PROJECT_TEMPLATES = {
             (SCENE, "Scen 1", CHAPTER),
         ],
     },
+    # Beat sheets som projektmallar (R07, Plottr säljer 20+): strukturen är
+    # färdig, texten är tom. Varje beat blir ett kapitel med en scen, så
+    # beatens namn står i binder-trädet och kortet bär scenens synopsis.
+    # Ordningen i listan är nodernas ordning — `create` läser den uppifrån och
+    # ned och fäster varje nod vid den *senaste* noden av sin föräldratyp.
+    "save_the_cat": {
+        "target_words": 80_000,
+        "structure": [
+            (CHAPTER, "1. Öppningsbilden", None), (SCENE, "Öppningsbilden", CHAPTER),
+            (CHAPTER, "2. Tema presenteras", None), (SCENE, "Temat", CHAPTER),
+            (CHAPTER, "3. Upptrappningen", None), (SCENE, "Vardagen", CHAPTER),
+            (CHAPTER, "4. Katalysatorn", None), (SCENE, "Katalysatorn", CHAPTER),
+            (CHAPTER, "5. Debatten", None), (SCENE, "Debatten", CHAPTER),
+            (CHAPTER, "6. Övergången till akt två", None), (SCENE, "Övergången", CHAPTER),
+            (CHAPTER, "7. B-storyn", None), (SCENE, "B-storyn", CHAPTER),
+            (CHAPTER, "8. Lektime", None), (SCENE, "Lektime", CHAPTER),
+            (CHAPTER, "9. Mittpunkten", None), (SCENE, "Mittpunkten", CHAPTER),
+            (CHAPTER, "10. Fienden slår till", None), (SCENE, "Motgången", CHAPTER),
+            (CHAPTER, "11. Allt är förlorat", None), (SCENE, "Förlusten", CHAPTER),
+            (CHAPTER, "12. Själens mörka natt", None), (SCENE, "Den mörka natten", CHAPTER),
+            (CHAPTER, "13. Övergången till akt tre", None), (SCENE, "Mot slutet", CHAPTER),
+            (CHAPTER, "14. Finalen", None), (SCENE, "Finalen", CHAPTER),
+            (CHAPTER, "15. Slutbilden", None), (SCENE, "Slutbilden", CHAPTER),
+        ],
+    },
+    "tre_akter": {
+        "target_words": 80_000,
+        "structure": [
+            (PART, "Akt ett — upptakt", None),
+            (CHAPTER, "Kapitel 1", PART), (SCENE, "Scen 1", CHAPTER),
+            (PART, "Akt två — konfrontation", None),
+            (CHAPTER, "Kapitel 2", PART), (SCENE, "Scen 1", CHAPTER),
+            (PART, "Akt tre — upplösning", None),
+            (CHAPTER, "Kapitel 3", PART), (SCENE, "Scen 1", CHAPTER),
+        ],
+    },
+    "hjaltens_resa": {
+        "target_words": 80_000,
+        "structure": [
+            (CHAPTER, "1. Den vanliga världen", None), (SCENE, "Vardagen", CHAPTER),
+            (CHAPTER, "2. Kallelsen till äventyret", None), (SCENE, "Kallelsen", CHAPTER),
+            (CHAPTER, "3. Vägran", None), (SCENE, "Tvekan", CHAPTER),
+            (CHAPTER, "4. Mötet med mentorn", None), (SCENE, "Mentorn", CHAPTER),
+            (CHAPTER, "5. Övergången över tröskeln", None), (SCENE, "Tröskeln", CHAPTER),
+            (CHAPTER, "6. Prövningar, allierade, fiender", None), (SCENE, "Prövningarna", CHAPTER),
+            (CHAPTER, "7. Närmandet", None), (SCENE, "In i det okända", CHAPTER),
+            (CHAPTER, "8. Det stora provet", None), (SCENE, "Provet", CHAPTER),
+            (CHAPTER, "9. Belöningen", None), (SCENE, "Belöningen", CHAPTER),
+            (CHAPTER, "10. Vägen hem", None), (SCENE, "Vägen hem", CHAPTER),
+            (CHAPTER, "11. Återuppståndelsen", None), (SCENE, "Sista striden", CHAPTER),
+            (CHAPTER, "12. Återkomsten", None), (SCENE, "Återkomsten", CHAPTER),
+        ],
+    },
+    "mysteriet": {
+        "target_words": 75_000,
+        "structure": [
+            (CHAPTER, "1. Brottet", None), (SCENE, "Brottet", CHAPTER),
+            (CHAPTER, "2. Utredningen inleds", None), (SCENE, "Utredningen", CHAPTER),
+            (CHAPTER, "3. Första spåret", None), (SCENE, "Spåret", CHAPTER),
+            (CHAPTER, "4. Falskt spår", None), (SCENE, "Villospåret", CHAPTER),
+            (CHAPTER, "5. Eskaleringen", None), (SCENE, "Andra offret", CHAPTER),
+            (CHAPTER, "6. Mörka stunden", None), (SCENE, "Återvändsgränden", CHAPTER),
+            (CHAPTER, "7. Genombrottet", None), (SCENE, "Genombrottet", CHAPTER),
+            (CHAPTER, "8. Avslöjandet", None), (SCENE, "Avslöjandet", CHAPTER),
+            (CHAPTER, "9. Upplösningen", None), (SCENE, "Upplösningen", CHAPTER),
+        ],
+    },
 }
 DEFAULT_TEMPLATE = "roman"      # vad väljaren föreslår för ett nytt projekt
 MINIMAL_TEMPLATE = "enkel"      # vad create() utan mall ger — minsta möjliga
@@ -1032,6 +1099,25 @@ def _self_check() -> int:
         check(len(set(PROJECT_TEMPLATES)) == len(mallar), "alla mallar går att skapa")
         check(mallar["roman"][1] > mallar["novell"][1] > mallar["enkel"][1],
               f"ordmålen skiljer sig åt ({[m[1] for m in mallar.values()]})")
+
+        # Beat sheets (R07): varje beat är ett kapitel med en scen under sig, och
+        # scenerna får egna filer trots att flera heter samma sak.
+        for namn, beats in (("save_the_cat", 15), ("hjaltens_resa", 12),
+                            ("mysteriet", 9), ("tre_akter", 3)):
+            mapp = tempfile.mkdtemp(prefix=f"beat-{namn}-")
+            try:
+                p = Project.create(mapp, f"Beat {namn}", template=namn)
+                kapitel = [n for n in p.walk() if n.type == CHAPTER]
+                scener = p.manuscript()
+                check(len(kapitel) == beats,
+                      f"{namn}: {len(kapitel)} beat-kapitel (väntat {beats})")
+                check(len(scener) == beats, f"{namn}: en scen per beat")
+                check(len({n.file for n in scener}) == beats,
+                      f"{namn}: scenerna har egna filer")
+                check(all(p.children(n.id) for n in kapitel),
+                      f"{namn}: varje beat har en scen under sig")
+            finally:
+                shutil.rmtree(mapp, ignore_errors=True)
         mapp = tempfile.mkdtemp(prefix="mall-okand-")
         try:
             p = Project.create(mapp, "Okänd mall", template="finns-inte")

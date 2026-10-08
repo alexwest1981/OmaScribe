@@ -2746,6 +2746,49 @@ def main() -> int:
                 if fot.pixelColor(x, y).lightness() < 200)
     check(mörka > 0, f"sidnumret ritas i arkets fot ({mörka} mörka punkter)")
 
+    print("\n49. Analysen: upprepningar, namn och klicket tillbaka (fas 4.17, 2.18, 2.21)")
+
+    from ui.insight_panel import OCCURRENCE_ROLE as OCC49, QUOTE_ROLE as QUOTE49
+
+    text49 = ("<p>Skogen var tyst. Skogen var tyst igen.</p>"
+              "<p>Anna gick in i skogen. Annna följde efter, och skogen teg. Skogen var tyst.</p>")
+    ovningsbok.write(ovningsscen.id, text49)
+    win._show_scene_html(ovningsscen.id, text49)
+
+    check(win.insight is not None and win.sidebar.tabs.indexOf(win.insight) >= 0,
+          "analyspanelen är en flik i sidopanelen")
+    rapport49 = win.insight.refresh()
+    check(rapport49["scenes"] == len(ovningsbok.manuscript()),
+          f"analysen ser manuset ({rapport49['scenes']} scener, {rapport49['words']} ord)")
+    check(rapport49["words"] == ovningsbok.total_words(),
+          "och ordtalet är projektets eget")
+    ord49 = [f for f in rapport49["findings"] if f.kind == "repeat"]
+    check(any(f.label.casefold() == "skogen" for f in ord49),
+          f"upprepningen hittas ({[(f.label, f.note) for f in ord49[:2]]})")
+    fras49 = [f for f in rapport49["findings"] if f.kind == "phrase"]
+    check(any("var tyst" in f.label.casefold() for f in fras49),
+          f"och frasen likaså ({[f.label for f in fras49[:2]]})")
+    check(win.insight.tree.topLevelItemCount() == len(rapport49["findings"]),
+          f"listan visar varje fynd ({win.insight.tree.topLevelItemCount()})")
+
+    # Klicket i listan: scenen öppnas och textstället markeras i editorn.
+    rader49 = [win.insight.tree.topLevelItem(i)
+               for i in range(win.insight.tree.topLevelItemCount())]
+    rad49 = next(r for r in rader49 if (r.data(0, QUOTE49) or "").casefold() == "skogen")
+    check(rad49.data(0, OCC49) == 0, "första förekomsten av ordet pekas ut")
+    win.insight._activate(rad49)
+    for _steg in range(2):
+        app.processEvents()
+    check(win.active_scene_id == ovningsscen.id, "klicket står i rätt scen")
+    check(win.editor.textCursor().selectedText().casefold() == "skogen",
+          f"och markerar ordet i texten ({win.editor.textCursor().selectedText()!r})")
+
+    # Ett fynd vars text är borta skall säga det, inte markera fel ord.
+    gammal49 = win.insight.tree.topLevelItem(0)
+    check(win.goto_quote(ovningsscen.id, "finns-inte-alls", 0) is False,
+          "ett citat som inte längre finns ger ett nej, inte en felmarkering")
+    check(gammal49 is not None, "och resten av listan står kvar")
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

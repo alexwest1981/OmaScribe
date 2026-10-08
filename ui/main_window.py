@@ -22,6 +22,7 @@ from ui.settings_dialog import SettingsDialog
 from ui.google_fonts_dialog import GoogleFontsDialog
 from ui.start_screen import StartScreen
 from ui.notes_panel import NotesPanel
+from ui.insight_panel import InsightPanel
 from ui.research_dialog import ResearchDialog
 from ui.ghostwriter_dialog import GhostwriterDialog
 from ui.graph_dialog import GraphDialog
@@ -221,6 +222,17 @@ class MainWindow(QMainWindow):
             lambda m: self.status_bar.showMessage(m, 6000))
         self.codex_panel.open_scene.connect(self._open_node)
         self.sidebar.add_tab(self.codex_panel, "sidebar_tab_codex")
+
+        # Analysen (4.17, 2.18): upprepade ord och fraser, namnvarianter och
+        # codexnamn som aldrig nämns — plus siffrorna över manuset. Klicket på
+        # en rad öppnar scenen och markerar textstället, så rapporten är en väg
+        # in i texten. Analysen körs när författaren ber om den: den kostar tid
+        # på en färdig bok.
+        self.insight = InsightPanel()
+        self.insight.scene_requested.connect(self.goto_quote)
+        self.insight.status_message.connect(
+            lambda m: self.status_bar.showMessage(m, 6000))
+        self.sidebar.add_tab(self.insight, "sidebar_tab_insight")
 
         self.splitter.addWidget(self.sidebar)
 
@@ -1128,6 +1140,7 @@ class MainWindow(QMainWindow):
             print(f"[codex] kunde inte öppnas: {exc}")
         self.scene_inspector.set_codex(self.codex)
         self.codex_panel.set_project(project, self.codex)
+        self.insight.set_project(project, self.codex)
         return self.codex
 
     def _close_codex(self):
@@ -1139,6 +1152,7 @@ class MainWindow(QMainWindow):
         self.codex = None
         self.scene_inspector.set_codex(None)
         self.codex_panel.set_project(None, None)
+        self.insight.set_project(None, None)
 
     def _deactivate_project(self):
         """Lämnar projektläget. Projektet ligger kvar på disk."""
@@ -1641,6 +1655,34 @@ class MainWindow(QMainWindow):
         cursor = self.editor.document.find(comment["quote"])
         if cursor.isNull():
             self.status_bar.showMessage(_("comment_quote_gone"), 6000)
+            return False
+        self.editor.setTextCursor(cursor)
+        self.editor.canvas.ensureCursorVisible()
+        self.active_canvas.setFocus()
+        return True
+
+    def goto_quote(self, node_id: str, quote: str, occurrence: int = 0) -> bool:
+        """Gå till ett textställe i en scen och markera det.
+
+        Förekomsten räknas inom scenen, så rätt träff av flera likadana träffas.
+        Texten kan ha ändrats sedan fyndet gjordes: då säger statusfältet det i
+        stället för att markera fel ord.
+        """
+        if self.project is None or not quote:
+            return False
+        self._close_scrivenings()
+        if node_id != self.active_scene_id:
+            self.binder.select_node(node_id)      # laddar scenen i editorn
+        doc = self.editor.document
+        cursor, position = None, 0
+        for _steg in range(int(occurrence) + 1):
+            found = doc.find(quote, position)
+            if found.isNull():
+                break
+            cursor = found
+            position = found.selectionEnd()
+        if cursor is None or cursor.isNull():
+            self.status_bar.showMessage(_("insight_quote_gone"), 6000)
             return False
         self.editor.setTextCursor(cursor)
         self.editor.canvas.ensureCursorVisible()

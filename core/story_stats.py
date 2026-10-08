@@ -1,4 +1,4 @@
-"""Numeric reports derived from an OmaScribe project and its story bible."""
+"""Numeric reports derived from an Scribentia project and its story bible."""
 
 from __future__ import annotations
 

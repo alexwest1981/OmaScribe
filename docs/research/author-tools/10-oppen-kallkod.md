@@ -1,6 +1,6 @@
 # Inventering av öppna författarverktyg
 
-Denna rapport kartlägger open source-verktyg för skönlitterärt skrivande, deras teknikstack, licenser och livscykel, i syfte att identifiera luckor och återanvändbara mönster för projektet OmaScribe.
+Denna rapport kartlägger open source-verktyg för skönlitterärt skrivande, deras teknikstack, licenser och livscykel, i syfte att identifiera luckor och återanvändbara mönster för projektet Scribentia.
 
 ## 1. Vilka öppna författarverktyg finns det?
 
@@ -45,9 +45,9 @@ Licenser hämtade via GitHubs API SPDX-kod för repofilen:
 *   **Pandoc**: `GPL-2.0` (Copyleft)
 *   **Typst**: `Apache-2.0` (Tillåtande)
 
-## 4. Verktyg som överlappar OmaScribe
+## 4. Verktyg som överlappar Scribentia
 
-**novelWriter** är projektet i öppen källkod som gör i stort sett exakt den grundläggande funktionen OmaScribe ämnar lösa (offline, scenbaserad text, QT-gränssnitt). [resonemang]
+**novelWriter** är projektet i öppen källkod som gör i stort sett exakt den grundläggande funktionen Scribentia ämnar lösa (offline, scenbaserad text, QT-gränssnitt). [resonemang]
 Det novelWriter *saknar* i relation till målbilden av ett modernt verktyg som Scrivener/Vellum/Sudowrite:
 - **WYSIWYG och riktig formatering:** novelWriter tvingar användaren att skriva med Markdown-liknande syntax istället för att erbjuda en ordbehandlar-känsla (Rich Text). 
 - **Modern publiceringskedja (Tryckfärdig PDF internt):** Exporten sker ofta till Pandoc för att sedan kompileras externt, vilket innebär att formatering av böcker för tryck inte kan dras/släppas och granskas direkt i programmet utan ett externt verktyg.
@@ -68,14 +68,14 @@ Sökningen skedde via GitHub-topics (`novel-writing`, `writer`), vilket avslöja
 
 ## 6. Qt/PyQt-projekt och licensiering
 
-De projekt som delar eventuell teknisk mark (PyQt / C++ Qt) med OmaScribe är:
+De projekt som delar eventuell teknisk mark (PyQt / C++ Qt) med Scribentia är:
 *   **novelWriter** (Python/PyQt6) - `GPL-3.0`
 *   **Manuskript** (Python/PyQt5/6) - `GPL-3.0`
 *   **FocusWriter** (C++/Qt) - `GPL-3.0`
 *   **Calibre** (Python/PyQt) - `GPL-3.0`
 *   **Ghostwriter** (C++/Qt) - `GPL-3.0`
 
-Dessa bär alla `GPL-3.0`-licensiering. [belagt] Detta innebär full licensförenlighet med en egen `GPL-3.0` bas för OmaScribe, vilket betyder att interna parser-moduler eller träd-widgets från dessa rent licensmässigt får inlånas förutsatt tillskrivning och identisk licens.
+Dessa bär alla `GPL-3.0`-licensiering. [belagt] Detta innebär full licensförenlighet med en egen `GPL-3.0` bas för Scribentia, vilket betyder att interna parser-moduler eller träd-widgets från dessa rent licensmässigt får inlånas förutsatt tillskrivning och identisk licens.
 
 ## 7. Luckor och rangordning 
 
@@ -89,7 +89,7 @@ Följande rangordnas utifrån hur mycket en oberoende författare bryr sig kontr
     *Skäl:* Manuskript och novelWriter saknar riktigt njutbara skrivytor. Ett Qt WebEngine-baserat edit-block eller starkt stylad QTextEdit som känns responsiv (distraction free) löser detta. Relativt billigt att åtgärda per kod.
 
 **Vad som inte bör byggas:**
-OmaScribe bör inte försöka skriva en *egen* konverteringsmotor från start för DOCX eller EPUB; sådana filformat är extremt komplicerade och svåra att rendera korrekt. [resonemang] Pandoc, Calibre och Typst bör anropas under huven, då en författare inte bryr sig om ifall filkonverteringen utfördes av en intern modul eller en körbar tredjepartsfil, så länge gränssnittet döljer det väl och det fungerar offline. Detsamma gäller ett eget versionshanteringssystem (använd lokal git-backend eller diff för revisioner istället för att bygga hjulet).
+Scribentia bör inte försöka skriva en *egen* konverteringsmotor från start för DOCX eller EPUB; sådana filformat är extremt komplicerade och svåra att rendera korrekt. [resonemang] Pandoc, Calibre och Typst bör anropas under huven, då en författare inte bryr sig om ifall filkonverteringen utfördes av en intern modul eller en körbar tredjepartsfil, så länge gränssnittet döljer det väl och det fungerar offline. Detsamma gäller ett eget versionshanteringssystem (använd lokal git-backend eller diff för revisioner istället för att bygga hjulet).
 
 ## Vad jag inte kunde belägga
 

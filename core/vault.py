@@ -1,5 +1,5 @@
 """
-core/vault.py — Obsidian-liknande anteckningsvalv för OmaScribe.
+core/vault.py — Obsidian-liknande anteckningsvalv för Scribentia.
 
 Hanterar en mapp med Markdown-anteckningar: indexering, [[wikilinks]],
 backlinks, taggar, sökning och skapande av nya anteckningar.
@@ -15,7 +15,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import Optional
 
-VAULT_DEFAULT_DIR = os.path.expanduser("~/Documents/OmaScribe Vault")
+VAULT_DEFAULT_DIR = os.path.expanduser("~/Documents/Scribentia Vault")
 NOTE_EXTS = (".md", ".markdown", ".txt")   # textfiler som indexeras
 NOTE_EXT = ".md"                            # ändelsen nya anteckningar får
 MAX_SCAN_BYTES = 2_000_000  # skydda mot att läsa in enorma filer i indexet
@@ -448,7 +448,7 @@ def _self_test() -> int:
         if got != want:
             failures.append(f"{label}: fick {got!r}, väntade {want!r}")
 
-    tmp = tempfile.mkdtemp(prefix="omascribe-vault-")
+    tmp = tempfile.mkdtemp(prefix="scribentia-vault-")
     try:
         v = Vault(tmp)
         v.ensure_exists()

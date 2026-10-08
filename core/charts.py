@@ -1,5 +1,5 @@
 """
-core/charts.py — Diagram- och grafmotor för OmaScribe.
+core/charts.py — Diagram- och grafmotor för Scribentia.
 
 Genererar skarpa, högupplösta diagram (stapel-, linje-, cirkel-, donut- och områdesdiagram)
 med QPainter utan externa tunga beroenden. Renderar direkt till QImage/QPixmap för

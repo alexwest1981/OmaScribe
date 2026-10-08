@@ -88,7 +88,7 @@
 |----------|--------|
 | Where am I? | Fas 1 klar (1.1–1.14, commit `fae80aa`), grinden grön (12 modulprov, ui_smoke 262, print_purity 54) |
 | Where am I going? | Fas 2 (författarlagret) eller fas 3.1 (snapshots per scen) enligt `task_plan.md` |
-| What's the goal? | Allt ett professionellt författarverktyg har, in i OmaScribe |
+| What's the goal? | Allt ett professionellt författarverktyg har, in i Scribentia |
 | What have I learned? | Se `findings.md` |
 | What have I done? | Se ovan — fas 0 (fundament, grind, projektmodell) och fas 1 (manusstruktur 1.1–1.14) |
 
@@ -117,8 +117,8 @@
   skrivsprintar med nedräkning och diskret notis, CSV-export.
 - `core/writing_log.py` fanns färdig sedan fas 0b men nåddes inte från gränssnittet — nu gör den
   det, med ett prov per inkoppling (7 nya kontroller i `ui_smoke`).
-- Loggen ligger i projektmappen när ett projekt är öppet, annars i `~/.local/share/omascribe`.
-  Grinden och rökprovet pekar om den med `OMASCRIBE_DATA_DIR` till en temp-mapp, så att deras
+- Loggen ligger i projektmappen när ett projekt är öppet, annars i `~/.local/share/scribentia`.
+  Grinden och rökprovet pekar om den med `SCRIBENTIA_DATA_DIR` till en temp-mapp, så att deras
   skrivande inte hamnar i Alex riktiga logg.
 - Grinden kör nu även `core.pagination`.
 
@@ -501,9 +501,9 @@
   2. **`ui/variants_dialog.py` anropade `item.setEnabled(False)`** — `QListWidgetItem` har ingen
      sådan metod, så raden kastade varje gång en scen tagits bort ur manuset men låg kvar i en variant.
      Latent sedan tidigare; rökprovet nådde den först nu. Rättat med flaggan (`~ItemIsEnabled`).
-- **Rökprovningen skrev i Alex riktiga inställningsfil** (`~/.config/omascribe/config.json`):
+- **Rökprovningen skrev i Alex riktiga inställningsfil** (`~/.config/scribentia/config.json`):
   `CONFIG_PATH` var hårdkodad, så provet sparade sina egna sidinställningar (6×9, spegelmarginaler)
-  i hans app. Åtgärdat i tre steg — `OMASCRIBE_CONFIG_PATH` respekteras nu, provet pekar om till sin
+  i hans app. Åtgärdat i tre steg — `SCRIBENTIA_CONFIG_PATH` respekteras nu, provet pekar om till sin
   egen fil, och provet läser sparade val **ur filen** i stället för ur ett objekt i minnet (två prov
   visade sig ha levt på värden ur hans config: skrivmaskinsläget och läsbarhetsmarkeringen, som nu
   prövas genom menyvägen i stället). Hans sidinställningar är återställda till appens standard, med

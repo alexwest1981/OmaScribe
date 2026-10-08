@@ -24,9 +24,9 @@ from pathlib import Path
 # 2026-10-08, the shots came out as tiled windows at 941x1030.
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 # The tool must never read or write the user's own config or writing log.
-_DATA = tempfile.mkdtemp(prefix="omascribe-shots-")
-os.environ.setdefault("OMASCRIBE_DATA_DIR", _DATA)
-os.environ.setdefault("OMASCRIBE_CONFIG_PATH", os.path.join(_DATA, "config.json"))
+_DATA = tempfile.mkdtemp(prefix="scribentia-shots-")
+os.environ.setdefault("SCRIBENTIA_DATA_DIR", _DATA)
+os.environ.setdefault("SCRIBENTIA_CONFIG_PATH", os.path.join(_DATA, "config.json"))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 WINDOW = (1600, 1000)
@@ -107,7 +107,7 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # Settings file exists before ConfigManager reads it, as in ui_smoke.
-    with open(os.environ["OMASCRIBE_CONFIG_PATH"], "w", encoding="utf-8") as handle:
+    with open(os.environ["SCRIBENTIA_CONFIG_PATH"], "w", encoding="utf-8") as handle:
         handle.write('{"language": "%s", "theme": "oma"}' % args.lang)
 
     from PyQt6.QtWidgets import QApplication

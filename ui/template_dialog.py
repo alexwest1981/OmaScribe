@@ -1,5 +1,5 @@
 """
-ui/template_dialog.py — Mallväljare för OmaScribe.
+ui/template_dialog.py — Mallväljare för Scribentia.
 
 Visar ett modernt galleri med fördefinierade mallar (Rapport, Avhandling,
 Mötesanteckningar, Projektplan, Promemoria) med beskrivningar, ikoner och

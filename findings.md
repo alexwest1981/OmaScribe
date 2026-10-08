@@ -2,7 +2,7 @@
 
 ## Requirements
 
-Alex vill att OmaScribe skall ha **allt** ett professionellt författarverktyg har.
+Alex vill att Scribentia skall ha **allt** ett professionellt författarverktyg har.
 Underlaget är fem agentrapporter i `docs/research/author-tools/` (119 källor, kontrollerade).
 Hela listan med status ligger i `task_plan.md` — den är den enda sanningskällan för vad som är kvar.
 

@@ -1,4 +1,4 @@
-"""Local, editable story facts and scene links for OmaScribe.
+"""Local, editable story facts and scene links for Scribentia.
 
 Run ``python -m core.storybible`` for a small dependency-free self-check.
 """

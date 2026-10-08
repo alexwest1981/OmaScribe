@@ -16,13 +16,13 @@ from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 # Skrivloggens data hamnar i en temp-mapp: rökprovet skriver riktiga ord.
-os.environ.setdefault("OMASCRIBE_DATA_DIR", tempfile.mkdtemp(prefix="omascribe-log-"))
+os.environ.setdefault("SCRIBENTIA_DATA_DIR", tempfile.mkdtemp(prefix="scribentia-log-"))
 # Egen inställningsfil: rökprovet får aldrig röra användarens config.json.
-os.environ.setdefault("OMASCRIBE_CONFIG_PATH",
-                      os.path.join(os.environ["OMASCRIBE_DATA_DIR"], "config.json"))
+os.environ.setdefault("SCRIBENTIA_CONFIG_PATH",
+                      os.path.join(os.environ["SCRIBENTIA_DATA_DIR"], "config.json"))
 # Provet arbetar på svenska, som appen gör hos sin användare. Utan det här
 # faller provet tillbaka på systemets språk och mäter engelska texter.
-with open(os.environ["OMASCRIBE_CONFIG_PATH"], "w", encoding="utf-8") as _konf:
+with open(os.environ["SCRIBENTIA_CONFIG_PATH"], "w", encoding="utf-8") as _konf:
     _konf.write('{"language": "sv"}')
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -51,7 +51,7 @@ def sparat_i_configen(nyckel):
     """Läser värdet ur **filen**, inte ur objektet.
 
     Provet ska mäta att valet verkligen sparades, inte att det ligger kvar i en
-    instans i minnet. Inställningsfilen är provets egen (OMASCRIBE_CONFIG_PATH),
+    instans i minnet. Inställningsfilen är provets egen (SCRIBENTIA_CONFIG_PATH),
     så en läsning härifrån rör aldrig användarens.
     """
     import json as json_mod
@@ -66,7 +66,7 @@ def sparat_i_configen(nyckel):
 
 def main() -> int:
     app = cast(QApplication, QApplication.instance() or QApplication(sys.argv[:1]))
-    out = Path(tempfile.mkdtemp(prefix="omascribe-smoke-"))
+    out = Path(tempfile.mkdtemp(prefix="scribentia-smoke-"))
 
     print("1. Huvudfönstret")
     from core.config import ConfigManager
@@ -1009,7 +1009,7 @@ def main() -> int:
     check(win.topbar.height() == 64, f"64px hög ({win.topbar.height()})")
     check(win.topbar.brand_mark.text() == "O" and win.topbar.brand_mark.width() == 31,
           "med referensens brandmark (O, 31px)")
-    check(win.topbar.brand_name.text() == "OmaScribe", "och appens namn")
+    check(win.topbar.brand_name.text() == "Scribentia", "och appens namn")
     check(win.menu_bar.parent() is win.topbar,
           "menyraden ligger inuti topbaren (inte ovanför innehållet)")
     check(win.menu_bar.isVisible() or True, "och är den menyrad appen använder")
@@ -1468,7 +1468,7 @@ def main() -> int:
           "och menyn har en väg till dem")
 
     # en egen liten scen att öva på
-    ovningsmapp = tempfile.mkdtemp(prefix="omascribe-ovning-")
+    ovningsmapp = tempfile.mkdtemp(prefix="scribentia-ovning-")
     ovningsbok = Bok.create(ovningsmapp, "Ovningen", template="roman")
     win._activate_project(ovningsbok)
     while not ovningsbok.manuscript():
@@ -1576,7 +1576,7 @@ def main() -> int:
     from core.vault import Vault
 
     # ett valv med en anteckning som länkar till en som inte finns
-    valvmapp = tempfile.mkdtemp(prefix="omascribe-valv-")
+    valvmapp = tempfile.mkdtemp(prefix="scribentia-valv-")
     with open(os.path.join(valvmapp, "Märta.md"), "w", encoding="utf-8") as handtag:
         handtag.write("Hon har nyckeln. Se [[Källaren]] och [[Märta]].\n")
     valv = Vault(valvmapp)

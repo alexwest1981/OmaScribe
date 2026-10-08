@@ -1,4 +1,4 @@
-"""EPUB 3-export för OmaScribe-dokument."""
+"""EPUB 3-export för Scribentia-dokument."""
 
 from __future__ import annotations
 

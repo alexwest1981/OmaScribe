@@ -19,8 +19,8 @@ from ui.main_window import MainWindow
 
 def main():
     app = QApplication(sys.argv)
-    app.setApplicationName("OmaScribe")
-    app.setOrganizationName("OmaScribe")
+    app.setApplicationName("Scribentia")
+    app.setOrganizationName("Scribentia")
 
     # Load custom TTF/OTF fonts from resources & user dir
     FontManager.load_custom_fonts()

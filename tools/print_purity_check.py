@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""tools/print_purity_check.py — mäter om OmaScribes genererade filer är "rena".
+"""tools/print_purity_check.py — mäter om Scribentias genererade filer är "rena".
 
 Kontraktet som mäts (inte påstås):
 
@@ -131,7 +131,7 @@ def build_kitchen_sink() -> QTextDocument:
 
     # Diagram i färg, precis som diagramdialogen kan skapa dem. Dialogen
     # infogar via DocumentCanvas.insert_chart(), som märker bilden som ett
-    # OmaScribe-diagram — märkningen görs här på samma sätt.
+    # Scribentia-diagram — märkningen görs här på samma sätt.
     cursor.movePosition(QTextCursor.MoveOperation.End)
     cursor.insertBlock()
     chart = ChartRenderer.render(
@@ -210,7 +210,7 @@ def image_to_array(img: QImage) -> np.ndarray:
 
 
 def analyse_pdf(pdf_path: Path, keep_pages_in: Path | None = None) -> dict:
-    pages_dir = keep_pages_in or Path(tempfile.mkdtemp(prefix="omascribe-pages-"))
+    pages_dir = keep_pages_in or Path(tempfile.mkdtemp(prefix="scribentia-pages-"))
     subprocess.run(
         ["pdftoppm", "-r", str(DPI), "-png", str(pdf_path), str(pages_dir / "page")],
         check=True,
@@ -349,11 +349,11 @@ def export_all(doc: QTextDocument, out: Path, stem: str) -> tuple[Path, Path, Pa
 
 def main() -> int:
     app = QApplication.instance() or QApplication(sys.argv[:1])
-    out = Path(tempfile.mkdtemp(prefix="omascribe-purity-"))
+    out = Path(tempfile.mkdtemp(prefix="scribentia-purity-"))
     rep = Report()
 
     print("=" * 78)
-    print(f"OmaScribe — renhetskontroll av genererade filer (PDF renderad i {DPI} dpi)")
+    print(f"Scribentia — renhetskontroll av genererade filer (PDF renderad i {DPI} dpi)")
     print("=" * 78)
 
     print("\n[A] Programgenererat värsta fall (mörkt tema, markering, tabell, diagram)")

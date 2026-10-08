@@ -27,7 +27,7 @@ from core.i18n import _
 # ```-block i Markdown, med valfritt språk
 _FENCE_RE = re.compile(r"^```([A-Za-z0-9_+#.\-]*)[ \t]*\n(.*?)^```[ \t]*$", re.M | re.S)
 # Platshållaren som tillfälligt ersätter ett kodblock under HTML-konverteringen
-_FENCE_PLACEHOLDER_RE = re.compile(r"^OmaScribeKodblock(\d+)Z$")
+_FENCE_PLACEHOLDER_RE = re.compile(r"^ScribentiaKodblock(\d+)Z$")
 
 # En rad som bara består av #taggar (Obsidian-stil), inte en rubrik.
 TAG_LINE_RE = re.compile(r"^(?:#[^\W_][\w\-/]*\s*)+$")
@@ -176,7 +176,7 @@ class DocumentManager:
             def _stash(m):
                 idx = len(fences)
                 fences.append((m.group(1) or "", m.group(2)))
-                return f"OmaScribeKodblock{idx}Z"
+                return f"ScribentiaKodblock{idx}Z"
 
             stashed_md = _FENCE_RE.sub(_stash, md_text)
 
@@ -200,7 +200,7 @@ class DocumentManager:
             if fences:
                 doc = text_document
                 for idx, (lang, code) in enumerate(fences):
-                    token = f"OmaScribeKodblock{idx}Z"
+                    token = f"ScribentiaKodblock{idx}Z"
                     cursor = doc.find(token)
                     while not cursor.isNull():
                         cursor.select(QTextCursor.SelectionType.WordUnderCursor)

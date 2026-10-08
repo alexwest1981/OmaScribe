@@ -1,4 +1,4 @@
-"""Small, dependency-free autocorrect and autotext helpers for OmaScribe."""
+"""Small, dependency-free autocorrect and autotext helpers for Scribentia."""
 
 from __future__ import annotations
 

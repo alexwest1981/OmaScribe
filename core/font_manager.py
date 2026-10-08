@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtWidgets import QStyle
 from PyQt6.QtCore import Qt, pyqtSignal
 
-USER_FONTS_DIR = os.path.expanduser("~/.config/omascribe/fonts")
+USER_FONTS_DIR = os.path.expanduser("~/.config/scribentia/fonts")
 APP_FONTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "resources", "fonts")
 
 # Curated popular writing & document fonts

@@ -1,5 +1,5 @@
 """
-ui/image_dialog.py — Dialog för att importera och anpassa bilder i OmaScribe.
+ui/image_dialog.py — Dialog för att importera och anpassa bilder i Scribentia.
 
 Låter användaren välja en bildfil (eller använda urklippt bild), ställa in
 skalning/bredd, justering (vänster, centrerad, höger) och bildtext.

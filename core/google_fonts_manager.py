@@ -5,7 +5,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QFontDatabase
 from core.google_fonts_data import GOOGLE_FONTS_CATALOG
 
-USER_FONTS_DIR = os.path.expanduser("~/.config/omascribe/fonts")
+USER_FONTS_DIR = os.path.expanduser("~/.config/scribentia/fonts")
 
 class GoogleFontsManager(QObject):
     font_installed = pyqtSignal(str) # family name

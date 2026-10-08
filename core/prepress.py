@@ -173,7 +173,7 @@ def _icc_profile() -> str | None:
     return None
 
 
-def to_pdfx(source_pdf: str, out_pdf: str, *, title: str = "", creator: str = "OmaScribe",
+def to_pdfx(source_pdf: str, out_pdf: str, *, title: str = "", creator: str = "Scribentia",
             version: str = "/GTS_PDFXVersion (PDF/X-1a:2003)") -> str:
     """Konverterar en PDF till PDF/X-1a:2003 med CMYK och inbäddade teckensnitt.
 

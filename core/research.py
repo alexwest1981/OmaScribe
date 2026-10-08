@@ -24,7 +24,7 @@ from core.config import DEFAULT_AI_ENDPOINT, DEFAULT_AI_MODEL
 
 USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) OmaScribe/1.0 Safari/537.36"
+    "(KHTML, like Gecko) Scribentia/1.0 Safari/537.36"
 )
 
 MAX_PAGE_CHARS = 12000      # per sida, innan texten skickas till modellen

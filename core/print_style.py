@@ -289,7 +289,7 @@ CHART_PROPERTY = QTextFormat.Property.UserProperty + 11
 
 def mark_as_generated_chart(char_format: QTextCharFormat,
                             mono_name: str = "") -> QTextCharFormat:
-    """Märker ett bildformat som ett diagram OmaScribe ritat.
+    """Märker ett bildformat som ett diagram Scribentia ritat.
 
     ``mono_name`` är resursnamnet för samma diagram ritat i gråskala. Finns
     den byter exporten bild i stället för att tona ned den färgade — två

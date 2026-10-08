@@ -3,11 +3,11 @@ from PyQt6.QtGui import QColor, QPalette, QTransform
 from PyQt6.QtWidgets import QApplication
 
 THEMES = {
-    # Referensens (v0-exportens) design: docs/design/omascribe-ui-spec.md.
+    # Referensens (v0-exportens) design: docs/design/scribentia-ui-spec.md.
     # Värdena är lästa ur referensens globals.css, inte gissade.
     "oma": {
         "id": "oma",
-        "name": "OmaScribe (referens)",
+        "name": "Scribentia (referens)",
         "window_bg": "#f4f5f7",         # --canvas
         "dialog_bg": "#ffffff",
         "canvas_bg": "#ffffff",
@@ -578,7 +578,7 @@ class ThemeManager(QObject):
         }}
 
         /* ---------------------------------------------------------------
-           Referensens anatomi (docs/design/omascribe-ui-spec.md).
+           Referensens anatomi (docs/design/scribentia-ui-spec.md).
            Måtten är referensens: topbar 64, rail 66/40x40 radie 11,
            toolbar-knapp 34 radie 7, statusbar 43, inspector 312.
            --------------------------------------------------------------- */

@@ -1104,7 +1104,7 @@ def _self_check() -> int:
             failures.append(label)
         return bool(ok)
 
-    tmp = tempfile.mkdtemp(prefix="omascribe-project-")
+    tmp = tempfile.mkdtemp(prefix="scribentia-project-")
     try:
         root = Path(tmp) / "Min bok"
         book = Project.create(root, "Min bok", template="roman")

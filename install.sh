@@ -6,7 +6,7 @@ BIN_DIR="$HOME/.local/bin"
 DESKTOP_DIR="$HOME/.local/share/applications"
 ICON_DIR="$HOME/.local/share/icons/hicolor/256x256/apps"
 
-echo "=== Installing OmaScribe ==="
+echo "=== Installing Scribentia ==="
 
 # Säkerhetsspärr. Dokumentfiler i projektmappen kan innehålla API-nycklar.
 # Inget sådant får följa med till en installation, och ingen ska behöva
@@ -37,29 +37,29 @@ mkdir -p "$BIN_DIR" "$DESKTOP_DIR" "$ICON_DIR"
 
 # Copy Icon
 if [ -f "$SCRIPT_DIR/icon.png" ]; then
-    cp "$SCRIPT_DIR/icon.png" "$ICON_DIR/omascribe.png"
+    cp "$SCRIPT_DIR/icon.png" "$ICON_DIR/scribentia.png"
 fi
 
 # Create launcher wrapper in ~/.local/bin
-cat << LAUNCHER > "$BIN_DIR/omascribe"
+cat << LAUNCHER > "$BIN_DIR/scribentia"
 #!/usr/bin/env bash
 exec $RUNNER "\$@"
 LAUNCHER
-chmod +x "$BIN_DIR/omascribe"
+chmod +x "$BIN_DIR/scribentia"
 
 # Install Desktop file
-cat << DESKTOP > "$DESKTOP_DIR/omascribe.desktop"
+cat << DESKTOP > "$DESKTOP_DIR/scribentia.desktop"
 [Desktop Entry]
-Name=OmaScribe
+Name=Scribentia
 GenericName=AI Rich Text Editor
 Comment=Word-like Rich Text Editor with Real-Time AI Review and Dictation
-Exec=$BIN_DIR/omascribe %F
-Icon=$ICON_DIR/omascribe.png
+Exec=$BIN_DIR/scribentia %F
+Icon=$ICON_DIR/scribentia.png
 Terminal=false
 Type=Application
 Categories=Office;WordProcessor;TextEditor;Utility;
 MimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document;text/markdown;text/plain;text/html;
-StartupWMClass=OmaScribe
+StartupWMClass=Scribentia
 DESKTOP
 
 # Update desktop database if available
@@ -67,5 +67,5 @@ if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database "$DESKTOP_DIR"
 fi
 
-echo "=== OmaScribe Installed Successfully! ==="
-echo "You can launch it by typing 'omascribe' or from your application menu (Super + Space)."
+echo "=== Scribentia Installed Successfully! ==="
+echo "You can launch it by typing 'scribentia' or from your application menu (Super + Space)."

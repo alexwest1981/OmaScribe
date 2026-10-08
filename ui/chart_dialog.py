@@ -1,5 +1,5 @@
 """
-ui/chart_dialog.py — Dialog för att skapa och anpassa diagram i OmaScribe.
+ui/chart_dialog.py — Dialog för att skapa och anpassa diagram i Scribentia.
 
 Stödjer stapel-, linje-, cirkel-, donut- och områdesdiagram med realtidsförhandsgranskning,
 redigerbar datatabell och färgteman.

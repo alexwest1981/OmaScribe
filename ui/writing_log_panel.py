@@ -29,7 +29,7 @@ from core.i18n import _, i18n
 from core.writing_log import WritingLog
 
 LOG_DB = "writing_log.sqlite"
-DATA_DIR = Path.home() / ".local" / "share" / "omascribe"
+DATA_DIR = Path.home() / ".local" / "share" / "scribentia"
 SPRINT_MINUTES = (15, 25, 45, 60)
 FLUSH_MS = 20_000
 
@@ -37,10 +37,10 @@ FLUSH_MS = 20_000
 def default_log_path() -> Path:
     """Loggen för ett löst dokument (ingen projektmapp).
 
-    `OMASCRIBE_DATA_DIR` pekar ut en annan mapp — grinden och rökprovet använder
+    `SCRIBENTIA_DATA_DIR` pekar ut en annan mapp — grinden och rökprovet använder
     det så att deras skrivande inte hamnar i den riktiga loggen.
     """
-    mapp = Path(os.environ.get("OMASCRIBE_DATA_DIR") or DATA_DIR)
+    mapp = Path(os.environ.get("SCRIBENTIA_DATA_DIR") or DATA_DIR)
     mapp.mkdir(parents=True, exist_ok=True)
     return mapp / LOG_DB
 

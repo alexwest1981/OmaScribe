@@ -1,7 +1,7 @@
 """
 ui/chrome.py — appskalet enligt v0-referensen.
 
-Referensen (docs/design/omascribe-ui-spec.md) har tre delar runt dokumentet:
+Referensen (docs/design/scribentia-ui-spec.md) har tre delar runt dokumentet:
 en topbar (64px), en vänsterrail (66px) och en statusbar. Här bor de två första
 som egna widgets; färger och mått kommer från temats tokens och den globala
 stilfilen (`ui/theme_manager.py`), inte från hårdkodade värden här.
@@ -96,7 +96,7 @@ class TopBar(QWidget):
         self.brand_mark.setAlignment(Qt.AlignmentFlag.AlignCenter)
         row.addWidget(self.brand_mark)
 
-        self.brand_name = QLabel("OmaScribe")
+        self.brand_name = QLabel("Scribentia")
         self.brand_name.setObjectName("BrandName")
         set_tracking(self.brand_name, -0.3)      # referensen: letter-spacing -.02em
         row.addWidget(self.brand_name)

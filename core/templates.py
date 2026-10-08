@@ -1,5 +1,5 @@
 """
-core/templates.py — Inbyggda dokumentmallar för OmaScribe.
+core/templates.py — Inbyggda dokumentmallar för Scribentia.
 
 Mallarna är dokument, inte skärm. Därför använder de bara papperets färger:
 vit botten, svart text och grå linjer — ingen kulör någonstans. Det gör att

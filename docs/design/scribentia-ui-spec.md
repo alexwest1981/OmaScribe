@@ -1,6 +1,6 @@
-# OmaScribe — UI-spec från v0-referensen
+# Scribentia — UI-spec från v0-referensen
 
-Referens: `oma-scribe-ui-design.zip` (v0-export, Next.js + Tailwind-skal men all formgivning i
+Referens: `scribentia-ui-design.zip` (v0-export, Next.js + Tailwind-skal men all formgivning i
 `app/globals.css` som ren CSS med egna klassnamn). Markup: `app/page.tsx`.
 
 **Referensens värden är specen.** Allt nedan är läst ur `globals.css`, rad för rad. Där ett värde
@@ -67,7 +67,7 @@ varnings-chip `#e5a23b`/`#fff5e5`, blå chip `#6a8bdc`/`#edf2ff`, kort-yta `#f7f
 
 ## 4. Anatomi (referensens ordning uppifrån)
 
-1. **topbar** — brand-mark + "OmaScribe" + avdelare + dokumentknapp (filnamn + fäll) · till höger:
+1. **topbar** — brand-mark + "Scribentia" + avdelare + dokumentknapp (filnamn + fäll) · till höger:
    sparat-läge med grön punkt, Ångra, Gör om, Hjälp, avatar.
 2. **vänsterrail** (66px) — fyra ikoner: aktuellt dokument (aktiv), öppna filer, mallar; skjuts ned,
    Inställningar.
@@ -82,9 +82,9 @@ varnings-chip `#e5a23b`/`#fff5e5`, blå chip `#6a8bdc`/`#edf2ff`, kort-yta `#f7f
    "Rewrite selection ⌘K"; Outline: numrerade punkter med aktiv markering; Metrics: 2×2 rutnät med
    stora tal.
 
-## 5. Mappning mot OmaScribe (allt referensen visar finns redan)
+## 5. Mappning mot Scribentia (allt referensen visar finns redan)
 
-| Referens | OmaScribe |
+| Referens | Scribentia |
 |----------|-----------|
 | inspector-flikarna Review/Outline/Metrics | `ui/sidebar_inspector.py` har **exakt** dessa tre flikar (`tab_review`, `tab_outline`, `tab_metrics`) |
 | betygskort + förslag + åtgärdsknapp | `tab_review` (`apply_suggestion_requested`) |

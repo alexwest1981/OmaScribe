@@ -190,7 +190,7 @@ def _self_test() -> int:
         assert condition, message
         checks += 1
 
-    temporary = tempfile.mkdtemp(prefix="omascribe-snapshots-")
+    temporary = tempfile.mkdtemp(prefix="scribentia-snapshots-")
     try:
         base = Path(temporary)
         source = base / "draft.md"

@@ -91,7 +91,7 @@ class StartScreen(QWidget):
         hero_layout.addWidget(self.lbl_icon)
 
         # Title
-        self.lbl_title = QLabel("OmaScribe")
+        self.lbl_title = QLabel("Scribentia")
         self.lbl_title.setObjectName("StartTitle")
         self.lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         hero_layout.addWidget(self.lbl_title)

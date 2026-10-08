@@ -53,7 +53,7 @@
 - **Vad den gör:** Gömmer gränssnittets sidopaneler eller håller aktuell textrad på en lugn, stabil plats. Scrivener har helskärmsläge; Ulysses har Typewriter Mode; FocusWriter döljer menyer tills pekaren når skärmkanten. [belagt: https://www.literatureandlatte.com/scrivener/overview] [belagt: https://ulysses.app/releases/] [belagt: https://gottcode.org/focuswriter/?trk=organization-update_share-update_update-text]
 - **Exakt arbetsflöde:** 1. Tryck genväg för fokusläge. 2. Dölj verktygsfält och paneler. 3. Skriv med vald bredd, tema och markörposition. 4. Flytta pekaren eller tryck Escape för att visa kontrollerna igen. [resonemang]
 - **Vem gör det bäst:** FocusWriter för helskärmsmiljö med gömda kontroller; Ulysses för justerbar fokusmarkering och centrerad markör. [belagt: https://gottcode.org/focuswriter/?trk=organization-update_share-update_update-text] [belagt: https://ulysses.app/releases/]
-- **Tekniskt i PyQt6/QTextDocument:** OmaScribe har redan ett helskärmsläge som döljer verktygsfält och sidopanel (`ui/main_window.py:392-400`). Lägg till val för markörcentrering med `QTextEdit.ensureCursorVisible`, maxbredd och menyåterställning. [resonemang]
+- **Tekniskt i PyQt6/QTextDocument:** Scribentia har redan ett helskärmsläge som döljer verktygsfält och sidopanel (`ui/main_window.py:392-400`). Lägg till val för markörcentrering med `QTextEdit.ensureCursorVisible`, maxbredd och menyåterställning. [resonemang]
 - **Prioritet för en ensam författare:** hög — låg kostnad och direkt hjälp mot gränssnittsstörningar. [resonemang]
 
 ### Pauspåminnelser och ergonomi
@@ -88,7 +88,7 @@
 - **Vad den gör:** Låter författaren hitta scener efter POV, status eller tema och hålla scenkommentarer nära texten. Scrivener stöder nyckelord, metadata och samlingar; Dabble stöder story notes och scenetiketter. [belagt: https://www.literatureandlatte.com/scrivener/overview] [belagt: https://www.dabblewriter.com/features-2/dabble-features]
 - **Exakt arbetsflöde:** 1. Lägg tagg/status på scen. 2. Skriv scenanteckning. 3. Skapa samling, exempelvis “saknar redigering”. 4. Filtrera eller öppna samlingen för att arbeta igenom relaterade scener. [belagt: https://www.literatureandlatte.com/scrivener/overview]
 - **Vem gör det bäst:** Scrivener för samlingar som kan gruppera dokument från olika delar av projektet; Dabble för anteckningar och etiketter direkt kopplade till scener. [belagt: https://www.literatureandlatte.com/scrivener/overview] [belagt: https://www.dabblewriter.com/features-2/dabble-features]
-- **Tekniskt i PyQt6/QTextDocument:** OmaScribe har redan en anteckningsvalvpanel med sökning och filter (`ui/notes_panel.py:86-107`). Lägg till scen-ID som backlink/metadata och bygg smarta samlingar som filtrerade vyer. [resonemang]
+- **Tekniskt i PyQt6/QTextDocument:** Scribentia har redan en anteckningsvalvpanel med sökning och filter (`ui/notes_panel.py:86-107`). Lägg till scen-ID som backlink/metadata och bygg smarta samlingar som filtrerade vyer. [resonemang]
 - **Prioritet för en ensam författare:** medel — minskar söktid när projektet växer. [resonemang]
 
 ### Namn- och ordförrådsgenerator
@@ -109,7 +109,7 @@
 - **Vad den gör:** Håller mål och dagsprogress synliga i själva skrivvyn. Scrivener kan visa projekt- och sessionsstaplar i verktygsfältet; Ulysses visar indikatorer vid projekt/grupp/text. [belagt: https://www.literatureandlatte.com/blog/track-statistics-and-targets-in-your-scrivener-projects] [belagt: https://help.ulysses.app/the-dashboard/goals]
 - **Exakt arbetsflöde:** 1. Ställ in mål. 2. Börja skriva. 3. Se ordtal och progress utan att lämna editorn. 4. Öppna detaljer bara när planering behövs. [belagt: https://www.literatureandlatte.com/blog/track-statistics-and-targets-in-your-scrivener-projects]
 - **Vem gör det bäst:** Scrivener för parallell projekt- och sessionprogress i en kompakt verktygsrad. [belagt: https://www.literatureandlatte.com/docs/Scrivener_Manual-Mac.pdf]
-- **Tekniskt i PyQt6/QTextDocument:** OmaScribe visar redan ord- och teckenantal i statusfältet (`ui/main_window.py:166-190`); utöka samalla widgeten med sessionstapeln och dagskvot. [resonemang]
+- **Tekniskt i PyQt6/QTextDocument:** Scribentia visar redan ord- och teckenantal i statusfältet (`ui/main_window.py:166-190`); utöka samalla widgeten med sessionstapeln och dagskvot. [resonemang]
 - **Prioritet för en ensam författare:** hög — progress syns där skrivandet sker. [resonemang]
 
 ### Blurb och synopsis
@@ -130,18 +130,18 @@
 - **Vad den gör:** Synliggör långa/komplexa meningar, passiv form eller ordval och erbjuder råd. Hemingway visar läsbarhet, svårlästa meningar, passiv form och svagare ord; ProWritingAid erbjuder rapporter och Sparks-förslag. [belagt: https://hemingwayapp.com/help/docs/highlighted-issues] [belagt: https://prowritingaid.com/features/sparks]
 - **Exakt arbetsflöde:** 1. Skriv utan markeringar i Write/fokusläge. 2. Växla till redigering/analys. 3. Gå igenom markerade meningar. 4. Acceptera, redigera eller avvisa varje råd. Hemingway rekommenderar uttryckligen att inte rensa varje markering mekaniskt. [belagt: https://hemingwayapp.com/help/docs/quick-start-guide] [belagt: https://hemingwayapp.com/help/docs/highlighted-issues]
 - **Vem gör det bäst:** Hemingway för omedelbar, visuellt avgränsad läsbarhetsgenomgång; ProWritingAid för bredare stilrapporter och redigeringsförslag. [belagt: https://hemingwayapp.com/help/docs/highlighted-issues] [belagt: https://prowritingaid.com/features/sparks]
-- **Tekniskt i PyQt6/QTextDocument:** OmaScribe har redan LIX, ordantal och lästid i `core/document_stats.py:17-18,38-73` och visar LIX i `ui/sidebar_inspector.py:176-183`. Visa markeringar som extra selections i `QTextEdit`, beräkna utanför varje tangenttryck och håll råtext oförändrad tills användaren väljer ett förslag. [resonemang]
+- **Tekniskt i PyQt6/QTextDocument:** Scribentia har redan LIX, ordantal och lästid i `core/document_stats.py:17-18,38-73` och visar LIX i `ui/sidebar_inspector.py:176-183`. Visa markeringar som extra selections i `QTextEdit`, beräkna utanför varje tangenttryck och håll råtext oförändrad tills användaren väljer ett förslag. [resonemang]
 - **Prioritet för en ensam författare:** medel — ger konkret revisionshjälp, men bör inte störa utkastfasen. [resonemang]
 
 ### Projektöversikt och onboardade anteckningar
 - **Vad den gör:** Håller projektets anteckningar sökbara och strukturerade. Obsidian har tags, properties och Canvas; Canvas kan lägga ut och länka anteckningar, och tags kan filtreras. [belagt: https://obsidian.md/help/tags] [belagt: https://obsidian.md/help/Plugins/Canvas] [belagt: https://obsidian.md/help/properties]
 - **Exakt arbetsflöde:** 1. Skapa anteckning eller scenblad. 2. Lägg till tagg/metadata. 3. Samla relaterade blad i Canvas eller sök på tagg. 4. Öppna länkat material från scenens arbetsyta. [belagt: https://obsidian.md/help/tags] [belagt: https://obsidian.md/help/Plugins/Canvas]
 - **Vem gör det bäst:** Obsidian för blandningen av fria anteckningar, strukturerade properties, taggar och visuellt Canvas; Scrivener för att koppla detta närmare sammanhängande manusstruktur. [belagt: https://obsidian.md/help/Plugins/Canvas] [belagt: https://www.literatureandlatte.com/scrivener/overview]
-- **Tekniskt i PyQt6/QTextDocument:** OmaScribe-valvet kan återanvändas som markdown-anteckningslager; använd YAML-liknande metadata eller sidecar-data för projekt-/scenrelationer. Valvets förekomst kan verifieras i `ui/notes_panel.py:86-107`. [resonemang]
+- **Tekniskt i PyQt6/QTextDocument:** Scribentia-valvet kan återanvändas som markdown-anteckningslager; använd YAML-liknande metadata eller sidecar-data för projekt-/scenrelationer. Valvets förekomst kan verifieras i `ui/notes_panel.py:86-107`. [resonemang]
 - **Prioritet för en ensam författare:** medel — hjälper kontinuitet utan att kräva en tung plotmodell. [resonemang]
 
 ## Vad jag inte kunde belägga
 - Jag kunde inte hitta tillräckligt stark officiell dokumentation för en specifik ergonomisk pauspåminnare i Scrivener, Ulysses, Dabble, 4thewords, Writing Analytics, ProWritingAid, Sudowrite, Obsidian/Logseq, FocusWriter eller Hemingway. [resonemang]
 - Jag kunde inte verifiera ett tydligt dedikerat scenbaserat tidslinjeverktyg i alla produkter; källorna belägger främst plot-grid, kort/Canvas och ordning av manusdelar. [belagt: https://www.dabblewriter.com/docs/getting-started/what-is-dabble] [belagt: https://feedback.sudowrite.com/en/help/articles/2695461-canvas] [belagt: https://www.literatureandlatte.com/scrivener/overview]
 - Jag kunde inte belägga att varje produkt i listan har romanmallar, karaktärsblad, blurbskrivning, revisionsmål per utkast eller dagskvotsberäkning. De funktionerna förekommer i olika kombinationer, inte som gemensam standard. [belagt: https://www.literatureandlatte.com/scrivener/overview] [belagt: https://www.dabblewriter.com/docs/getting-started/what-is-dabble] [belagt: https://feedback.sudowrite.com/help/articles/1671191-what-is-story-bible]
-- För OmaScribe har jag verifierat endast de citerade koddelarna: statusfält, helskärmsläge, LIX/statistik, mallkatalog och anteckningspanel. Andra här föreslagna funktioner är byggresonemang och ska inte läsas som befintligt stöd. [resonemang]
+- För Scribentia har jag verifierat endast de citerade koddelarna: statusfält, helskärmsläge, LIX/statistik, mallkatalog och anteckningspanel. Andra här föreslagna funktioner är byggresonemang och ska inte läsas som befintligt stöd. [resonemang]

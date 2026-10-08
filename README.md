@@ -1,4 +1,8 @@
-# Skrivstudio
+<p align="center">
+  <img src="docs/images/logo.png" alt="Scribentia" width="440">
+</p>
+
+# Scribentia
 
 <p align="center">
   <a href="#-english"><b>🇬🇧 English</b></a> &nbsp;•&nbsp; <a href="#-svenska"><b>🇸🇪 Svenska</b></a>
@@ -7,7 +11,10 @@
 **A manuscript-first writing suite for Linux.** Structure, story bible, editorial tools
 and print-ready exports in one local program — no account, no subscription, no cloud.
 
-![Skrivstudio workspace](docs/images/en/workspace.png)
+*Scribentia* is Latin: from `scribere`, to write, the way `sapientia` comes from
+`sapiens`. It means the writing itself.
+
+![Scribentia workspace](docs/images/en/workspace.png)
 
 *The binder, the A4 page and the inspector. More: [corkboard](docs/images/en/corkboard.png) · [publishing profile](docs/images/en/publish.png).*
 
@@ -22,8 +29,8 @@ Everything except the AI features works with no provider, no key and no network.
 AI menu says so instead of sending anything:
 
 ```bash
-git clone https://github.com/alexwest1981/OmaScribe.git
-cd OmaScribe
+git clone https://github.com/alexwest1981/Scribentia.git
+cd Scribentia
 uv run python main.py          # or: python3 main.py
 ```
 
@@ -89,7 +96,7 @@ character styles, autocorrect and autotext, spell and grammar check per language
 section, regex find and replace, blurb and synopsis fields, a writing log, and a
 Normseite (standard manuscript page) for submissions that demand one.
 
-**AI — your provider, your key.** Skrivstudio ships with no keys and no provider. Pick
+**AI — your provider, your key.** Scribentia ships with no keys and no provider. Pick
 one under the AI menu: OmniRoute, Ollama (offline), DeepSeek, OpenAI, OpenRouter, Nous
 Research, Google Gemini, LM Studio/LocalAI — or a custom, self-hosted endpoint. Anything
 that speaks the OpenAI chat API works, including a proxy in front of a provider that does
@@ -153,14 +160,22 @@ than a green badge, so it is written down rather than dressed up.
 
 | | |
 |---|---|
-| Settings and API key | `~/.config/omascribe/config.json` (override with `OMASCRIBE_CONFIG_PATH`) |
-| Notes vault | `~/Documents/OmaScribe Vault` by default, changeable |
+| Settings and API key | `~/.config/scribentia/config.json` (override with `SCRIBENTIA_CONFIG_PATH`) |
+| Notes vault | `~/Documents/Scribentia Vault` by default, changeable |
 | Manuscripts | wherever you saved the project folder — a project is a folder you own |
 | Dictation models | Whisper's own cache, downloaded on first use |
 
-Delete those and it is gone; nothing is stored anywhere else and nothing is sent
-anywhere unless you configure a provider. `install.sh` does not touch your documents,
+Delete those and it is gone. `install.sh` does not touch your documents,
 your config, or the projects you have made. There is no telemetry.
+
+Two things do leave the machine, and only when you ask for them:
+
+- **The AI features**, and only when you have configured a provider and pressed the
+  button. An empty endpoint sends nothing.
+- **Spell and grammar check** (the menu item, `Ctrl+Shift+G`) posts the section you
+  are checking to `https://api.languagetool.org/v2/check`. Nothing is sent unless you
+  run it, and `spellcheck_endpoint` in the config points it at your own LanguageTool
+  instead if you would rather nothing left at all.
 
 ### Known ceilings, said out loud
 
@@ -218,7 +233,7 @@ what is left, one line each. Before a change counts as finished:
 tryckfärdig export i ett och samma lokala program — inget konto, ingen prenumeration,
 inget moln.
 
-![Skrivstudios arbetsyta](docs/images/sv/workspace.png)
+![Scribentias arbetsyta](docs/images/sv/workspace.png)
 
 *Projektvyn, A4-sidan och sidopanelen. Mer: [korttavlan](docs/images/sv/corkboard.png) · [publiceringsprofilen](docs/images/sv/publish.png).*
 
@@ -228,8 +243,8 @@ Allt utom AI-funktionerna fungerar utan leverantör, nyckel och nätverk. AI-men
 det i stället för att skicka något:
 
 ```bash
-git clone https://github.com/alexwest1981/OmaScribe.git
-cd OmaScribe
+git clone https://github.com/alexwest1981/Scribentia.git
+cd Scribentia
 uv run python main.py          # eller: python3 main.py
 ```
 
@@ -295,7 +310,7 @@ autokorrigering och autotext, stavnings- och grammatikkontroll per språkavsnitt
 ersätt med reguljära uttryck, fält för blurb och synopsis, skrivlogg och en normsida för
 förlag som kräver en.
 
-**AI — din leverantör, din nyckel.** Skrivstudio levereras utan nycklar och utan
+**AI — din leverantör, din nyckel.** Scribentia levereras utan nycklar och utan
 leverantör. Välj under AI-menyn: OmniRoute, Ollama (helt offline), DeepSeek, OpenAI,
 OpenRouter, Nous Research, Google Gemini, LM Studio/LocalAI — eller en egen, självhostad
 slutpunkt. Allt som talar OpenAIs chatt-API fungerar, även en proxyserver framför en
@@ -358,14 +373,22 @@ det arket editorn sitter i.
 
 | | |
 |---|---|
-| Inställningar och API-nyckel | `~/.config/omascribe/config.json` (byt plats med `OMASCRIBE_CONFIG_PATH`) |
-| Anteckningsvalv | `~/Documents/OmaScribe Vault` som standard, ändringsbart |
+| Inställningar och API-nyckel | `~/.config/scribentia/config.json` (byt plats med `SCRIBENTIA_CONFIG_PATH`) |
+| Anteckningsvalv | `~/Documents/Scribentia Vault` som standard, ändringsbart |
 | Manus | där du sparade projektmappen — ett projekt är en mapp du äger |
 | Dikteringsmodeller | Whispers egen cache, hämtas vid första användningen |
 
-Radera dem och det är borta; inget sparas någon annanstans och inget skickas någonstans
-om du inte själv kopplar in en leverantör. `install.sh` rör inte dina dokument, din
-konfiguration eller de projekt du gjort. Ingen telemetri.
+Radera dem och det är borta. `install.sh` rör inte dina dokument, din konfiguration
+eller de projekt du gjort. Ingen telemetri.
+
+Två saker lämnar datorn, och bara när du själv ber om dem:
+
+- **AI-funktionerna**, och bara när du har kopplat in en leverantör och tryckt på
+  knappen. En tom slutpunkt skickar ingenting.
+- **Stavnings- och grammatikkontrollen** (menyvalet, `Ctrl+Shift+G`) skickar avsnittet
+  du kontrollerar till `https://api.languagetool.org/v2/check`. Ingenting skickas om
+  du inte kör den, och `spellcheck_endpoint` i konfigurationen pekar den mot din egen
+  LanguageTool-server om du vill att ingenting lämnar datorn alls.
 
 ### Kända tak, sagt rakt ut
 
@@ -417,7 +440,7 @@ var. Innan en ändring räknas som färdig:
 
 ## 🔒 Your keys, your provider
 
-Skrivstudio ships with **no API keys**. Enter your own provider and key under
+Scribentia ships with **no API keys**. Enter your own provider and key under
 `AI → Settings` (OmniRoute, Ollama, OpenAI, Anthropic-compatible proxies, OpenRouter,
 Gemini, DeepSeek, LM Studio, a local server, or any OpenAI-compatible endpoint). An empty
 endpoint means nothing is sent.
@@ -435,7 +458,7 @@ for you:
 **GNU General Public License v3.0 only** (`GPL-3.0-only`) © 2026 [Alex Weström](https://github.com/alexwest1981).
 Full text: [LICENSE](LICENSE).
 
-Skrivstudio **can't** be MIT or Apache, and the reason is in the dependency list: the
+Scribentia **can't** be MIT or Apache, and the reason is in the dependency list: the
 program links [PyQt6](https://riverbankcomputing.com/software/pyqt/), which Riverbank
 distributes under the GPL v3 *only* (or a commercial licence). A work that links it must
 therefore be GPL v3 as well.
@@ -451,6 +474,6 @@ There is no warranty of any kind (§15–17).
 
 **The licence covers the code, not the name.** The copyright above grants you the source
 under the GPL; the product's name and mark are a separate thing. A fork is welcome to
-carry Skrivstudio's code — with its own name and its own icon. This is a notice, not a
+carry Scribentia's code — with its own name and its own icon. This is a notice, not a
 registration: a registered trademark is what could compel a rename, and no such
 registration exists.

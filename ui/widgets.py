@@ -1,5 +1,5 @@
 """
-ui/widgets.py — delade gränssnittsbyggstenar för OmaScribe.
+ui/widgets.py — delade gränssnittsbyggstenar för Scribentia.
 
 ClickableCard finns här av ett skäl: ett klickbart kort får inte vara en
 QPushButton.

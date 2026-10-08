@@ -9,7 +9,7 @@
 #
 # Interpretern är den utvecklade .venv i live-kassan, eftersom en fräsch
 # worktree inte har någon egen .venv (den är gitignorerad). Nya beroenden kan
-# därför inte smygas in — vilket är avsiktligt. Sätt OMASCRIBE_PY för att peka
+# därför inte smygas in — vilket är avsiktligt. Sätt SCRIBENTIA_PY för att peka
 # på en annan tolk.
 set -uo pipefail
 
@@ -22,11 +22,11 @@ unset PYTHONPATH   # Hermes-skalet läcker sin egen python 3.14 hit annars
 export QT_QPA_PLATFORM=offscreen
 # Skrivloggen hamnar i en temp-mapp: grinden skriver riktiga ord och får inte
 # fylla Alex egen skrivlogg med dem.
-export OMASCRIBE_DATA_DIR="$(mktemp -d)"
+export SCRIBENTIA_DATA_DIR="$(mktemp -d)"
 
-PY="${OMASCRIBE_PY:-$HOME/Projects/OmaScribe/.venv/bin/python}"
+PY="${SCRIBENTIA_PY:-$HOME/Projects/scribentia/.venv/bin/python}"
 if [ ! -x "$PY" ]; then
-  echo "GRINDEN KAN INTE KÖRA: $PY saknas (sätt OMASCRIBE_PY)"
+  echo "GRINDEN KAN INTE KÖRA: $PY saknas (sätt SCRIBENTIA_PY)"
   exit 2
 fi
 
@@ -119,7 +119,7 @@ run "print_purity" "$PY" tools/print_purity_check.py
 # sekunder, utan traceback, är svaret; en app som dör direkt ger en annan kod.
 printf '\n### startar applikationen\n'
 start_log="$(mktemp)"
-timeout 8 env OMASCRIBE_CONFIG_PATH="$(mktemp)" "$PY" main.py >"$start_log" 2>&1
+timeout 8 env SCRIBENTIA_CONFIG_PATH="$(mktemp)" "$PY" main.py >"$start_log" 2>&1
 start_kod=$?
 if [ "$start_kod" -eq 124 ] && ! grep -q "Traceback" "$start_log"; then
   echo "  ✓ applikationen startar och står kvar (stoppad efter 8 s)"

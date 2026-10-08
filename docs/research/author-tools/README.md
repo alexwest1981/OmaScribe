@@ -1,6 +1,6 @@
-# Vad ett professionellt författarverktyg har — och var OmaScribe står
+# Vad ett professionellt författarverktyg har — och var Scribentia står
 
-Underlag för att lyfta OmaScribe från ordbehandlare till författarverktyg.
+Underlag för att lyfta Scribentia från ordbehandlare till författarverktyg.
 Fem externa rapporter (under denna mapp) + en mätning av vad som redan finns i koden.
 
 ## Metod, och hur mycket du bör lita på det
@@ -17,13 +17,13 @@ Kontrollerat efteråt, av mig:
 - **119 unika källänkar** — 111 svarar 200. Åtta gav 403 (botvägg hos OpenAI,
   Wiley, Atticus, CapRadio) eller tillfällig timeout hos literatureandlatte.com;
   de fyra timeouterna svarar 200 vid omkörning. Inga döda länkar.
-- **Varje kodpåstående om OmaScribe** är kontrollerat mot fil och rad. Alla höll,
+- **Varje kodpåstående om Scribentia** är kontrollerat mot fil och rad. Alla höll,
   utom en radhänvisning (LIX ligger på `core/document_stats.py:38-73`, inte 17-18).
 - Siffertabellen i rapport 5 (KDP-marginaler, blöd, ryggbredd) är hämtad från
   Amazons egna hjälpsidor och är den enda delen som bör dubbelkollas mot KDP
   innan den blir kod — leverantörer ändrar krav.
 
-## Var OmaScribe står i dag (mätt, inte läst ur README)
+## Var Scribentia står i dag (mätt, inte läst ur README)
 
 13 726 rader i `core/` + `ui/` + `main.py`, 38 moduler. Ett **dokument i taget**
 öppnas i `self.editor.document` (`ui/main_window.py:663`). Två språk, sju
@@ -108,7 +108,7 @@ för en ensam författare och kan vänta.
 | `03-forfattarens-arbetsflode.md` | mål, deadlines, statistik, fokusläge, story bible, plot | Scrivener, Ulysses, Dabble, 4thewords, Writing Analytics, ProWritingAid, Sudowrite, FocusWriter, Hemingway, Obsidian |
 | `04-ai-nativa-verktyg.md` | codex, RAG, recap, stilprofil, promptbibliotek, fallgropar | Sudowrite, NovelCrafter, Squibler, Lex, Type, NovelAI, Claude/ChatGPT Projects |
 | `05-publicering-och-export.md` | EPUB 3, tryck-PDF, KDP-mått, DOCX-stilar, metadata | Vellum, Atticus, Scrivener, pandoc, KDP, IngramSpark, Lulu, W3C, Sigil/Calibre |
-| `narvaromatris.txt` | rå mätning av OmaScribes kod mot 26 nyckelord | denna kodbas |
+| `narvaromatris.txt` | rå mätning av Scribentias kod mot 26 nyckelord | denna kodbas |
 
 ## Andra passet (2026-10-08): produkt för produkt, och vad som saknades
 

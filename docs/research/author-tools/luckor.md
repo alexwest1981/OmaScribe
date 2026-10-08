@@ -1,4 +1,4 @@
-# Har OmaScribe allt de betalda har? — mätt, inte gissat
+# Har Scribentia allt de betalda har? — mätt, inte gissat
 
 Frågan: *"har vi allt som de andra textredigerarna/författarverktygen har, och vad
 saknas i så fall?"* Detta är svaret, byggt av mig (inte av agenterna) genom att ställa
@@ -118,7 +118,7 @@ Medelstora, efter ovanstående:
 ## Vad som inte bör byggas
 
 - **Molnsynk, realtidssamarbete, iOS-app** (Dabble, Ulysses, Campfire): kräver drift och
-  backend; hela poängen med OmaScribe är att boken är en lokal mapp.
+  backend; hela poängen med Scribentia är att boken är en lokal mapp.
 - **Kartredigerare med lager** (World Anvil, Campfire): dyrt, nischat.
 - **Marknadsplats, community, kursakademi, läsarprenumerationer** (World Anvil, AutoCrit).
 - **Kreditvaluta och egen grundmodell** (Sudowrite, NovelAI): dubblar leverantörens
@@ -142,16 +142,16 @@ Medelstora, efter ovanstående:
 - 🟠 **Licensen är avgjord och byggd** — `GPL-3.0-only`, tvingad av PyQt6 (Riverbanks egen
   rad: "PyQt is dual licensed on all supported platforms under the GNU GPL v3 and the
   Riverbank Commercial License. Unlike Qt, PyQt is not available under the LGPL.").
-  `LICENSE`, `pyproject.toml` och `Hjälp → Om OmaScribe` bär den, och hjulet är byggt och
+  `LICENSE`, `pyproject.toml` och `Hjälp → Om Scribentia` bär den, och hjulet är byggt och
   kontrollerat. Andra åsikten (`11-licens.md`) landar i samma identifierare. Det som
-  återstår är inte tekniskt: vill du skydda **namnet** OmaScribe är varumärket det enda
+  återstår är inte tekniskt: vill du skydda **namnet** Scribentia är varumärket det enda
   som gör det — licensen täcker koden, inte identiteten.
 
 ## Den öppna sidan (R10) — vad de andra öppna verktygen gör
 
 Alla relevanta öppna skrivverktyg bär **GPL-3.0** (novelWriter, Manuskript, Zettlr,
 FocusWriter, Ghostwriter, KIT Scenarist, bibisco, Calibre, Sigil) — alltså samma licens som
-OmaScribe nu tvingas till, och därför förenliga att läsa och låna mönster från, förutsatt
+Scribentia nu tvingas till, och därför förenliga att läsa och låna mönster från, förutsatt
 tillskrivning. Typst är Apache-2.0, Pandoc GPL-2.0.
 
 Den närmaste grannen är **novelWriter** (PyQt6, GPL-3.0, aktivt: pushad 2026-10-07,
@@ -186,7 +186,7 @@ en omskrivning av det som fungerar.
 
 Det öppna projektet bekräftar också vårt filformat: novelWriter sparar scener som enkla
 textfiler med id-baserad metadata "vilket gör programmet extremt versionshanteringsvänligt"
-— samma val OmaScribe gjorde med `project.json` + en HTML-fil per scen.
+— samma val Scribentia gjorde med `project.json` + en HTML-fil per scen.
 
 ## Vad den här sammanställningen inte är
 

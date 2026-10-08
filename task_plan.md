@@ -1,8 +1,8 @@
-# Task Plan: OmaScribe → professionellt författarverktyg
+# Task Plan: Scribentia → professionellt författarverktyg
 
 ## Goal
 
-Allt som ett professionellt författarverktyg har skall in i OmaScribe — manusstruktur,
+Allt som ett professionellt författarverktyg har skall in i Scribentia — manusstruktur,
 författarlagret, revision, sakprosa, publicering och AI — utan att något glöms mellan sessionerna.
 
 Underlaget är `docs/research/author-tools/` (**elva** rapporter i två pass; 119 källänkar i
@@ -63,7 +63,7 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
   `ui/main_window.py` och `core/doc_manager.py`, som båda är flankerade.
 - Grinden `tools/test_all.sh` skall vara grön före varje harvest, och är densamma i
   worktreen som i live-kassan.
-- Ingen agent får `git push`, `git commit`, `systemctl` eller röra `~/Projects/OmaScribe`
+- Ingen agent får `git push`, `git commit`, `systemctl` eller röra `~/Projects/Scribentia`
   direkt. Diffen hämtas in för hand och granskas per fil.
 - Punktlista: `[ ]` = inte gjord, `[~]` = pågår, `[x]` = klar och verifierad.
 

@@ -1,7 +1,7 @@
 [project]
-name = "omascribe"
+name = "scribentia"
 version = "0.1.0"
-description = "OmaScribe - AI-Powered Rich Text Editor with Real-Time Review, Whisper Dictation, and DOCX/PDF Export"
+description = "Scribentia - AI-Powered Rich Text Editor with Real-Time Review, Whisper Dictation, and DOCX/PDF Export"
 readme = "README.md"
 requires-python = ">=3.11"
 # PyQt6 is GPL-3.0-only, so the whole program is GPL-3.0-only: not "or later",
@@ -26,7 +26,7 @@ dependencies = [
 ]
 
 [project.scripts]
-omascribe = "main:main"
+scribentia = "main:main"
 
 [build-system]
 requires = ["hatchling"]

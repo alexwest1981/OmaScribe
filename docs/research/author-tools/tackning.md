@@ -107,7 +107,7 @@
 | 9. Efterbearbetning av EPUB i Sigil och Calibre | ja | 5.11 |
 | 10. Distributörsuppladdning och slutkontroll | delvis (pågår) | 5.9 |
 | 11. Svensk och engelsk boksättning | ja | 5.10 |
-| Föreslaget minimum för OmaScribe | ja | 5.12 |
+| Föreslaget minimum för Scribentia | ja | 5.12 |
 
 *(Jämförde 12 punkter från rapport 05)*
 

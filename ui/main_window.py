@@ -357,7 +357,7 @@ class MainWindow(QMainWindow):
 
         # 5. Appskalet enligt referensen: topbar (64px) överst med menyraden
         # inuti, och en 66px-rail längst till vänster. Se
-        # docs/design/omascribe-ui-spec.md. Railen äger ingen data — den byter vy.
+        # docs/design/scribentia-ui-spec.md. Railen äger ingen data — den byter vy.
         # Gör valvets anteckningar tillgängliga som [[förslag]] direkt
         self._refresh_link_titles()
 
@@ -690,10 +690,10 @@ class MainWindow(QMainWindow):
         if lang == "sv":
             html = f"""
             <h1>{_("app_title")}</h1>
-            <p>Välkommen till <b>OmaScribe</b>, din moderna och intelligenta skrivmiljö för Linux & Omarchy.</p>
+            <p>Välkommen till <b>Scribentia</b>, din moderna och intelligenta skrivmiljö för Linux & Omarchy.</p>
             
-            <h2>🚀 Vad gör OmaScribe unikt?</h2>
-            <p>OmaScribe kombinerar en ren och fokuserad ordbehandlare med inbyggd AI-granskning, interaktiv omskrivning och lokal röst-diktering:</p>
+            <h2>🚀 Vad gör Scribentia unikt?</h2>
+            <p>Scribentia kombinerar en ren och fokuserad ordbehandlare med inbyggd AI-granskning, interaktiv omskrivning och lokal röst-diktering:</p>
             
             <ul>
               <li><b>✨ Magisk Co-Writer:</b> Markera valfri text och tryck <code>Ctrl + K</code> för att skriva om, förbättra tonläge, översätta eller utveckla.</li>
@@ -708,10 +708,10 @@ class MainWindow(QMainWindow):
         else:
             html = f"""
             <h1>{_("app_title")}</h1>
-            <p>Welcome to <b>OmaScribe</b>, your next-generation intelligent writing environment designed for Linux and Omarchy.</p>
+            <p>Welcome to <b>Scribentia</b>, your next-generation intelligent writing environment designed for Linux and Omarchy.</p>
             
-            <h2>🚀 What makes OmaScribe unique?</h2>
-            <p>OmaScribe combines standard WYSIWYG document editing with built-in AI review, intelligent rephrasing, and local voice dictation:</p>
+            <h2>🚀 What makes Scribentia unique?</h2>
+            <p>Scribentia combines standard WYSIWYG document editing with built-in AI review, intelligent rephrasing, and local voice dictation:</p>
             
             <ul>
               <li><b>✨ Magic Co-Writer:</b> Highlight any phrase or sentence and press <code>Ctrl + K</code> to rewrite, polish, translate, or expand.</li>

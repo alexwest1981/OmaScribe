@@ -1,13 +1,39 @@
 import os
 import json
 import locale
+import shutil
 from core.i18n import i18n
 
-# Prov och rökprov styr inställningsfilen med OMASCRIBE_CONFIG_PATH i stället för
-# att skriva i den riktiga: en rökprovning som ändrar användarens sidinställningar
-# är inte en provning, den är ett ingrepp.
-CONFIG_PATH = (os.environ.get("OMASCRIBE_CONFIG_PATH")
-               or os.path.expanduser("~/.config/omascribe/config.json"))
+# Inställningarna låg tidigare under ~/.config/omascribe. Ett namnbyte får inte
+# tyst börja om från en tom konfiguration — AI-nyckeln, temat, språket och de
+# senaste filerna ligger där. Finns den nya filen inte men den gamla, kopieras
+# den hit en gång och den gamla ligger kvar som den var.
+_STANDARD_CONFIG = os.path.expanduser("~/.config/scribentia/config.json")
+_GAMMAL_CONFIG = os.path.expanduser("~/.config/omascribe/config.json")
+
+
+def _config_path() -> str:
+    """Sökvägen till inställningsfilen.
+
+    Prov och rökprov styr filen med SCRIBENTIA_CONFIG_PATH i stället för att
+    skriva i den riktiga: en rökprovning som ändrar användarens sidinställningar
+    är inte en provning, den är ett ingrepp. Den gamla variabeln läses också, så
+    att skript som någon redan har inte tystnar.
+    """
+    for nyckel in ("SCRIBENTIA_CONFIG_PATH", "OMASCRIBE_CONFIG_PATH"):
+        if os.environ.get(nyckel):
+            return os.environ[nyckel]              # prov: rör aldrig användarens fil
+    if not os.path.exists(_STANDARD_CONFIG) and os.path.exists(_GAMMAL_CONFIG):
+        try:
+            os.makedirs(os.path.dirname(_STANDARD_CONFIG), exist_ok=True)
+            shutil.copy2(_GAMMAL_CONFIG, _STANDARD_CONFIG)
+            return _STANDARD_CONFIG
+        except OSError:
+            return _GAMMAL_CONFIG                  # går det inte att kopiera, läs den gamla
+    return _STANDARD_CONFIG
+
+
+CONFIG_PATH = _config_path()
 
 def get_system_default_language():
     try:
@@ -57,7 +83,7 @@ DEFAULT_CONFIG = {
     "dictation_auto_punctuate": True,
     "recent_files": [],
     "has_run_before": False,
-    "vault_root": os.path.expanduser("~/Documents/OmaScribe Vault"),
+    "vault_root": os.path.expanduser("~/Documents/Scribentia Vault"),
     "research_searxng_url": ""   # egen SearXNG-instans ger nyckelfri webbsökning
 }
 

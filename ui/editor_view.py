@@ -365,7 +365,7 @@ class DocumentCanvas(QTextEdit):
 
         mono_name = ""
         if mono_image is not None and not mono_image.isNull():
-            mono_name = f"omascribe-diagram-mono://{uuid.uuid4().hex}"
+            mono_name = f"scribentia-diagram-mono://{uuid.uuid4().hex}"
             doc.addResource(QTextDocument.ResourceType.ImageResource,
                             QUrl(mono_name), mono_image)
         pos = self.textCursor().position()

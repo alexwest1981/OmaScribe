@@ -124,12 +124,12 @@
 | IngramSpark blödexempel | En 6×9-tums inlaga med bleed blir 6,125 × 9,25 tum; guiden rekommenderar 0,5 tum på tre trimkanter. | [belagt: https://www.ingramspark.com/hubfs/downloads/file-creation-guide.pdf?t=1540849595582] |
 | Lulu full bleed | Lulu anger 0,25 tum = 6,35 mm extra i både bredd och höjd för print-ready full-bleed-inlaga; deras bokguide anger 0,125 tum/3,175 mm bleed. | [belagt: https://help.lulu.com/en/support/solutions/articles/64000255584], [belagt: https://assets.lulu.com/media/guides/en/lulu-book-creation-guide.pdf] |
 
-### Föreslaget minimum för OmaScribe
+### Föreslaget minimum för Scribentia
 
 - [resonemang] Prioritera först publiceringsprojekt med metadata/front matter, exporterbar EPUB 3 med semantisk TOC, och DOCX med riktiga named styles.
 - [resonemang] Bygg sedan trimstorlekar, spegelmarginaler, kapitelstart på höger/vänster sida, validering och distributörsprofiler; låt PDF-exporten visa slutligt sidantal innan omslagsrygg beräknas.
 - [resonemang] Lägg omslagsdesigner som en separat, smal funktion efter inlaga; för KDP/IngramSpark/Lulu ska exporteraren använda aktuell mall-/kalkylatorinformation och tydligt visa att omslagsmåtten måste räknas om när sidantal eller papper ändras.
-- [belagt: core/doc_manager.py#L39-L53] OmaScribe har redan A4/Letter, fasta marginalvärden, sidnumrering, “skip first page”, header/footer och clean-print-inställningar.
+- [belagt: core/doc_manager.py#L39-L53] Scribentia har redan A4/Letter, fasta marginalvärden, sidnumrering, “skip first page”, header/footer och clean-print-inställningar.
 - [belagt: core/doc_manager.py#L219-L236] PDF-utskriften sätter QPageSize till A4 eller Letter och använder fyra fasta marginaler i mm; den spegelvänder inte marginalerna efter sidans jämna/udda position i detta avsnitt.
 - [belagt: core/doc_manager.py#L429-L440] Den dokumenterade save_file-exporten hanterar DOCX, PDF, HTML, Markdown och text; EPUB-export finns inte i den här exportdispatchen.
 - [belagt: ui/main_window.py#L734-L750] PDF-exporten anropar DocumentManager.save_file med sidinställningar.
@@ -137,7 +137,7 @@
 
 ## Vad jag inte kunde belägga
 
-- [resonemang] Jag kunde inte belägga en enda gemensam officiell ryggbreddsformel för IngramSpark, Lulu och KDP; IngramSpark och Lulu hänvisar till produkt-/sidantalsspecifika mallar, så OmaScribe bör inte återanvända KDP:s koefficient mellan kanaler.
+- [resonemang] Jag kunde inte belägga en enda gemensam officiell ryggbreddsformel för IngramSpark, Lulu och KDP; IngramSpark och Lulu hänvisar till produkt-/sidantalsspecifika mallar, så Scribentia bör inte återanvända KDP:s koefficient mellan kanaler.
 - [resonemang] Jag kunde inte belägga en generell regel att svenska böcker ska ha ett visst trimformat jämfört med engelska böcker; trim bör erbjudas som marknads- och kanalval.
 - [resonemang] Jag kunde inte belägga exakt en universell dropp-cap-, ornaments- eller kapitelnumreringskonvention för alla genrer/marknader. Det bör vara valbara bokstilar.
 - [resonemang] Jag kunde inte här fastställa hela KDP:s aktuella trimstorlekstabell, sidantalstak per alla format/trycktyper eller varje specialfall för hardcover; tabellen redovisar endast källbelagda mått som är direkt relevanta för minimum.

@@ -334,11 +334,14 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
 - [ ] **4.20** Uppläsning för korrekturläsning: läs upp stycket, kapitlet eller scenen med
       TTS — örat hittar det ögat hoppar över. Dabble, AutoCrit och NovelAI har det; vår diktering
       (Whisper) är bara tal→text. R06, R09
-- [ ] **4.21** Analysrapport per kapitel: LIX, repetitioner, stilvarningar och ordräkning samlade
-      per kapitel med länkar in i texten, i stället för en siffra i sidopanelen. Siffrorna finns
-      redan per kapitel i `core.story_stats.chapter_rows` (2.18), och fynden i `core.analysis`;
-      det som fattas är att gruppera listan per kapitel i panelen. R06 (ProWritingAid
-      Chapter Critique, AutoCrit Summary Report)
+- [x] **4.21** Analysrapport per kapitel: panelen kan gruppera samma fynd under sin kapitelrubrik
+      med kapitlets ordtal ("7 fynd · 3 140 ord") — den vy en författare arbetar igenom kapitel för
+      kapitel, i stället för en lista över hela boken. Grupperingen bygger på
+      `core.story_stats.chapter_rows`, som nu bär sina scen-id:n (en siffra utan sina scener går
+      inte att gruppera). Ett fynd i en scen utan kapitel hamnar under en egen rubrik, och ett
+      codexnamn som aldrig nämns har ingen scen alls — det fyndet får ingen ordräkning i stället för
+      att krascha (hittat av `ui_smoke`, inte av mig). 18 kontroller i panelen, 6 i `ui_smoke`
+      avsnitt 49. R06 (ProWritingAid Chapter Critique, AutoCrit Summary Report)
 
 ### Fas 5: Publiceringen
 

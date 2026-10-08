@@ -952,5 +952,8 @@
   "insight_kind_filler": "Filler words",
   "insight_kind_cliche": "Clichés",
   "insight_kind_adverb": "Adverbs",
-  "insight_kind_dialogue_tag": "Coloured dialogue tags"
+  "insight_kind_dialogue_tag": "Coloured dialogue tags",
+  "insight_by_chapter": "By chapter",
+  "insight_chapter_line": "{findings} findings · {words} words",
+  "insight_no_chapter": "No chapter"
 }

@@ -57,6 +57,9 @@ def chapter_rows(project) -> list[dict]:
             "level": "part" if container.type == PART else "chapter",
             "scenes": len(own_scenes), "words": words, "target": target,
             "progress": words / target if target else 0.0,
+            # Scenerna bakom siffran: rapporten per kapitel (4.21) grupperar
+            # fynd per scen, och en siffra utan sina scener går inte att gruppera.
+            "scene_ids": [scene.id for scene in own_scenes],
         })
     return rows
 

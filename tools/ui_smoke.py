@@ -2803,6 +2803,18 @@ def main() -> int:
           f"och klicket markerar fyllnadsordet i texten "
           f"({win.editor.textCursor().selectedText()!r})")
 
+    # Per kapitel (4.21): samma fynd, grupperade under sin rubrik i det riktiga
+    # fönstret — antalet rader i toppen skall då vara antalet kapitel med fynd.
+    win.insight.check_chapters.setChecked(True)
+    kapitelrader49 = [win.insight.tree.topLevelItem(i).text(0)
+                      for i in range(win.insight.tree.topLevelItemCount())]
+    check(len(kapitelrader49) < len(rapport49["findings"]),
+          f"grupperat per kapitel blir raderna kapitel, inte fynd ({kapitelrader49})")
+    check(all(win.insight.tree.topLevelItem(i).childCount() >= 1
+              for i in range(win.insight.tree.topLevelItemCount())),
+          "och varje rubrik har sina fynd under sig")
+    win.insight.check_chapters.setChecked(False)
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

@@ -1,10 +1,13 @@
 """ui/insight_panel.py — analysen i sidopanelen: upprepningar, namn och siffror.
 
 Fynden kommer ur `core.analysis` (upprepade ord och fraser, namnvarianter,
-versaler/gemener, codexnamn som aldrig nämns) och siffrorna ur
-`core.story_stats`. Panelen äger ingen data: den får projektet och codexet, och
-ett klick på en rad ber fönstret öppna scenen och markera textstället — så är
-rapporten en väg in i texten i stället för en siffra vid sidan av den.
+versaler/gemener, codexnamn som aldrig nämns), `core.style_rules` (fyllnadsord,
+klichéer, färgade dialogtaggar, adverb) och siffrorna ur `core.story_stats`.
+Rapporten kan grupperas **per kapitel** med kapitlets ordtal — det är den vy en
+författare arbetar igenom kapitel för kapitel. Panelen äger ingen data: den får
+projektet och codexet, och ett klick på en rad ber fönstret öppna scenen och
+markera textstället — så är rapporten en väg in i texten i stället för en siffra
+vid sidan av den.
 
 Analysen kostar tid (mätt: 1,8 s på en bok på 120 000 ord), så den körs när
 författaren ber om den och inte vid varje tangenttryckning.
@@ -12,10 +15,12 @@ författaren ber om den och inte vid varje tangenttryckning.
     python -m ui.insight_panel      kör självprovet (offscreen)
 """
 
+from collections import defaultdict
+
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QComboBox, QHBoxLayout, QLabel, QPushButton, QTreeWidget, QTreeWidgetItem,
-    QVBoxLayout, QWidget,
+    QCheckBox, QComboBox, QHBoxLayout, QLabel, QPushButton, QTreeWidget,
+    QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
 from core import analysis, story_stats
@@ -61,6 +66,13 @@ class InsightPanel(QWidget):
         row.addWidget(self.combo_kind, 1)
         layout.addLayout(row)
 
+        # Rapport per kapitel (4.21): samma fynd, grupperade under sin rubrik med
+        # kapitlets ordtal. Det är den vy en författare arbetar igenom kapitel för
+        # kapitel, i stället för en lista över hela boken.
+        self.check_chapters = QCheckBox(_("insight_by_chapter"))
+        self.check_chapters.toggled.connect(self._fill)
+        layout.addWidget(self.check_chapters)
+
         self.label_summary = QLabel(_("insight_empty"))
         self.label_summary.setWordWrap(True)
         layout.addWidget(self.label_summary)
@@ -88,6 +100,7 @@ class InsightPanel(QWidget):
     def retranslate_ui(self) -> None:
         """Språkbytet: rubriker och värden är i18n-nycklar, som i de andra panelerna."""
         self.btn_run.setText(_("insight_run"))
+        self.check_chapters.setText(_("insight_by_chapter"))
         for index in range(self.combo_kind.count()):
             self.combo_kind.setItemText(
                 index, _(f"insight_kind_{self.combo_kind.itemData(index) or 'all'}"))
@@ -128,14 +141,65 @@ class InsightPanel(QWidget):
             return
         valt = self.combo_kind.currentData() or ""
         fynd = [f for f in self.report["findings"] if not valt or f.kind == valt]
-        for f in fynd:
-            item = QTreeWidgetItem([f.quote or f.label, f.note, f.node_title])
-            item.setData(0, NODE_ROLE, f.node_id)
-            item.setData(0, QUOTE_ROLE, f.quote)
-            item.setData(0, OCCURRENCE_ROLE, int(f.occurrence))
-            item.setToolTip(0, f.quote or f.label)
-            self.tree.addTopLevelItem(item)
+        if self.check_chapters.isChecked() and self.project is not None:
+            self._fill_per_kapitel(fynd)
+        else:
+            for f in fynd:
+                self.tree.addTopLevelItem(self._row(f))
         self.label_summary.setText(self._summary_text(len(fynd)))
+
+    def _row(self, f) -> QTreeWidgetItem:
+        item = QTreeWidgetItem([f.quote or f.label, f.note, f.node_title])
+        item.setData(0, NODE_ROLE, f.node_id)
+        item.setData(0, QUOTE_ROLE, f.quote)
+        item.setData(0, OCCURRENCE_ROLE, int(f.occurrence))
+        item.setToolTip(0, f.quote or f.label)
+        return item
+
+    def _fill_per_kapitel(self, fynd: list) -> None:
+        """Fynden under sin kapitelrubrik, med kapitlets ordtal (4.21).
+
+        Ett fynd i en scen utan kapitel hamnar under en egen rubrik — den scenen
+        finns, och rapporten skall inte tappa den.
+        """
+        if self.project is None:
+            return
+        rader = story_stats.chapter_rows(self.project)
+        rubriker: dict[str, tuple[str, int]] = {}
+        kapitel: dict[str, str] = {}                    # scen -> kapitel
+        for rad in rader:
+            if rad["level"] != "chapter":
+                continue
+            rubriker[rad["node_id"]] = (rad["title"], rad["words"])
+            for scen in rad["scene_ids"]:
+                kapitel[scen] = rad["node_id"]
+
+        per: dict[str, list] = defaultdict(list)
+        for f in fynd:
+            per[kapitel.get(f.node_id, "")].append(f)
+
+        for kapitel_id, (rubrik, ordtal) in rubriker.items():
+            egna = per.pop(kapitel_id, [])
+            if not egna:
+                continue
+            self._add_chapter_row(rubrik, ordtal, egna)
+
+        resten = per.pop("", [])
+        if resten:
+            # Ett codexnamn som aldrig nämns har ingen scen alls: fyndet finns,
+            # men det finns ingen text att räkna ord i.
+            egna_scener = {f.node_id for f in resten if f.node_id}
+            ordtal = sum(self.project.words(scen) for scen in egna_scener)
+            self._add_chapter_row(_("insight_no_chapter"), ordtal, resten)
+
+    def _add_chapter_row(self, rubrik: str, ordtal: int, egna: list) -> None:
+        rad = QTreeWidgetItem([rubrik, _("insight_chapter_line").format(
+            findings=len(egna), words=ordtal), ""])
+        rad.setToolTip(0, rubrik)
+        self.tree.addTopLevelItem(rad)
+        for f in egna:
+            rad.addChild(self._row(f))
+        rad.setExpanded(True)
 
     def _summary_text(self, visade: int) -> str:
         r = self.report or {}
@@ -150,6 +214,8 @@ class InsightPanel(QWidget):
 
     def _activate(self, item: QTreeWidgetItem, _column: int = 0) -> None:
         """Ett klick: be fönstret öppna scenen vid textstället."""
+        if item.childCount():
+            return          # en kapitelrubrik är en rubrik, inte ett fynd
         node_id = item.data(0, NODE_ROLE) or ""
         quote = item.data(0, QUOTE_ROLE) or ""
         if not node_id or not quote:
@@ -226,6 +292,43 @@ def _self_check() -> int:
 
         panel.set_project(None, None)
         kolla(panel.tree.topLevelItemCount() == 0, "stängt projekt tömmer listan")
+
+        # Per kapitel (4.21): fynden under sin rubrik med kapitlets ordtal, och
+        # scenen som inte ligger i något kapitel hamnar under en egen rubrik i
+        # stället för att tappas.
+        kapitel = project.add_node("chapter", "Kapitel ett")
+        inne = project.add_node("scene", "Inne i kapitlet", parent=kapitel.id)
+        project.write(inne.id, "<p>kapitlet kapitlet kapitlet.</p>")
+        lös = project.add_node("scene", "Lös scen")
+        project.write(lös.id, "<p>lösningen lösningen lösningen.</p>")
+        # Codexet är med: ett namn som aldrig nämns har ingen scen alls, och
+        # grupperingen får inte snubbla på ett fynd utan text.
+        with StoryBible(root + "/bok/codex.sqlite") as bible:
+            panel.set_project(project, bible)
+            rapport_kapitel = panel.refresh()
+            tagen_kapitel = []
+            panel.scene_requested.connect(lambda nid, q, occ: tagen_kapitel.append(nid))
+            panel.check_chapters.setChecked(True)
+            rubriker = [panel.tree.topLevelItem(i).text(0)
+                        for i in range(panel.tree.topLevelItemCount())]
+            kolla("Kapitel ett" in rubriker, f"kapitelrubriken finns ({rubriker})")
+            kolla(_("insight_no_chapter") in rubriker,
+                  f"och scenen utan kapitel får en egen rad ({rubriker})")
+            kolla(any(f.kind == "unused" for f in rapport_kapitel["findings"]),
+                  "codexnamnet som aldrig nämns är med i rapporten")
+            rad_kapitel = next(panel.tree.topLevelItem(i)
+                               for i in range(panel.tree.topLevelItemCount())
+                               if panel.tree.topLevelItem(i).text(0) == "Kapitel ett")
+            kolla(rad_kapitel.childCount() >= 1,
+                  f"fyndet ligger under sin rubrik ({rad_kapitel.childCount()})")
+            kolla("ord" in rad_kapitel.text(1),
+                  f"och rubriken bär kapitlets ordtal ({rad_kapitel.text(1)})")
+            panel._activate(rad_kapitel)
+            kolla(tagen_kapitel == [], "ett klick på en rubrik öppnar ingenting")
+            panel.check_chapters.setChecked(False)
+            kolla(panel.tree.topLevelItemCount() == len(rapport_kapitel["findings"]),
+                  f"och utan gruppering är listan platt igen "
+                  f"({panel.tree.topLevelItemCount()})")
     finally:
         shutil.rmtree(root, ignore_errors=True)
     print(f"insight_panel: {antal - fel} av {antal} kontroller gröna")

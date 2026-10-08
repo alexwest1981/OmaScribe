@@ -952,5 +952,8 @@
   "insight_kind_filler": "Fyllnadsord",
   "insight_kind_cliche": "Klichéer",
   "insight_kind_adverb": "Adverb",
-  "insight_kind_dialogue_tag": "Färgade dialogtaggar"
+  "insight_kind_dialogue_tag": "Färgade dialogtaggar",
+  "insight_by_chapter": "Per kapitel",
+  "insight_chapter_line": "{findings} fynd · {words} ord",
+  "insight_no_chapter": "Utan kapitel"
 }

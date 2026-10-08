@@ -1085,7 +1085,7 @@
   "analysis_note_variant_of": "Variante de {canon}",
   "analysis_note_capitalisation": "Ocorrem grafias em maiúsculas e minúsculas",
   "style_note_scenes": "uma vez no total, mais frequente em {title}|{total} vezes no total, mais frequente em {title}",
-  "style_note_consider_said": " — considere «disse»",
+  "style_note_consider_said": " — considere «{word}»",
   "ghost_person_first": "primeira pessoa (eu/nós)",
   "ghost_person_second": "segunda pessoa (tu/você)",
   "ghost_person_third": "terceira pessoa / impessoal"

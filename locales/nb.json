@@ -1085,7 +1085,7 @@
   "analysis_note_variant_of": "Variant av {canon}",
   "analysis_note_capitalisation": "Både store og små forbokstaver forekommer",
   "style_note_scenes": "én gang totalt, tettest i {title}|{total} ganger totalt, tettest i {title}",
-  "style_note_consider_said": " – vurder «sa»",
+  "style_note_consider_said": " – vurder «{word}»",
   "ghost_person_first": "førsteperson (jeg/vi)",
   "ghost_person_second": "andreperson (du)",
   "ghost_person_third": "tredjeperson / upersonlig"

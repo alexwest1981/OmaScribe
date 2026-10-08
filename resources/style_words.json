@@ -1,0 +1,50 @@
+{
+  "_note": "Stilord per språk: färgade dialogtaggar och fras-fyllnadsord. Handplockade startlistor, inte uppmätta — till skillnad från de svenska och engelska listorna i core/style_rules.py, som är stramade efter en mätning på riktiga romaner. Därför bara entydiga ord: en färgad tagg är sällsynt nog att en träff är riktig, och fraserna är flerordiga (ett enskilt tyskt 'halt' eller 'eben' är vanligt språk, inte en ovana). Enkelords-fyllnadsord och adverbändelser för de nya språken väntar på samma mätning som svenskan fick — en gissning som pekar fel i författarens text är värre än ingen varning. 'say' är den vanliga taggen rådet hänvisar till, så att rådet följer manusets språk och inte gränssnittets.",
+  "sv": {"say": "sade"},
+  "en": {"say": "said"},
+  "nb": {
+    "say": "sa",
+    "tags": ["hvisket", "ropte", "skrek", "mumlet", "mutret", "sukket", "stønnet", "freste", "fniste", "lo", "utbrøt", "innvendte", "stammet", "brølte", "knurret", "kvitret", "smilte"],
+    "phrases": ["på en måte", "i og for seg", "så å si", "mer eller mindre", "på sett og vis", "i prinsippet"]
+  },
+  "da": {
+    "say": "sagde",
+    "tags": ["hviskede", "råbte", "skreg", "mumlede", "mumrede", "sukkede", "stønnede", "hvæsede", "fniste", "lo", "udbrød", "indvendte", "stammede", "brølede", "knurrede", "kvidrede", "smilede"],
+    "phrases": ["på en måde", "i og for sig", "så at sige", "mere eller mindre", "på en eller anden måde", "i princippet"]
+  },
+  "fi": {
+    "say": "sanoi",
+    "tags": ["kuiskasi", "huusi", "mumisi", "mutisi", "huokaisi", "voihkaisi", "sihisi", "tirskui", "nauroi", "huudahti", "änkytti", "karjui", "murisi", "kujersi", "hymyili"],
+    "phrases": ["tavallaan", "ikään kuin", "enemmän tai vähemmän", "niin sanotusti"]
+  },
+  "is": {
+    "say": "sagði",
+    "tags": ["hvíslaði", "kallaði", "öskraði", "muldraði", "tautaði", "andvarpaði", "stundi", "hvessti", "flissaði", "hló", "stamaði", "urraði", "kvakaði", "brosti"],
+    "phrases": ["að vissu leyti", "meira og minna", "svo að segja", "í raun og veru"]
+  },
+  "de": {
+    "say": "sagte",
+    "tags": ["flüsterte", "brüllte", "schrie", "rief", "murmelte", "nuschelte", "zischte", "fauchte", "knurrte", "seufzte", "stöhnte", "kicherte", "lachte", "japste", "keuchte", "hauchte", "säuselte", "brummte"],
+    "phrases": ["im grunde genommen", "an und für sich", "sozusagen", "mehr oder weniger", "im prinzip", "auf gewisse weise", "so gesehen"]
+  },
+  "fr": {
+    "say": "dit",
+    "tags": ["chuchota", "murmura", "cria", "hurla", "soupira", "gémit", "siffla", "ricana", "rit", "s'exclama", "répliqua", "bégaya", "rugit", "grogna", "gazouilla", "sourit"],
+    "phrases": ["en quelque sorte", "d'une certaine manière", "plus ou moins", "pour ainsi dire", "à vrai dire", "en fin de compte"]
+  },
+  "es": {
+    "say": "dijo",
+    "tags": ["susurró", "gritó", "murmuró", "masculló", "suspiró", "gimió", "siseó", "se rió", "exclamó", "replicó", "tartamudeó", "rugió", "gruñó", "canturreó", "sonrió"],
+    "phrases": ["de alguna manera", "más o menos", "por así decirlo", "en cierto modo", "a decir verdad", "al fin y al cabo"]
+  },
+  "pt": {
+    "say": "disse",
+    "tags": ["sussurrou", "gritou", "murmurou", "resmungou", "suspirou", "gemeu", "sibilou", "riu", "exclamou", "replicou", "gaguejou", "rugiu", "rosnou", "cantarolou", "sorriu"],
+    "phrases": ["de certa forma", "mais ou menos", "por assim dizer", "de certo modo", "a bem dizer", "no fim das contas"]
+  },
+  "it": {
+    "say": "disse",
+    "tags": ["sussurrò", "gridò", "urlò", "mormorò", "borbottò", "sospirò", "gemette", "sibilò", "ridacchiò", "rise", "esclamò", "replicò", "balbettò", "ruggì", "ringhiò", "cinguettò", "sorrise"],
+    "phrases": ["in un certo senso", "più o meno", "per così dire", "in qualche modo", "a dire il vero", "in fin dei conti"]
+  }
+}

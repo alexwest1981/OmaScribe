@@ -190,7 +190,7 @@ def report(project, entities=None, min_count: int = TIGHT_REPEATS, lang: str = "
     lang = lang or _project_language(project)
     scenes = scenes_in_order(project)
     findings = repeats(scenes, min_count=min_count, lang=lang)
-    findings.extend(style_findings(scenes))
+    findings.extend(style_findings(scenes, lang=lang))
     if entities:
         findings.extend(name_consistency(scenes, entities))
     counts = {kind: sum(f.kind == kind for f in findings)

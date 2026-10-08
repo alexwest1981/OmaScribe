@@ -1085,7 +1085,7 @@
   "analysis_note_variant_of": "Variante di {canon}",
   "analysis_note_capitalisation": "Sono presenti grafie con maiuscola e minuscola",
   "style_note_scenes": "una volta in totale, più concentrato in {title}|{total} volte in totale, più concentrato in {title}",
-  "style_note_consider_said": " — considera «disse»",
+  "style_note_consider_said": " — considera «{word}»",
   "ghost_person_first": "prima persona (io/noi)",
   "ghost_person_second": "seconda persona (tu)",
   "ghost_person_third": "terza persona / impersonale"

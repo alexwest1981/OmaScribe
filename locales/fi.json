@@ -1085,7 +1085,7 @@
   "analysis_note_variant_of": "Muunnelma nimestä {canon}",
   "analysis_note_capitalisation": "Esiintyy sekä isolla että pienellä alkukirjaimella",
   "style_note_scenes": "yhteensä kerran, tiheimmillään kohdassa {title}|yhteensä {total} kertaa, tiheimmillään kohdassa {title}",
-  "style_note_consider_said": " – harkitse sanan 'sanoi' käyttöä",
+  "style_note_consider_said": " – harkitse sanan '{word}' käyttöä",
   "ghost_person_first": "minä-muoto (minä/me)",
   "ghost_person_second": "sinä-muoto (sinä)",
   "ghost_person_third": "hän-muoto / persoonaton"

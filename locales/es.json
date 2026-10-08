@@ -1085,7 +1085,7 @@
   "analysis_note_variant_of": "Variante de {canon}",
   "analysis_note_capitalisation": "Aparece escrito tanto en mayúsculas como en minúsculas",
   "style_note_scenes": "una vez en total, con mayor densidad en {title}|{total} veces en total, con mayor densidad en {title}",
-  "style_note_consider_said": " — considere «dijo»",
+  "style_note_consider_said": " — considere «{word}»",
   "ghost_person_first": "primera persona (yo/nosotros)",
   "ghost_person_second": "segunda persona (tú/vosotros/usted)",
   "ghost_person_third": "tercera persona / impersonal"

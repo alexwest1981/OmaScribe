@@ -1085,7 +1085,7 @@
   "analysis_note_variant_of": "Variant av {canon}",
   "analysis_note_capitalisation": "Både versal och gemen stavning förekommer",
   "style_note_scenes": "en gång totalt, tätast i {title}|{total} gånger totalt, tätast i {title}",
-  "style_note_consider_said": " — överväg 'sade'",
+  "style_note_consider_said": " — överväg '{word}'",
   "ghost_person_first": "första person (jag/vi)",
   "ghost_person_second": "tilltal (du/ni)",
   "ghost_person_third": "tredje person / opersonligt"

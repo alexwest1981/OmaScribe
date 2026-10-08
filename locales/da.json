@@ -1085,7 +1085,7 @@
   "analysis_note_variant_of": "Variant af {canon}",
   "analysis_note_capitalisation": "Både store og små bogstaver forekommer",
   "style_note_scenes": "én gang i alt, tættest i {title}|{total} gange i alt, tættest i {title}",
-  "style_note_consider_said": " — overvej 'sagde'",
+  "style_note_consider_said": " — overvej '{word}'",
   "ghost_person_first": "førsteperson (jeg/vi)",
   "ghost_person_second": "andenperson (du)",
   "ghost_person_third": "tredjeperson / upersonlig"

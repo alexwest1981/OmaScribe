@@ -11,6 +11,17 @@ Båda språkens listor körs alltid. En svensk lista träffar inte engelsk text 
 tvärtom, så ingen språkdetektering behövs — och en författare som skriver på
 engelska får samma rapport som en som skriver på svenska.
 
+De nya språken (norska, danska, finska, isländska, tyska, franska, spanska,
+portugisiska, italienska) hämtas i stället ur resources/style_words.json och
+**väljs av manusets språk**. Att köra elva listor samtidigt skulle göra varje
+homograf till en falsk träff ("halt" är ett tyskt fyllnadsord och ett svenskt
+uppehåll), och listorna är för nya för att ha mätts. De bär därför bara det som
+är entydigt: färgade dialogtaggar och flerordiga fraser. Enkelords-fyllnadsord
+och adverbändelser för de nya språken väntar på samma mätning som svenskan fick
+— en gissning som pekar fel i författarens text är värre än ingen varning alls.
+Klichéerna är svenska och engelska av samma skäl: de är redaktionella, och en
+hittepå-lista kostar mer än den ger.
+
 Ett fynd per ord och manus, inte per scen: en lista med "liksom" tio gånger i
 tio scener är tio rader som säger samma sak. Raden pekar i stället på den scen
 där ordet är tätast, för det är där författaren har något att göra.
@@ -24,10 +35,13 @@ fast, inte slumpad, så samma text ger samma rapport varje gång.
 
 from __future__ import annotations
 
+import json
+import os
 import re
 import tempfile
 import shutil
 from collections import defaultdict
+from functools import lru_cache
 
 from core.analysis import Finding, scenes_in_order, _tokens   # samma tokenisering som upprepningarna
 from core.i18n import _
@@ -89,9 +103,33 @@ _PHRASE_FILLERS_FOLDED = tuple(" ".join(map(_fold, p.split())) for p in PHRASE_F
 _PHRASE_FIRST_WORDS = frozenset(p.split()[0] for p in _PHRASE_FILLERS_FOLDED)
 
 
-def _phrase_here(tokens, index: int) -> str | None:
+_STYLE_WORDS_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                 "resources", "style_words.json")
+
+
+@lru_cache(maxsize=1)
+def _extra_words() -> dict:
+    """Stilorden för de nya språken. Tomma om filen inte går att läsa."""
+    try:
+        with open(_STYLE_WORDS_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError) as e:
+        print(f"[style_rules] kunde inte läsa style_words.json: {e}")
+        return {}
+
+
+def _words_for(lang: str) -> tuple[frozenset, tuple, str]:
+    """(färgade taggar, fraser, rådets ord) för manusets språk."""
+    kod = _fold((lang or "").replace("-", "_").split("_")[0])
+    rad = _extra_words().get(kod, {})
+    return (frozenset(_fold(w) for w in rad.get("tags", ())),
+            tuple(" ".join(map(_fold, p.split())) for p in rad.get("phrases", ())),
+            rad.get("say", ""))
+
+
+def _phrase_here(tokens, index: int, phrases) -> str | None:
     """Den fras som börjar på den här token, eller inget."""
-    for phrase in _PHRASE_FILLERS_FOLDED:
+    for phrase in phrases:
         delar = phrase.split()
         if [token[0] for token in tokens[index:index + len(delar)]] == delar:
             return phrase
@@ -101,12 +139,17 @@ def _phrase_here(tokens, index: int) -> str | None:
 _CLICHE_RE = re.compile("|".join(re.escape(k) for k in CLICHES), re.IGNORECASE)
 
 
-def _is_style_word(word: str) -> bool:
-    return (word in FILLERS or word in DIALOGUE_TAGS
+def _is_style_word(word: str, tags: frozenset = frozenset()) -> bool:
+    # Franska dialogtaggar står ofta med inversion ("chuchota-t-elle"), och
+    # bindestrecket gör hela formen till ett ord. Taggen är den del som står
+    # före det första bindestrecket.
+    stam = word.split("-")[0]
+    return (word in FILLERS or word in DIALOGUE_TAGS or word in tags
+            or stam in tags
             or len(word) >= ADVERB_MIN_LENGTH and word.endswith(ADVERB_SUFFIXES))
 
 
-def style_findings(scenes, min_count: int = _STYLE_MIN_COUNT) -> list[Finding]:
+def style_findings(scenes, min_count: int = _STYLE_MIN_COUNT, lang: str = "") -> list[Finding]:
     """Fyllnadsord, klichéer, dialogtaggar och adverb över hela manuset.
 
     Ett fynd per ord (eller fras) och manus — tio scener med "liksom" är tio
@@ -114,7 +157,15 @@ def style_findings(scenes, min_count: int = _STYLE_MIN_COUNT) -> list[Finding]:
     texten (versalt "Liksom" hittas av markören) och den scen där ordet är
     tätast, för det är där arbetet finns. Klichén kräver ingen tröskel: en
     förekomst är en för mycket, och det är just vad en kliché betyder.
+
+    `lang` är manusets språk: svenska och engelska har sina listor här i filen,
+    de nya språken sina i resources/style_words.json.
     """
+    tags, extra_phrases, say = _words_for(lang)
+    # Svenska och engelska fraser körs alltid (se modulens inledning); de nya
+    # språken lägger sina ovanpå, och bara för sitt eget språk.
+    phrases = _PHRASE_FILLERS_FOLDED + extra_phrases
+    phrase_first = frozenset(p.split()[0] for p in phrases)
     findings: list[Finding] = []
     counts: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     # ord -> {scen: (stavning i texten, förekomst i scenen)}
@@ -132,11 +183,11 @@ def style_findings(scenes, min_count: int = _STYLE_MIN_COUNT) -> list[Finding]:
 
         tokens = [(_fold(w), w, start) for w, start, _end in _tokens(text)]
         for index, (folded, original, start) in enumerate(tokens):
-            phrase = _phrase_here(tokens, index) if folded in _PHRASE_FIRST_WORDS else None
+            phrase = _phrase_here(tokens, index, phrases) if folded in phrase_first else None
             if phrase:
                 key = phrase
                 original = " ".join(t[1] for t in tokens[index:index + len(phrase.split())])
-            elif _is_style_word(folded):
+            elif _is_style_word(folded, tags):
                 key = folded
             else:
                 continue
@@ -153,15 +204,15 @@ def style_findings(scenes, min_count: int = _STYLE_MIN_COUNT) -> list[Finding]:
         quote, occurrence = places[key][densest]
         if key in _CLICHE_KEYS:
             kind = "cliche"
-        elif key in FILLERS or key in _PHRASE_FILLERS_FOLDED:
+        elif key in FILLERS or key in _PHRASE_FILLERS_FOLDED or key in phrases:
             kind = "filler"
-        elif key in DIALOGUE_TAGS:
+        elif key in DIALOGUE_TAGS or key in tags or key.split("-")[0] in tags:
             kind = "dialogue_tag"
         else:
             kind = "adverb"
         note = _("style_note_scenes", total=total, scenes=len(per_scene), title=titles[densest])
         if kind == "dialogue_tag":
-            note += _("style_note_consider_said")
+            note += _("style_note_consider_said", word=say or "sade")
         findings.append(Finding(kind=kind, label=quote, quote=quote, occurrence=occurrence,
                                 node_id=densest, node_title=titles[densest], count=total,
                                 note=note))
@@ -229,6 +280,29 @@ def _self_check() -> int:
               "varje fynd pekar på en riktig scen")
     finally:
         shutil.rmtree(root, ignore_errors=True)
+
+    # De nya språken: manusets språk väljer listan, inte gränssnittets.
+    tysk_text = ("<p>„Nein“, zischte sie. „Nein“, zischte sie. „Nein“, zischte sie. "
+                 "Im Grunde genommen war alles gesagt. Im Grunde genommen war alles gesagt. "
+                 "Im Grunde genommen war alles gesagt.</p>")
+    tysk = style_findings([("s1", "Kapitel 1", tysk_text)], lang="de")
+    kolla(any(f.kind == "dialogue_tag" and f.label.casefold() == "zischte" for f in tysk),
+          f"tyskan hittar sin egen färgade tagg ({[f.label for f in tysk]})")
+    kolla(any("sagte" in f.note for f in tysk),
+          f"och rådet pekar på det tyska ordet ({[f.note for f in tysk][:1]})")
+    kolla(any(f.kind == "filler" and "grunde" in f.label.casefold() for f in tysk),
+          "den flerordiga tyska frasen hittas")
+    kolla(not any(f.label.casefold() == "zischte"
+                  for f in style_findings([("s1", "Kapitel 1", tysk_text)], lang="sv")),
+          "medan svenskan inte larmar om tyskans tagg")
+    kolla(not any(f.label.casefold() == "zischte"
+                  for f in style_findings([("s1", "Kapitel 1", tysk_text)])),
+          "och ett manus utan språk får inga tyska listor alls")
+    fransk = style_findings([("s1", "Chapitre 1",
+                              "<p>« Non », chuchota-t-elle. « Non », chuchota-t-elle. "
+                              "« Non », chuchota-t-elle.</p>")], lang="fr")
+    kolla(any("dit" in f.note and "sade" not in f.note and "said" not in f.note for f in fransk),
+          f"franskan får sin tagg och sitt rådordsval ({[f.note for f in fransk][:1]})")
 
     print(f"style_rules: {checks - failures} av {checks} kontroller gröna")
     return failures

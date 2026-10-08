@@ -1085,7 +1085,7 @@
   "analysis_note_variant_of": "Variante von {canon}",
   "analysis_note_capitalisation": "Kommt in Groß- und Kleinschreibung vor",
   "style_note_scenes": "insgesamt einmal, am häufigsten in {title}|insgesamt {total}-mal, am häufigsten in {title}",
-  "style_note_consider_said": " – „sagte“ erwägen",
+  "style_note_consider_said": " – „{word}“ erwägen",
   "ghost_person_first": "Erste Person (ich/wir)",
   "ghost_person_second": "Zweite Person (du/ihr/Sie)",
   "ghost_person_third": "Dritte Person / unpersönlich"

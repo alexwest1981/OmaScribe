@@ -1085,7 +1085,7 @@
   "analysis_note_variant_of": "Variant of {canon}",
   "analysis_note_capitalisation": "Both upper and lower case spellings occur",
   "style_note_scenes": "once in total, densest in {title}|{total} times in total, densest in {title}",
-  "style_note_consider_said": " — consider 'said'",
+  "style_note_consider_said": " — consider '{word}'",
   "ghost_person_first": "first person (I/we)",
   "ghost_person_second": "second person (you)",
   "ghost_person_third": "third person / impersonal"

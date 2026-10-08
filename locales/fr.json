@@ -1085,7 +1085,7 @@
   "analysis_note_variant_of": "Variante de {canon}",
   "analysis_note_capitalisation": "Les deux graphies (majuscules et minuscules) apparaissent",
   "style_note_scenes": "une fois au total, densité maximale dans {title}|{total} fois au total, densité maximale dans {title}",
-  "style_note_consider_said": " — envisager « dit »",
+  "style_note_consider_said": " — envisager « {word} »",
   "ghost_person_first": "première personne (je/nous)",
   "ghost_person_second": "deuxième personne (tu/vous)",
   "ghost_person_third": "troisième personne / impersonnel"

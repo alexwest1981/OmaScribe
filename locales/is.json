@@ -1085,7 +1085,7 @@
   "analysis_note_variant_of": "Afbrigði af {canon}",
   "analysis_note_capitalisation": "Bæði hástafa- og lágstafaritun kemur fyrir",
   "style_note_scenes": "einu sinni samtals, þéttast í {title}|{total} sinnum samtals, þéttast í {title}",
-  "style_note_consider_said": " — íhugaðu „sagði“",
+  "style_note_consider_said": " — íhugaðu „{word}“",
   "ghost_person_first": "fyrsta persóna (ég/við)",
   "ghost_person_second": "önnur persóna (þú)",
   "ghost_person_third": "þriðja persóna / ópersónulegt"

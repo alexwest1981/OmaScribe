@@ -1816,6 +1816,59 @@ def main() -> int:
     win.editor.document.setModified(False)
     win.is_modified = False
 
+    print("\n45. Släpp boken: paketet med checksummor (fas 5.9)")
+
+    import hashlib as _hashlib45
+
+    from ui import main_window as _mw45
+
+    check(win.act_release is not None and win.act_release.isEnabled(),
+          f"menyposten finns ({win.act_release.text()!r})")
+
+    # Förhandskontrollen: säger ifrån när ingen profil är vald, annars kanalens språk
+    sparat45 = dict(win.page_settings)
+    win.page_settings = {k: v for k, v in sparat45.items() if k != "trim"}
+    check(any("tryckprofil" in rad.lower() for rad in win._release_warnings()),
+          "förhandskontrollen säger ifrån när ingen tryckprofil är vald")
+    win.page_settings = {**sparat45, "trim": "6x9", "paper": "white", "bleed": False, "channel": "kdp"}
+    varningar45 = win._release_warnings()
+    check(all("_" not in rad for rad in varningar45),
+          f"och annars talar den kanalens språk, inte koder ({len(varningar45)} rader)")
+
+    # Själva paketet — med en tyst ruta, annars stannar rökprovet på en modal
+    klass45 = _mw45.QMessageBox
+    _mw45.QMessageBox = type("TystRuta", (), {
+        "information": staticmethod(lambda *a, **k: None),
+        "critical": staticmethod(lambda *a, **k: None)})
+    mapp45 = tempfile.mkdtemp(prefix="slapp45-")
+    try:
+        win.release_book(folder=mapp45)
+    finally:
+        _mw45.QMessageBox = klass45
+    filer45 = sorted(os.listdir(mapp45))
+    check(len(filer45) == 4, f"paketet har bokens filer och rapporten ({filer45})")
+    from core.release import rapport_text
+    rapport_json45 = os.path.join(mapp45, "release.json")
+    import json as _json45
+    rapport45 = _json45.load(open(rapport_json45, encoding="utf-8"))
+    check(rapport45["book"] == win.book_metadata()["title"] == ovningsbok.title,
+          f"rapporten bär bokens titel ur projektet, inte ur filnamnet ({rapport45['book']!r})")
+    check(len(rapport45["files"]) == 2, f"och bokens två filer ({[f['file'] for f in rapport45['files']]})")
+    epub_post45 = next((f for f in rapport45["files"] if f["file"].endswith(".epub")), None)
+    check(epub_post45 is not None and len(epub_post45["sha256"]) == 64,
+          "med en checksumma per fil")
+    check(epub_post45["sha256"] == _hashlib45.sha256(
+              open(os.path.join(mapp45, epub_post45["file"]), "rb").read()).hexdigest(),
+          "och summan är filens egen")
+    check(rapport45["missing"] == [], "och inget saknas")
+    text45 = open(os.path.join(mapp45, "RAPPORT.md"), encoding="utf-8").read()
+    check(f"# {ovningsbok.title}" in text45 and epub_post45["sha256"] in text45,
+          "RAPPORT.md går att läsa som text, med summorna i")
+    pdf45 = next((f for f in rapport45["files"] if f["file"].endswith(".pdf")), None)
+    check(pdf45 is not None and pdf45["bytes"] > 500,
+          f"och tryck-PDF:en är en riktig fil ({pdf45['bytes'] if pdf45 else 0} byte)")
+    win.page_settings = sparat45
+
     print("\n44. Spegelvända marginaler i utskriften (fas 5.5, och 0.2)")
 
     from PyQt6.QtPrintSupport import QPrinter

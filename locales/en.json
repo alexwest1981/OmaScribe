@@ -890,5 +890,17 @@
   "colophon_publisher": "Published by {name}",
   "colophon_isbn": "ISBN {isbn}",
   "colophon_year": "© {year}",
-  "colophon_rights": "The author {author} holds the rights to the text."
+  "colophon_rights": "The author {author} holds the rights to the text.",
+  "menu_file_release": "Release the book…",
+  "release_choose_folder": "Folder for the release",
+  "release_done_title": "The book is released",
+  "release_done_text": "The package is in {folder} with {count} files.",
+  "release_missing_text": "Missing: {files}",
+  "release_warnings_lead": "Check before sending the file:",
+  "release_no_profile": "No print profile is chosen — run Publishing… first, or nobody knows how the book is to be cut.",
+  "release_no_blurb": "The back-cover text is empty — it is the first thing a shop shows.",
+  "release_no_isbn": "No ISBN — without it the book cannot be ordered in a bookshop.",
+  "release_odd_pages": "The page count is odd ({pages}) — the book gets a blank last page.",
+  "release_epub_failed": "The EPUB could not be written: {error}",
+  "release_pdf_failed": "The print PDF could not be written."
 }

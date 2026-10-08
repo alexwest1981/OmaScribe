@@ -890,5 +890,17 @@
   "colophon_publisher": "Utgiven av {name}",
   "colophon_isbn": "ISBN {isbn}",
   "colophon_year": "© {year}",
-  "colophon_rights": "Författaren {author} äger rättigheterna till texten."
+  "colophon_rights": "Författaren {author} äger rättigheterna till texten.",
+  "menu_file_release": "Släpp boken…",
+  "release_choose_folder": "Mapp för utgivningen",
+  "release_done_title": "Boken är släppt",
+  "release_done_text": "Paketet ligger i {folder} med {count} filer.",
+  "release_missing_text": "Saknas: {files}",
+  "release_warnings_lead": "Att kontrollera innan filen skickas:",
+  "release_no_profile": "Ingen tryckprofil är vald — kör Publicering… först, annars vet ingen hur boken ska skäras.",
+  "release_no_blurb": "Baksidestexten är tom — det är den text butiken visar först.",
+  "release_no_isbn": "ISBN saknas — utan det går boken inte att beställa i en bokhandel.",
+  "release_odd_pages": "Sidantalet är udda ({pages}) — boken får en blank sista sida.",
+  "release_epub_failed": "EPUB:en kunde inte skrivas: {error}",
+  "release_pdf_failed": "Tryck-PDF:en kunde inte skrivas."
 }

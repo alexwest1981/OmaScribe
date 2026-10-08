@@ -406,6 +406,7 @@ class MainWindow(QMainWindow):
         self.act_exp_md = self._add_action(self.menu_file, _("menu_file_export_md"), self.export_markdown)
         self.act_exp_html = self._add_action(self.menu_file, _("menu_file_export_html"), self.export_html)
         self.act_exp_epub = self._add_action(self.menu_file, _("menu_file_export_epub"), self.export_epub_book)
+        self.act_release = self._add_action(self.menu_file, _("menu_file_release"), self.release_book)
         self.menu_file.addSeparator()
         self.act_exit = self._add_action(self.menu_file, _("menu_file_exit"), self.close, "Ctrl+Q")
 
@@ -1957,9 +1958,7 @@ class MainWindow(QMainWindow):
         """
         from ui.publish_dialog import PublishDialog
 
-        canvas = self.editor.canvas if self.editor else None
-        sidor = len(getattr(canvas, "pages", None) or [])
-        dlg = PublishDialog(sidor or 300, self.page_settings, self)
+        dlg = PublishDialog(self._page_count() or 300, self.page_settings, self)
         dlg.settings_applied.connect(self._on_page_settings_applied)
         dlg.settings_applied.connect(
             lambda ny: self.status_bar.showMessage(
@@ -1999,6 +1998,32 @@ class MainWindow(QMainWindow):
                 QMessageBox.information(self, _("export_success_title"), _("export_success_text", path=fpath))
             except Exception as e:
                 QMessageBox.critical(self, _("export_error_title"), str(e))
+
+    def _page_count(self) -> int:
+        """Sidantalet ur det öppna manuset — gutter, rygg och omslag hänger på det."""
+        canvas = self.editor.canvas if self.editor else None
+        return len(getattr(canvas, "pages", None) or [])
+
+    def _release_warnings(self) -> list:
+        """Vad en kanal skulle klaga på, sagt innan filen skickas (R05.10)."""
+        from core import publishing
+
+        inst = self.page_settings or {}
+        varningar = []
+        if inst.get("trim"):
+            varningar = [_("warn_" + kod) for kod in publishing.warnings(
+                inst.get("trim"), self._page_count(), inst.get("paper", "white"),
+                bool(inst.get("bleed")), inst.get("channel", "kdp"))]
+        else:
+            varningar.append(_("release_no_profile"))
+        uppgifter = self.book_metadata()
+        if not str(uppgifter.get("description") or "").strip():
+            varningar.append(_("release_no_blurb"))
+        if not str(uppgifter.get("identifier") or "").strip():
+            varningar.append(_("release_no_isbn"))
+        if self._page_count() % 2:
+            varningar.append(_("release_odd_pages", pages=str(self._page_count())))
+        return varningar
 
     def book_metadata(self) -> dict:
         """Bokens metadata: ur projektet när det finns, annars ur filen (R05.4).
@@ -2042,6 +2067,60 @@ class MainWindow(QMainWindow):
                                     _("export_success_text", path=fpath))
         except Exception as e:                            # noqa: BLE001
             QMessageBox.critical(self, _("export_error_title"), str(e))
+
+    def release_book(self, folder: str | None = None):
+        """Släpp boken: EPUB, tryck-PDF och rapport i en mapp (R05.9, R05.10).
+
+        En utgivning är inte en fil utan ett paket. EPUB:en är boken man läser,
+        PDF:en är boken man trycker, och rapporten säger vad som ligger i mappen,
+        när det byggdes och vad kanalen kommer att klaga på — med checksummor, så
+        att frågan "är det här samma fil som i går?" går att svara på.
+        """
+        from core.epub import export_epub
+        from core.project import slugify
+        from core.release import build_release
+
+        if not folder:
+            folder = QFileDialog.getExistingDirectory(self, _("release_choose_folder"))
+        if not folder:
+            return
+        uppgifter = self.book_metadata()
+        namn = slugify(uppgifter.get("title") or "") or "boken"
+        epub_sökväg = os.path.join(folder, f"{namn}.epub")
+        pdf_sökväg = os.path.join(folder, f"{namn}-tryck.pdf")
+        varningar = self._release_warnings()
+
+        try:
+            export_epub(epub_sökväg, self.editor.document, uppgifter)
+        except Exception as e:                                # noqa: BLE001
+            varningar.append(_("release_epub_failed", error=str(e)))
+        if not self._render_release_pdf(pdf_sökväg):
+            varningar.append(_("release_pdf_failed"))
+
+        rapport = build_release(folder, [epub_sökväg, pdf_sökväg], uppgifter, varningar)
+        text = _("release_done_text", folder=folder, count=str(len(rapport["files"])))
+        if rapport["missing"]:
+            text += "\n" + _("release_missing_text", files=", ".join(rapport["missing"]))
+        if varningar:
+            text += "\n\n" + _("release_warnings_lead") + "\n" + "\n".join(
+                "• " + rad for rad in varningar[:6])
+        QMessageBox.information(self, _("release_done_title"), text)
+
+    def _render_release_pdf(self, path: str) -> bool:
+        """Tryck-PDF:en — boken som den ska se ut på papper, utan redigeringsmärken."""
+        from PyQt6.QtPrintSupport import QPrinter
+
+        from core.doc_manager import DocumentManager
+
+        skrivare = QPrinter(QPrinter.PrinterMode.HighResolution)
+        skrivare.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
+        skrivare.setOutputFileName(path)
+        try:
+            DocumentManager.print_document_to_printer(
+                self.editor.document, skrivare, {**self.page_settings, "clean_print": True})
+        except Exception:                                     # noqa: BLE001
+            return False
+        return os.path.exists(path) and os.path.getsize(path) > 0
 
     def export_markdown(self):
         fpath, selected_filter = QFileDialog.getSaveFileName(

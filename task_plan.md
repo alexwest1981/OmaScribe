@@ -295,9 +295,19 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       rökprovet. **Kvar:** EPUBCheck-validering — den kräver Java och ett EPUBCheck-paket på datorn,
       så den ska köras som ett *val* med tydligt besked när verktyget saknas, inte som ett krav i
       exporten. R05.8
-- [ ] **5.9** Distributörsuppladdning och slutkontroll: exportpaket, checksummor, preflight-rapport. R05.10
+- [~] **5.9** Slutkontrollen: **Arkiv → Släpp boken…** samlar EPUB:en, tryck-PDF:en och en rapport i
+      en mapp. Rapporten (`RAPPORT.md` + `release.json`) säger vad som ligger där, när det byggdes,
+      vad varje fil väger och dess **SHA-256**, så att frågan "är det här samma fil som i går?" går att
+      svara på. Preflighten säger vad kanalen skulle klaga på *innan* filen skickas: kanalens egna
+      varningar översatta till svenska, tom baksidestext, saknat ISBN, udda sidantal, ingen vald
+      tryckprofil — och en fil som inte kunde skrivas **namnges i stället för att tyst försvinna**.
+      Provat: fyra filer i mappen, summan är filens egen (omräknad i provet), rapporten bär titeln ur
+      projektet och PDF:en är 9 109 byte. **Kvar:** själva uppladdningen till distributören (KDP:s
+      API), som kräver kontouppgifter och hör till ett eget beslut. R05.10
 - [ ] **5.10** Svensk och engelsk boksättning: repliktankstreck, citattecken, avstavning. R05.11
-- [ ] **5.11** Efterbearbetning i Sigil/Calibre: "öppna exportmapp", checksumma. R05.9 — *låg*
+- [~] **5.11** Efterbearbetning i Sigil/Calibre: **checksumman finns** (i rapporten, per fil), och
+      mappen är den man öppnar i Sigil eller Calibre. **Kvar:** "öppna exportmappen" direkt ur
+      programmet (`xdg-open`) — en rad, men *låg* prioritet precis som planen säger. R05.9
 - [x] **5.12** Siffertabellen ur R05 in som **data med källa**: varje kanal bär sin käll-URL i
       `SOURCES`, kanalerna delar inte varandras koefficienter (bara KDP har en publicerad formel), och
       en kanal utan belagt tal säger det i stället för att låna ett. Provat: trappans gränser steg för

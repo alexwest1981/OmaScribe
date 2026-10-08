@@ -567,3 +567,23 @@
   i kolofonen, och nav.xhtml utan `front-`.
 - **Kvar:** samma sidor i utskriften (där skriver författaren dem i dag, och det är rimligt — en
   utskrift kommer från ett dokument, en EPUB från ett projekt), samt dedikation och tack som fält.
+
+### Fas 5: släppet — paketet med checksummor och förhandskontroll (5.9, 5.11)
+
+- **Vad som blev gjort:** **Arkiv → Släpp boken…** samlar EPUB:en, tryck-PDF:en och en rapport i en
+  mapp. PDF:en ritas ur samma sidinställningar som utskriften, så tryckprofilens trim, gutter och
+  spegling följer med ända in i filen.
+- **Rapporten är medvetet tråkig:** `RAPPORT.md` (läsbar text, den ska gå att skicka till ett
+  tryckeri) och `release.json` (för program). Titel, författare, förlag, ISBN, byggtid, varje fils
+  storlek och **SHA-256**. Utan summorna går frågan "är det här samma fil som jag skickade i går?"
+  inte att svara på — och den frågan kommer alltid, först när något gått fel.
+- **Förhandskontrollen** säger vad kanalen skulle klaga på innan filen skickas: kanalens egna
+  varningskoder översatta (`warn_*`, samma nycklar som publiceringsrutan), tom baksidestext, saknat
+  ISBN, udda sidantal, ingen vald tryckprofil. En fil som inte kunde skrivas **namnges i rapporten**
+  i stället för att tyst försvinna — en saknad fil är exakt vad rapporten är till för.
+- **En väg till sidantalet:** `_page_count()` — publiceringsrutan och släppet läser samma källa
+  (`editor.canvas.pages`), i stället för två kopior som kan glida ifrån varandra.
+- **Provat:** fyra filer i mappen, EPUB 2 386 byte, PDF 9 109 byte, checksumman omräknad i provet och
+  jämförd, rapporten bär titeln **ur projektet** (inte ur filnamnet), och menyposten finns.
+- **Kvar:** uppladdningen till distributören (KDP:s API — kräver kontouppgifter, eget beslut) och
+  "öppna exportmappen" (`xdg-open`, en rad, låg prioritet).

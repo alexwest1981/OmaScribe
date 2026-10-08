@@ -76,6 +76,7 @@ run "skrivloggen" "$PY" -m core.writing_log
 run "storybible" "$PY" -m core.storybible
 run "sök och ersätt" "$PY" -m core.find_replace
 run "autokorrigeringen" "$PY" -m core.autocorrect
+run "fälten" "$PY" -m core.fields
 run "korktavlan" "$PY" -m ui.corkboard
 run "läsvyn" "$PY" -m ui.scrivenings
 run "samlingarna" "$PY" -m core.collections

@@ -92,13 +92,10 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 - [x] **2.4** Sessionshistorik och skrivlogg i SQLite via `core.writing_log` (som redan fanns och nu äntligen nås): dagens rader med added/removed separat, sessioner som startar vid första ändringen och stängs vid flush/stängning, CSV-export genom en filväljare. Loggen ligger i projektmappen när ett projekt är öppet — bokens dagar hör till boken. R03.4
 - [x] **2.5** Skrivsprintar och timer: 15/25/45/60 minuter, nedräkning i panelen, avbryt, och vid slut en rad i statusfältet plus `QApplication.alert` (diskret — ingen modal). Antalet ord under sprinten räknas och rapporteras. R03.5
 - [x] **2.6** Skrivmaskinsläge utöver befintligt helskärmsläge: `PagedPaper.center_cursor()` håller markörens rad mitt i fönstret medan man skriver, kopplat till markörens rörelse i `ui/editor_view.py`. Läget slås på i Visa-menyn och kommer ihåg sig i configen. Maxbredden var redan satt — arket är A4 (750 px) och texten kan inte bli bredare. Nära dokumentets slut kan ingen centrering ske (det finns ingen text att skrolla förbi), precis som i Word. R03.6
-- [ ] **2.7** Pauspåminnelser och ergonomi, valbart. R03.7 — *låg*
 - [x] **2.8** Karaktärsblad och story bible i projektet: `ui/codex_panel.py` visar projektets codex (codex.sqlite i projektmappen) med sökning och typfilter, och ett blad per entitet — namn, alias, vem det är (sparas med kort fördröjning medan man skriver), relationer till andra i boken, scenerna den är kopplad till (klick öppnar scenen) och hur ofta namnet nämns i manuset. Ny/redigera/ta bort, koppla loss scen, lägg till och ta bort relation. `core.storybible` fick `remove_relation`; dialogrutan förifylls vid redigering. R03.9
 - [x] **2.9** Tidslinje, plot-tavla och scenöversikt: `ui/plot_grid.py` visar manuset som en tabell — en rad per scen med del/kapitel, tråd (etiketter), POV, status, när i berättelsen den händer, ord och ordmål. Redigerbar direkt i tabellen (status genom en meny med projektets egna statusar), ett klick på titeln öppnar scenen, och sorteringen är poängen: manusordning, **tidslinje** (scenens egen tid, tom tid sist), POV eller status — Dabbles huvudtråd och sidotrådar sida vid sida, utan att lämna projektet. Modellen fick fältet `when` (sparas i manifestet). Tavlan är en egen sida i stacken och inte en flik i sidopanelen: åtta kolumner är ~790 px och panelen är 370. *Medvetet inte gjort:* en grafisk tidslinje (band med markörer) — texten i `when` sorterad i tid är tidslinjen en ensam författare läser, och en ritad tidslinje är en egen vy den dag någon saknar den. R03.10
 - [x] **2.10** Taggar, samlingar och anteckningar knutna till scen. Mestadels färdigt sedan tidigare —fas 1.5 (statusfärg), 1.9 (samlingar), 1.11 (scenanteckning) och 2.9 (tråd/etiketter i tavlan) hade redan byggt bitarna. Det som saknades var sista steget i arbetsflödet: samlingen gick att filtrera fram men inte att *arbeta igenom*. Nu har samlingspanelen en läs-knapp som öppnar samlingens scener i läsvyn (`▶`, "Läs samlingen som en text") — och `_show_scrivenings` är utbruten så att hela manuset och en samling går samma väg. R03.11
-- [ ] **2.11** Namn- och ordförrådsgenerator. R03.12 — *låg*
 - [x] **2.12** Revisionsläge och mål per utkast: plot-tavlan har en **Utkast**-kolumn (1–9, samma gränser som sceninspektören, redigerbar direkt i tabellen och skriven till manifestet) och ett **utkastfilter** — välj utkast 2 och tabellen visar bara de scener som nått dit, med räkningen "1 av 3 scener i utkast 2". Det är revisionsläget: arbetet blir en lista i stället för ett helt manus. *Målet per utkast* blev räkningen i stället för ett talfält per utkast — målet för ett utkast är att scenerna har nått det, och nio målfält som ingen fyller i är sämre än en siffra som stämmer. Vill du ha egna ordmål per utkast är det ett fält i projektdialogen; säg till. R03.13
-- [ ] **2.13** Blurb och synopsis som projektfält. R03.15 — *låg*
 - [x] **2.14** Övningar mot skrivblock ("vad händer nu?"): forskningens arbetsflöde satt rakt av — välj en fråga, få tre förslag, granska, välj eller ignorera, och återgå till skrivandet. Fyra kategorier (Vad händer nu? / Dialog / Handling / Sinnesintryck, efter Sparks), `core/exercises.py` bygger frågan och tolkar svaret (rent, eget självprov på 11 kontroller), och `ui/exercise_dialog.py` visar svaren. Det valda förslaget hamnar i **scenens egen anteckning**, inte i manuset: förslagen är vägar in, inte färdig prosa — och anteckningen är samma sammanhang som AI:n läser nästa gång. Anropet går genom den befintliga AI-klienten, så ingen ny nyckel eller leverantör behövs. R03.16
 - [x] **2.15** Läsbarhetsanalys och stilråd i texten: LIX fanns i `core/document_stats.py` och visades i panelen, men ingenstans i texten. Nu finns `sentence_ranges(text, max_words=20)` (ren funktion, eget självprov) och `ReadabilityHighlighter` i editorn, som markerar tunga meningar med en **prickad understrykning** — formen bär betydelsen, färgen förstärker. Markeringen är en *vy*-format (som kommentarerna): texten rörs inte och inget hamnar i scenfilen. Slås på i Visa-menyn och kommer ihåg sig i configen. Valet av enhet är inte slumpat: meningen är det LIX drivs av, så markeringen visar precis det rådet gäller. R03.17
 - [x] **2.16** Projektöversikt och anteckningar: **Arkiv → Projektöversikt** (Ctrl+Shift+O) visar
@@ -117,7 +114,8 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       projekt som är öppet just nu i stället för att kopiera texten. Menyväg: Arkiv →
       Projektinstruktioner. Alla tre AI-vägarna (granskning, omskrivning, övningar) går genom samma
       `_system_prompt`, så regeln bor på ett ställe. R03.18
-- **Status:** complete (2.1–2.6, 2.8–2.10 och 2.12–2.17 klara och grindade; 2.7, 2.11 och 2.13 låg och kvar)
+- **Status:** complete (två undantag flyttades till fas 4 som 4.14–4.16: pauspåminnelser, namn- och
+  ordförrådsgenerator, blurb/synopsis — de hörde hemma med sakprosan)
 
 ### Fas 3: Revision och granskning
 
@@ -183,11 +181,23 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 - [ ] **4.6** Stycke- och teckenstilar, stilinspektör och stilmallar. R02.9
 - [ ] **4.7** Avsnittsbrytningar med separata sidhuvuden/sidfötter. R02.10
 - [ ] **4.8** Spalter och avstavning. R02.11 — *låg*
-- [ ] **4.9** Autokorrigering och autotext. R02.12
+- [x] **4.9** Autokorrigering och autotext: `core/autocorrect.py` har funnits sedan 0b men **nådde
+      aldrig gränssnittet**. Nu ligger den i Redigera-menyn (Ctrl+Shift+K) och kör över scenen.
+      Provat: `teh` → `the`, `"hej"` → `”hej”`, `...` → `…`, fler fel i samma scen, **fetstilen runt
+      ordet står kvar** (vikt 700) och en gång till hittar ingenting. Bara de områden som faktiskt
+      skiljer skrivs om, och allt sker i ett edit block — ett ångra tar tillbaka hela körningen.
+      R02.12
 - [ ] **4.10** Språk per textavsnitt, stavning/grammatik (LanguageTool) och egen ordlista. R02.13
 - [ ] **4.11** Tecken-/symboltabell och tesaurus. R02.14 — *låg*
-- [ ] **4.12** Sök och ersätt med reguljära uttryck. R02.16
+- [x] **4.12** Sök och ersätt med reguljära uttryck: `core/find_replace.py` har också funnits utan
+      att nås. Nu i Redigera-menyn (Ctrl+F och Ctrl+H), icke-modal (man ska kunna skriva vidare) med
+      räknare, mönster, skiftläge och hela ord. Provat: räknaren, sök nästa markerar träffen, Ersätt
+      alla byter alla och **ett** ångra tar tillbaka hela ersättningen, mönster med bakåtreferens
+      (`(skriv)en` → `\1et`). R02.16
 - [ ] **4.13** Tabeller med formler och ekvationer. R02.18 — *låg*
+- [ ] **4.14** Pauspåminnelser och ergonomi, valbart. *Flyttad från fas 2 (2.7).* R03.7
+- [ ] **4.15** Namn- och ordförrådsgenerator. *Flyttad från fas 2 (2.11).* R03.12
+- [ ] **4.16** Blurb och synopsis som projektfält. *Flyttad från fas 2 (2.13).* R03.15
 - **Status:** pending
 
 ### Fas 5: Publiceringen

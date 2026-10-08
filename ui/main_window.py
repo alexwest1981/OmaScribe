@@ -48,6 +48,19 @@ from core.templates import get_template_html
 from core.doc_manager import DEFAULT_PAGE_SETTINGS
 from core import richtext, directives
 
+# Ett ord: bokstäver (även svenska), siffror och apostrof — samma avgränsning
+# som core/autocorrect.py använder för hela ord.
+_WORD_PATTERN = r"[\w\u00c0-\u024f']+"
+
+
+def _all_blocks(document):
+    """Alla textblock i ett dokument, i ordning."""
+    block = document.begin()
+    while block.isValid():
+        yield block
+        block = block.next()
+
+
 class MainWindow(QMainWindow):
     def __init__(self, ai_client, dictation_engine, theme_mgr, config_mgr):
         super().__init__()
@@ -388,6 +401,10 @@ class MainWindow(QMainWindow):
         self.act_copy = self._add_action(self.menu_edit, _("menu_edit_copy"), lambda: self.active_canvas.copy(), "Ctrl+C")
         self.act_paste = self._add_action(self.menu_edit, _("menu_edit_paste"), lambda: self.active_canvas.paste(), "Ctrl+V")
         self.act_select_all = self._add_action(self.menu_edit, _("menu_edit_select_all"), lambda: self.active_canvas.selectAll(), "Ctrl+A")
+        self.menu_edit.addSeparator()
+        self.act_find = self._add_action(self.menu_edit, _("menu_edit_find"), self.open_find, "Ctrl+F")
+        self.act_find_replace = self._add_action(self.menu_edit, _("menu_edit_find_replace"), lambda: self.open_find(with_replace=True), "Ctrl+H")
+        self.act_autocorrect = self._add_action(self.menu_edit, _("menu_edit_autocorrect"), self.run_autocorrect, "Ctrl+Shift+K")
 
         # View Menu
         self.menu_view = mb.addMenu(_("menu_view"))
@@ -1187,6 +1204,87 @@ class MainWindow(QMainWindow):
         self._save_project_manifest()
         self.scene_inspector.set_scene(self.project, self.project.by_id(node.id))
         self.status_bar.showMessage(_("exercise_saved"), 5000)
+
+    def open_find(self, with_replace: bool = False) -> None:
+        """Sökrutan (R02.16). Modulen har funnits hela tiden — nu nås den.
+
+        Icke-modal, för man ska kunna skriva vidare medan rutan står öppen; en
+        modal ruta hade låst texten man söker i. Dokumentet hämtas genom en
+        funktion i stället för att ges en gång, så rutan följer med när man
+        byter scen eller vy.
+        """
+        from ui.find_replace_dialog import FindReplaceDialog
+
+        if getattr(self, "find_dialog", None) is None:
+            self.find_dialog = FindReplaceDialog(
+                lambda: self.active_canvas.document() if self.active_canvas else None,
+                self, with_replace=with_replace)
+        else:
+            self.find_dialog.with_replace = with_replace
+        if with_replace:
+            self.find_dialog.input_replace.setFocus()
+        else:
+            self.find_dialog.input_find.setFocus()
+        self.find_dialog.input_find.selectAll()
+        self.find_dialog.show()
+        self.find_dialog.raise_()
+        self.find_dialog.activateWindow()
+
+    def run_autocorrect(self) -> bool:
+        """Autokorrigering och typografi över scenen (R02.12).
+
+        Allt sker i **ett** edit block: ett ångra-steg tar tillbaka hela
+        körningen. Bara de områden som faktiskt skiljer skrivs om — ett helt
+        stycke i taget hade plattat ut fet och kursiv stil i resten av det — och
+        rättelserna samlas först och skrivs bakifrån, eftersom ett block blir
+        ogiltigt så snart dokumentet ändras.
+        """
+        from core.autocorrect import Autocorrect, changed_spans
+        from core.find_replace import find_all
+
+        canvas = self.active_canvas
+        if canvas is None:
+            return False
+        document = canvas.document()
+        if document is None or not document.toPlainText().strip():
+            self.status_bar.showMessage(_("autocorrect_none"), 5000)
+            return False
+
+        motor = Autocorrect()
+        rattelser = []
+        # Typografin per stycke: raka citattecken blir svenska och tre punkter
+        # blir ett tecken. Bara själva tecknet byts, resten av stycket står stilla.
+        for block in _all_blocks(document):
+            rent = block.text()
+            for del_start, del_slut, ny_text in changed_spans(rent, motor.apply_typography(rent)):
+                rattelser.append((block.position() + del_start,
+                                  block.position() + del_slut, ny_text))
+        # Sedan orden, ett i taget, ur samma dokument.
+        for traff in find_all(document, _WORD_PATTERN, regex=True):
+            rattat = motor.apply(traff.text)
+            if rattat != traff.text:
+                rattelser.append((traff.start, traff.start + traff.length, rattat))
+
+        markor = QTextCursor(document)
+        markor.beginEditBlock()
+        sista = None
+        try:
+            for start, slut, ny_text in sorted(rattelser, key=lambda r: r[0], reverse=True):
+                if sista is not None and slut > sista:
+                    continue          # ligger i ett område som redan skrivits
+                markor.setPosition(start)
+                markor.setPosition(slut, QTextCursor.MoveMode.KeepAnchor)
+                markor.insertText(ny_text)
+                sista = start
+        finally:
+            markor.endEditBlock()
+
+        if rattelser:
+            self.is_modified = True
+            self.status_bar.showMessage(_("autocorrect_done", n=len(rattelser)), 6000)
+            return True
+        self.status_bar.showMessage(_("autocorrect_none"), 5000)
+        return False
 
     def _open_review(self) -> None:
         """Vad som ändrats sedan senaste punkten (R02.1).
@@ -2182,6 +2280,9 @@ class MainWindow(QMainWindow):
         self.act_copy.setText(_("menu_edit_copy"))
         self.act_paste.setText(_("menu_edit_paste"))
         self.act_select_all.setText(_("menu_edit_select_all"))
+        self.act_find.setText(_("menu_edit_find"))
+        self.act_find_replace.setText(_("menu_edit_find_replace"))
+        self.act_autocorrect.setText(_("menu_edit_autocorrect"))
 
         self.menu_view.setTitle(_("menu_view"))
         self.act_view_sidebar.setText(_("menu_view_ai_sidebar"))

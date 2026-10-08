@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from typing import cast  # noqa: E402
 
 from PyQt6.QtWidgets import QApplication  # noqa: E402
-from PyQt6.QtGui import QImage, QColor, QTextDocument  # noqa: E402
+from PyQt6.QtGui import QImage, QColor, QTextDocument, QTextCursor  # noqa: E402
 
 from core import templates, print_style  # noqa: E402
 from core.charts import ChartRenderer, PALETTES  # noqa: E402
@@ -1772,6 +1772,63 @@ def main() -> int:
     ruta3.close()
     win.editor.document.setModified(False)
     win.is_modified = False
+
+    print("\n36. Sök och ersätt, och autokorrigering (fas 4.9 och 4.12)")
+
+    text36 = ('<p>Jag <b>skrev</b> teh bok och sa "hej"...</p>'
+              '<p>Adressen var seperat skriven.</p>')
+    ovningsbok.write(ovningsscen.id, text36)
+    win._show_scene_html(ovningsscen.id, text36)
+
+    # 4.9: typografin och orden rättas, och formateringen runt omkring står kvar
+    check(win.run_autocorrect(), "autokorrigeringen hittar något att rätta")
+    efter36 = win.editor.document.toPlainText()
+    check("the bok" in efter36, f"ordet rättas ({efter36[:24]!r})")
+    check("”hej”" in efter36 and "…" in efter36,
+          f"och typografin blir svensk — citattecken och ellips")
+    check("separat skriven" in efter36, f"och fler fel i samma scen rättas")
+    markor36 = win.editor.document.find("skrev")
+    inne = QTextCursor(win.editor.document)
+    inne.setPosition(markor36.selectionStart() + 1)
+    check(int(inne.charFormat().fontWeight()) > 400,
+          f"och fetstilen runt ordet står kvar (vikt {int(inne.charFormat().fontWeight())})")
+    check(not win.run_autocorrect(), "och en gång till hittar ingenting att rätta")
+    # 4.12: sökrutan
+    win.open_find()
+    ruta36 = win.find_dialog
+    check(ruta36 is not None and not ruta36.isModal(),
+          "sökrutan är icke-modal — man ska kunna skriva medan den står öppen")
+    ruta36.input_find.setText("källaren")
+    check("0" in ruta36.lbl_status.text() or "Inga" in ruta36.lbl_status.text(),
+          f"och räknaren säger att ordet inte finns ({ruta36.lbl_status.text()!r})")
+    ruta36.input_find.setText("bok")
+    check("1 träff" in ruta36.lbl_status.text() and "träffar" not in ruta36.lbl_status.text(),
+          f"och räknar träffarna ({ruta36.lbl_status.text()!r})")
+    ruta36._sok()
+    valt = win.editor.textCursor().selectedText()
+    check(valt == "bok", f"sök nästa markerar träffen i texten ({valt!r})")
+
+    # ersättning, och ett ångra-steg för hela Ersätt alla
+    win.editor.document.clearUndoRedoStacks()
+    ruta36.input_find.setText("bok")
+    ruta36.input_replace.setText("volym")
+    ruta36._ersatt_alla()
+    efter36b = win.editor.document.toPlainText()
+    check("volym" in efter36b and "bok" not in efter36b,
+          f"ersätt alla byter ut alla ({efter36b[:24]!r})")
+    win.editor.document.undo()
+    check("bok" in win.editor.document.toPlainText(),
+          "och ett ångra tar tillbaka hela ersättningen")
+
+    # mönster: reguljärt uttryck och bakåtreferens
+    ruta36.chk_regex.setChecked(True)
+    ruta36.input_find.setText(r"(skriv)en")
+    ruta36.input_replace.setText(r"\1et")
+    ruta36._ersatt_alla()
+    check("skrivet" in win.editor.document.toPlainText(),
+          f"och mönster med bakåtreferens fungerar "
+          f"({win.editor.document.toPlainText()[:34]!r})")
+    ruta36.close()
 
     print("\n35. AI-förslag i marginalen, och ett ångra-steg (fas 3.7 och 3.8)")
 

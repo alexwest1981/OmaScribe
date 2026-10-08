@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import difflib
 import re
 import sys
 import tempfile
@@ -137,8 +138,31 @@ class Autocorrect:
         self.rules_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def changed_spans(before: str, after: str) -> list[tuple[int, int, str]]:
+    """Varje sammanhängande ändring som (start, slut, ny text) — tom om lika.
+
+    Gränssnittet skriver bara om de här områdena i stället för hela stycket: ett
+    helt stycke i taget hade plattat ut fet och kursiv stil i resten av det.
+    Ändringarna ligger i stigande ordning, så de ska läggas på plats bakifrån.
+    """
+    if before == after:
+        return []
+    return [(i1, i2, after[j1:j2])
+            for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(
+                a=before, b=after, autojunk=False).get_opcodes()
+            if tag != "equal"]
+
+
 def _self_test() -> int:
     checks = 0
+
+    assert changed_spans("Hej", "Hej") == []
+    assert changed_spans('Sa "hej"', "Sa \u201dhej\u201d") == [(3, 4, "\u201d"), (7, 8, "\u201d")]
+    assert changed_spans("Hej", "Hej!") == [(3, 3, "!")]
+    # Två rättelser runt ett ord: ordet emellan ska inte röras, för där sitter
+    # formateringen. Det här är hela poängen med områdena i stället för ett svep.
+    assert changed_spans('Sa "hej" och ...', 'Sa \u201dhej\u201d och \u2026') == [
+        (3, 4, "\u201d"), (7, 8, "\u201d"), (13, 16, "\u2026")]
 
     def check(condition: bool) -> None:
         nonlocal checks

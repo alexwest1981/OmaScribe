@@ -270,8 +270,12 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       tack — alltså genererade sidor i boken, inte bara metadata. R05.4
 - [~] **5.5** Trycklayout: trim, gutter och spegelmarginaler **beräknas** nu (KDP:s trappa 9,6–22,3 mm
       efter sidantal, ytterkant 6,4 mm, +3,2 mm med blöd) och skrivs in i sidinställningarna med
-      `mirror_margins`, udda/ämn sidväxling och folio längst ner. **Kvar:** utskriftsvägen ska
-      *verkställa* speglingen (sidindex → inner/ytter, samma sak som 0.2 pekar på), kapitelstart på
+      `mirror_margins`, udda/ämn sidväxling och folio längst ner. **Och utskriftsvägen verkställer
+      speglingen:** en speglad profil får samma marginal på båda sidor, lika med den inre (guttern),
+      så att innermarginalen aldrig hamnar på fel sida i en färdig bok — provat på skrivarens egen
+      sidlayout (12,7/12,7 med spegling, 6,4/12,7 utan, toppmarginalen orörd). **Kvar:** den *riktiga*
+      växlingen mellan udda och jämn sida kräver en paginerad målare (sidindex → inner/ytter) — tills
+      någon ska trycka är den symmetriska marginalen aldrig fel, bara frikostig — samt kapitelstart på
       höger sida och blanka fyllnadssidor. R05.5 (+ 0.2)
 - [~] **5.6** Ryggbredd och omslagsmått **räknas** enligt kanalens formel (KDP: sidantal × 0,0572 mm
       för vitt papper, 0,0635 för crème, 0,0596 för premiumfärg) och omslaget blir bleed + baksida +

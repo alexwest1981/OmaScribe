@@ -1816,6 +1816,47 @@ def main() -> int:
     win.editor.document.setModified(False)
     win.is_modified = False
 
+    print("\n44. Spegelvända marginaler i utskriften (fas 5.5, och 0.2)")
+
+    from PyQt6.QtPrintSupport import QPrinter
+    from PyQt6.QtGui import QPageLayout as QPageLayout44
+
+    # Eget namn: en import inuti main() skuggar namnet för hela funktionen, och
+    # exportkontrollerna tidigare i main() använder just DocumentManager.
+    from core.doc_manager import DocumentManager as DocManager44
+    from core.publishing import mirrored_margins
+
+    check(mirrored_margins({"margin_left_mm": 6.4, "margin_right_mm": 12.7,
+                            "mirror_margins": True}) == (12.7, 12.7),
+          "en speglad tryckprofil får samma marginal på båda sidor")
+    check(mirrored_margins({"margin_left_mm": 6.4, "margin_right_mm": 12.7}) == (6.4, 12.7),
+          "och utan spegling står de som de är")
+
+    def skriv_pdf(mirror: bool):
+        ut = os.path.join(tempfile.mkdtemp(prefix="pdf44-"), "prov.pdf")
+        skrivare = QPrinter(QPrinter.PrinterMode.HighResolution)
+        skrivare.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
+        skrivare.setOutputFileName(ut)
+        doc = QTextDocument()
+        doc.setHtml("<p>Ett stycke text att sätta marginaler kring, så att arket syns.</p>")
+        DocManager44.print_document_to_printer(doc, skrivare, {
+            "mirror_margins": mirror,
+            "margin_left_mm": 6.4, "margin_right_mm": 12.7,
+            "margin_top_mm": 15.0, "margin_bottom_mm": 20.0,
+            "page_numbering": False, "clean_print": True, "page_size": "A4"})
+        m = skrivare.pageLayout().margins(QPageLayout44.Unit.Millimeter)
+        return ut, (round(m.left(), 1), round(m.right(), 1), round(m.top(), 1))
+
+    fil44, mått44 = skriv_pdf(True)
+    check(os.path.exists(fil44) and os.path.getsize(fil44) > 500,
+          f"utskriften skriver en fil även med spegling ({os.path.getsize(fil44)} byte)")
+    check(mått44[0] == mått44[1] == 12.7,
+          f"och innermarginalen hamnar på båda sidor, lika stor ({mått44})")
+    _, mått44b = skriv_pdf(False)
+    check(mått44b[0] == 6.4 and mått44b[1] == 12.7,
+          f"medan en ospeglad sida behåller sina egna marginaler ({mått44b})")
+    check(mått44[2] == 15.0, f"och toppmarginalen rörs inte ({mått44[2]} mm)")
+
     print("\n43. EPUB-exporten med bokens metadata (fas 5.2, 5.4, 5.8)")
 
     import zipfile

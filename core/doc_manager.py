@@ -227,10 +227,15 @@ class DocumentManager:
         orient = QPageLayout.Orientation.Landscape if is_landscape else QPageLayout.Orientation.Portrait
         page_size_id = QPageSize.PageSizeId.Letter if cfg.get("page_size") == "Letter" else QPageSize.PageSizeId.A4
         
+        # En speglad tryckprofil (gutter inåt) får samma marginal på båda sidor:
+        # annars hamnar innermarginalen på fel sida varannan sida i boken.
+        from core.publishing import mirrored_margins
+
+        vänster_mm, höger_mm = mirrored_margins(cfg)
         margins = QMarginsF(
-            float(cfg.get("margin_left_mm", 20.0)),
+            vänster_mm,
             float(cfg.get("margin_top_mm", 20.0)),
-            float(cfg.get("margin_right_mm", 20.0)),
+            höger_mm,
             float(cfg.get("margin_bottom_mm", 20.0))
         )
         page_layout = QPageLayout(QPageSize(page_size_id), orient, margins, QPageLayout.Unit.Millimeter)

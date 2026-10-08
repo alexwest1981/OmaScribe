@@ -140,6 +140,26 @@ def page_settings_for(trim: str, pages: int, paper: str = "white", bleed: bool =
     }
 
 
+def mirrored_margins(settings: dict) -> tuple:
+    """Vänster- och högermarginal för utskrift, av en speglad tryckprofil.
+
+    Är spegling på sätts **samma marginal på båda sidor**, lika med den inre
+    (gutter): det är rätt i tryck — innermarginalen blir aldrig för liten, vilket
+    är det fel som syns i en färdig bok — och priset är en något generös
+    ytterkant.
+
+    ponytail: riktig växling mellan udda och jämn sida kräver en paginerad
+    målare (sidindex → inner/ytter), inte en konstant margin-box. Det är byggt
+    när någon faktiskt ska trycka: tills dess är den symmetriska marginalen
+    aldrig fel, bara frikostig.
+    """
+    vänster = float(settings.get("margin_left_mm", 20.0) or 20.0)
+    höger = float(settings.get("margin_right_mm", 20.0) or 20.0)
+    if not settings.get("mirror_margins"):
+        return (vänster, höger)
+    return (max(vänster, höger), max(vänster, höger))
+
+
 def warnings(trim: str, pages: int, paper: str = "white", bleed: bool = False,
              channel: str = "kdp") -> list:
     """Det kanalen skulle klaga på, sagt innan filen skickas."""
@@ -224,6 +244,17 @@ def _self_test() -> int:
     check("och bara KDP har en formel",
           [n for n, k in CHANNELS.items() if k["formula"]], ["kdp"])
     check("alla bär en källa", all(k["source"] in SOURCES for k in CHANNELS.values()), True)
+
+    # Spegelvändningen: samma marginal på båda sidor, lika med den inre
+    check("utan spegling står marginalerna som de är",
+          mirrored_margins({"margin_left_mm": 6.4, "margin_right_mm": 12.7}), (6.4, 12.7))
+    check("med spegling blir båda den inre",
+          mirrored_margins({"margin_left_mm": 6.4, "margin_right_mm": 12.7,
+                            "mirror_margins": True}), (12.7, 12.7))
+    check("och en profil utan speglingsflagga rörs inte",
+          mirrored_margins({"margin_left_mm": 20.0, "margin_right_mm": 20.0}), (20.0, 20.0))
+    check("tomma värden faller tillbaka på 20 mm",
+          mirrored_margins({}), (20.0, 20.0))
     return grönt
 
 

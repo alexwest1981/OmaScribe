@@ -531,3 +531,25 @@
   omslagsarket (5.6), front matter som sidor (5.4), DOCX med namngivna Word-stilar (5.7), EPUBCheck
   som val (5.8), exportpaket med checksummor och preflight (5.9), svensk/engelsk sättning (5.10) och
   samma roller till EPUB-CSS/PDF/DOCX (5.3).
+
+### Fas 5: spegelvändningen verkställs i utskriften (5.5, och 0.2)
+
+- **Status:** grindad (596 rökprov + 54 renhetsprov + modulernas egna, GRÖNT).
+- **Problemet:** `page_settings_for` ger en tryckprofil *asymmetriska* marginaler — ytterkant till
+  vänster, gutter till höger — men utskriftsvägen satte dem rakt av på **varje** sida. I en färdig bok
+  hamnar då innermarginalen på utsidan varannan sida. Det är felet 0.2 pekade på och som forskningen
+  varnar för.
+- **Lösningen:** regeln ligger som en ren funktion, `publishing.mirrored_margins()`, och utskriften
+  använder den. Är spegling på sätts **samma marginal på båda sidor, lika med den inre**: rätt i tryck
+  (innermarginalen blir aldrig för liten), priset en något generös ytterkant. Utan spegling står
+  marginalerna som de är.
+- **Kanten är märkt i koden** (`ponytail:`): den riktiga växlingen mellan udda och jämn sida kräver en
+  paginerad målare, inte en konstant margin-box. Den byggs när någon faktiskt ska trycka; tills dess är
+  den symmetriska marginalen aldrig *fel*, bara frikostig. **Ett medvetet val, inte en glömd rad.**
+- **Provat på skrivarens egen sidlayout:** speglad profil → (12,7; 12,7; 15,0), ospeglad → (6,4; 12,7;
+  15,0), toppmarginalen orörd i båda fallen, och en PDF skriven (8 745 byte). Kontrollen är således
+  falsifierbar i båda riktningarna.
+- **Tredje gången samma familj av fel:** en **funktionslokal bindning skuggar namnet för hela
+  funktionen.** I rökprovets `main()` gjorde en sen `from core.doc_manager import DocumentManager` att
+  exportkontrollerna *tidigare* i samma funktion fick `UnboundLocalError` — samma sak som `_`-skuggan
+  i fas 4 och 5. Rättat med ett eget namn i avsnittet.

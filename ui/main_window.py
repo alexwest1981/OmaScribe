@@ -419,6 +419,10 @@ class MainWindow(QMainWindow):
         self.act_exp_md = self._add_action(self.menu_file, _("menu_file_export_md"), self.export_markdown)
         self.act_exp_html = self._add_action(self.menu_file, _("menu_file_export_html"), self.export_html)
         self.act_exp_epub = self._add_action(self.menu_file, _("menu_file_export_epub"), self.export_epub_book)
+        # Kompileringen (5.15) samlar det de andra gör var för sig: urval,
+        # delning och namn — med sparade profiler per bok.
+        self.act_compile = self._add_action(self.menu_file, _("menu_file_compile"),
+                                            self.open_compile_dialog)
         self.act_release = self._add_action(self.menu_file, _("menu_file_release"), self.release_book)
         self.act_epubcheck = self._add_action(self.menu_file, _("menu_file_epubcheck"),
                                               self.check_epub_with_epubcheck)
@@ -1966,6 +1970,7 @@ class MainWindow(QMainWindow):
         preview.exec()
 
     def export_pdf(self):
+        """Hela boken som PDF. Urval, delning och profiler görs i kompileringen."""
         doc = self.editor.document
         if doc is None:
             return
@@ -2052,6 +2057,23 @@ class MainWindow(QMainWindow):
         self.config.set("page_settings", self.page_settings)
         self.editor.set_page_settings(self.page_settings)
         self.status_bar.showMessage(_("pagesetup_applied"), 4000)
+
+    def open_compile_dialog(self) -> None:
+        """Kompilera det som är öppet, eller markeringen (5.15).
+
+        Fönstret gör jobbet: valen, profilen och filerna. Här kontrolleras bara
+        att det finns något att kompilera — en editor utan dokument skall säga
+        det, inte öppna ett fönster som inte kan göra något.
+        """
+        if self.project is None:
+            return
+        if self.editor is None or self.editor.document is None:
+            QMessageBox.information(self, _("compile_title"), _("compile_empty"))
+            return
+        from ui.compile_dialog import CompileDialog
+
+        dlg = CompileDialog(self.project, self.editor, self)
+        dlg.exec()
 
     def export_docx(self):
         fpath, selected_filter = QFileDialog.getSaveFileName(

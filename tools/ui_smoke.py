@@ -1760,12 +1760,12 @@ def main() -> int:
           f"och raden visar att den ångras ({ruta.lst_changes.item(0).text()[:12]!r})")
     check(ruta.lbl_status.text() == tr("review_status", kept=2, total=3),
           f"räknaren följer kryssen ({ruta.lbl_status.text()})")
-    ruta._sätt_alla(Qt.CheckState.Unchecked)
+    ruta._set_all(Qt.CheckState.Unchecked)
     check(ruta.preview_text() == gammal_text, "ångra alla ger den gamla texten")
 
     # verkställ: skriver enligt besluten och sparar texten före som egen punkt
     antal_fore = len(ovningsbok.snapshots().list(str(ovningsbok.scene_path(scen.id))))
-    ruta._sätt_alla(Qt.CheckState.Checked)
+    ruta._set_all(Qt.CheckState.Checked)
     ruta.lst_changes.item(2).setCheckState(Qt.CheckState.Unchecked)   # avvisa tillägget
     beslut = ruta.decisions()
     ruta.apply_requested.connect(lambda b: win._apply_review(fore, efter, b))
@@ -2987,6 +2987,44 @@ def main() -> int:
     check(any(e["when"] == "dag 7" and e["text"] == "Nyckeln byter ägare"
               for e in omlast51.events),
           f"och händelsen ligger i projektfilen ({omlast51.events})")
+
+    print("\n52. Kompileringen (fas 5.15)")
+
+    from ui.compile_dialog import CompileDialog
+    from core import compile as cmp52
+
+    fångad52 = []
+    ursprunglig52 = CompileDialog.exec
+    CompileDialog.exec = lambda self: (fångad52.append(self), 0)[1]
+    try:
+        win.act_compile.trigger()
+    finally:
+        CompileDialog.exec = ursprunglig52
+    check(len(fångad52) == 1, "menyvalet Kompilera öppnar fönstret")
+    dialog52 = fångad52[0]
+
+    ut52 = tempfile.mkdtemp(prefix="kompilat52-")
+    dialog52.edit_folder.setText(ut52)
+    dialog52.combo_format.setCurrentIndex(cmp52.FORMATS.index(cmp52.FORMAT_MD))
+    dialog52.edit_template.setText("{n} - {title}")
+    dialog52.chk_chapter.setChecked(False)
+    filer52 = dialog52.run_compile()
+    check(len(filer52) == 1 and os.path.exists(filer52[0]),
+          f"en fil skrivs till mappen ({[os.path.basename(f) for f in filer52]})")
+    check(os.path.getsize(filer52[0]) > 0, "och den har innehåll")
+    check(dialog52.lbl_result.text() != "", "och fönstret säger vad som blev")
+
+    dialog52.chk_chapter.setChecked(True)
+    filer52b = dialog52.run_compile()
+    check(len(filer52b) >= 1 and all(os.path.exists(f) for f in filer52b),
+          f"och en fil per kapitel skrivs också ({len(filer52b)} filer)")
+
+    cmp52.save_profile(ovningsbok, "Provfil", **dialog52.settings())
+    ovningsbok.save()
+    omlast52 = type(ovningsbok).load(ovningsbok.root)
+    profil52 = cmp52.profile_for(omlast52, "Provfil")
+    check(profil52 is not None and profil52.get("per_chapter") is True,
+          f"och kompileringsprofilen ligger i projektfilen ({profil52})")
 
     print("\n" + "=" * 66)
     if failures:

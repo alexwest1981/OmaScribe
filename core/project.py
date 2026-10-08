@@ -312,6 +312,9 @@ class Project:
         # Händelser (2.23): tid, beskrivning och de scener den spelas i. En
         # händelse kan återanvändas — samma avslöjande nämns i flera scener.
         self.events: list[dict] = []              # [{"id","when","text","scenes":[ids]}]
+        # Utskriftsprofiler (5.1/5.15): namngivna kompileringsval per bok, så en
+        # tryckfärdig inställning inte behöver sättas om varje gång.
+        self.profiles: list[dict] = []            # [{"name","fmt","scope",...}]
         self._words: dict[str, int] = {}          # cache per nod-id
 
     # ------------------------------------------------------------- skapa/ladda
@@ -370,6 +373,11 @@ class Project:
             for e in (data.get("events") or [])
             if e.get("id")
         ]
+        project.profiles = [
+            {**{k: v for k, v in p.items() if k != "name"}, "name": str(p.get("name", ""))}
+            for p in (data.get("profiles") or [])
+            if p.get("name")
+        ]
         return project
 
     def save(self) -> None:
@@ -382,6 +390,7 @@ class Project:
             "variants": [dict(v) for v in self.variants],
             "links": [dict(l) for l in self.links],
             "events": [dict(e) for e in self.events],
+            "profiles": [dict(p) for p in self.profiles],
         }
         self.root.mkdir(parents=True, exist_ok=True)
         atomic_write_text(

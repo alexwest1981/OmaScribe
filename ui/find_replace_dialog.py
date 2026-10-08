@@ -123,7 +123,7 @@ class FindReplaceDialog(QDialog):
         # Nästa träff efter markören, och runt från början när texten tar slut.
         position = self.cursor_position()
         nästa = next((m for m in träffar if m.start > position), träffar[0])
-        self._välj(nästa)
+        self._select(nästa)
         index = träffar.index(nästa) + 1
         self.lbl_status.setText(_("find_of", n=index, total=len(träffar), text=var))
 
@@ -136,7 +136,7 @@ class FindReplaceDialog(QDialog):
             return 0
         return canvas.textCursor().position()
 
-    def _välj(self, träff) -> None:
+    def _select(self, träff) -> None:
         dokument = self.document()
         markör = QTextCursor(dokument)
         markör.setPosition(träff.start)

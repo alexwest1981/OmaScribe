@@ -1,8 +1,8 @@
 """ui/events_dialog.py — händelsetabellen (2.23).
 
-En rad per händelse: tid, vad som händer och vilka scener den spelas i. Tid och
+En rad per _event: tid, vad som händer och vilka scener den spelas i. Tid och
 beskrivning skrivs direkt i tabellen; scenkopplingen görs med knapparna, som
-kopplar **scenen som är öppen** till den valda händelsen — samma händelse kan
+kopplar **scenen som är öppen** till den valda händelsen — samma _event kan
 alltså höra till flera scener, och en scen kan ha flera händelser.
 
 Ändringarna går rakt in i projektet (som med all annan metadata) och `changed`
@@ -193,7 +193,7 @@ def _self_check() -> int:
         project = Project.create(root, "Händelsedialog", template="enkel")
         scen = project.manuscript()[0]
 
-        def händelse(eid):
+        def _event(eid):
             e = events_mod.by_id(project, eid)
             if e is None:
                 raise AssertionError(f"händelsen {eid} finns inte")
@@ -203,16 +203,16 @@ def _self_check() -> int:
         kolla(dialog.table.rowCount() == 0, "en tom tabell utan händelser")
 
         eid = dialog.add_event()
-        kolla(dialog.table.rowCount() == 1, "en händelse läggs till")
+        kolla(dialog.table.rowCount() == 1, "en _event läggs till")
         kolla(dialog.selected_id() == eid, f"och raden blir markerad ({dialog.selected_id()})")
-        kolla(händelse(eid)["scenes"] == [scen.id],
+        kolla(_event(eid)["scenes"] == [scen.id],
               "med den öppna scenen kopplad")
 
         dialog.table.item(0, COL_WHEN).setText("dag 3")
         dialog.table.item(0, COL_TEXT).setText("Anna hittar nyckeln")
-        kolla(händelse(eid)["when"] == "dag 3",
+        kolla(_event(eid)["when"] == "dag 3",
               "tid skrivs till projektet")
-        kolla(händelse(eid)["text"] == "Anna hittar nyckeln",
+        kolla(_event(eid)["text"] == "Anna hittar nyckeln",
               "och beskrivningen med den")
         kolla(dialog.table.item(0, COL_SCENES).text() == scen.title,
               f"scenkolumnen visar rubriken ({dialog.table.item(0, COL_SCENES).text()!r})")
@@ -222,12 +222,12 @@ def _self_check() -> int:
         kolla(dialog.detach_current_scene() is False, "en oscen kan inte lossas")
         dialog.current_scene_id = scen.id
         kolla(dialog.detach_current_scene() is True, "men den kopplade kan")
-        kolla(händelse(eid)["scenes"] == [], "och kopplingen försvinner")
+        kolla(_event(eid)["scenes"] == [], "och kopplingen försvinner")
         kolla(dialog.attach_current_scene() is True, "och kan sättas tillbaka")
 
         tagen = []
         dialog.changed.connect(lambda: tagen.append(1))
-        kolla(dialog.remove_event() is True, "en händelse kan tas bort")
+        kolla(dialog.remove_event() is True, "en _event kan tas bort")
         kolla(dialog.table.rowCount() == 0, "och raden försvinner")
         kolla(tagen != [], "och ändringen sägs till om")
     finally:

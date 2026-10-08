@@ -1,7 +1,7 @@
 """core/events.py — händelser kopplade till scener (2.23).
 
-Datahalvan av tidslinjen: en händelse har en tid i berättelsen, en beskrivning
-och de scener den spelas i. En händelse kan **återanvändas** — samma avslöjande
+Datahalvan av tidslinjen: en _event har en tid i berättelsen, en beskrivning
+och de scener den spelas i. En _event kan **återanvändas** — samma avslöjande
 nämns i flera scener — så kopplingen är en lista av scen-id:n, inte ett fält på
 scenen. Scenen har sin egen tid (`when`) för *var* den ligger; händelsen har sin
 för *vad* som händer, och de två behöver inte vara samma.
@@ -29,7 +29,7 @@ def by_id(project, event_id: str) -> dict | None:
 
 
 def add_event(project, text: str = "", when: str = "", scene_ids=()) -> dict:
-    """Ny händelse. Tom beskrivning är tillåten — man skriver ofta tiden först."""
+    """Ny _event. Tom beskrivning är tillåten — man skriver ofta tiden först."""
     event = {"id": _new_id(), "when": str(when), "text": str(text),
              "scenes": [str(s) for s in scene_ids]}
     project.events.append(event)
@@ -39,7 +39,7 @@ def add_event(project, text: str = "", when: str = "", scene_ids=()) -> dict:
 def update_event(project, event_id: str, **fields) -> dict:
     event = by_id(project, event_id)
     if event is None:
-        raise KeyError(f"okänd händelse: {event_id}")
+        raise KeyError(f"okänd _event: {event_id}")
     for key in ("when", "text"):
         if key in fields:
             event[key] = str(fields[key])
@@ -87,7 +87,7 @@ def ordered(project) -> list[dict]:
 
 
 def scene_titles(project, event: dict) -> list[str]:
-    """Scenernas rubriker för en händelse — id:n är till för koden, inte läsaren."""
+    """Scenernas rubriker för en _event — id:n är till för koden, inte läsaren."""
     ut = []
     for node_id in event["scenes"]:
         try:
@@ -116,7 +116,7 @@ def _self_check() -> int:
         forst = project.manuscript()[0]
         andra = project.add_node("scene", "Andra")
 
-        def händelse(eid, projekt=None):
+        def _event(eid, projekt=None):
             """Händelsen, eller ett tydligt fel — provet skall inte gissa."""
             e = by_id(projekt or project, eid)
             if e is None:
@@ -133,7 +133,7 @@ def _self_check() -> int:
         kolla(attach(project, e1["id"], andra.id) is True, "en scen kan kopplas till")
         kolla(attach(project, e1["id"], andra.id) is False,
               "och samma scen två gånger blir en koppling")
-        kolla(len(händelse(e1["id"])["scenes"]) == 2, "två scener på samma händelse")
+        kolla(len(_event(e1["id"])["scenes"]) == 2, "två scener på samma _event")
         kolla(detach(project, e1["id"], andra.id) is True, "och en koppling kan lossas")
         kolla(detach(project, e1["id"], andra.id) is False, "en gång räcker")
 
@@ -144,24 +144,24 @@ def _self_check() -> int:
         kolla(events_of(project, andra.id) == [], "en scen utan händelser ger en tom lista")
 
         update_event(project, e1["id"], when="dag 5", text="Anna hittar nyckeln i lådan")
-        igen = händelse(e1["id"])
+        igen = _event(e1["id"])
         kolla(igen["when"] == "dag 5" and "lådan" in igen["text"],
-              "en händelse går att ändra")
+              "en _event går att ändra")
         kolla(scene_titles(project, igen) == [forst.title],
               f"och scenernas rubriker går att läsa ({scene_titles(project, igen)})")
 
         project.save()
         omlast = Project.load(project.root)
-        kolla(len(omlast.events) == 2 and händelse(e1["id"], omlast)["when"] == "dag 5",
+        kolla(len(omlast.events) == 2 and _event(e1["id"], omlast)["when"] == "dag 5",
               "händelserna överlever en sparning")
-        kolla(händelse(e1["id"], omlast)["scenes"] == [forst.id],
+        kolla(_event(e1["id"], omlast)["scenes"] == [forst.id],
               "med sina scenkopplingar")
 
         project.delete_node(andra.id)
-        kolla(scene_titles(project, händelse(e1["id"])) == [forst.title],
+        kolla(scene_titles(project, _event(e1["id"])) == [forst.title],
               "en borttagen scen lämnar ingen tom rad i listan")
 
-        kolla(remove_event(project, e2["id"]) is True, "en händelse kan tas bort")
+        kolla(remove_event(project, e2["id"]) is True, "en _event kan tas bort")
         kolla(remove_event(project, e2["id"]) is False, "och en gång räcker")
         kolla(len(project.events) == 1, f"kvar är en ({len(project.events)})")
         try:

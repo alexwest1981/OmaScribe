@@ -31,7 +31,7 @@ def _kort(text: str, längd: int = 84) -> str:
     return en_rad if len(en_rad) <= längd else en_rad[:längd - 1] + "…"
 
 
-def _förhandsvisning(before_html: str, after_html: str, decisions) -> str:
+def _preview(before_html: str, after_html: str, decisions) -> str:
     """Texten som den blir — läsbar, stycke för stycke."""
     resultat = apply_changes(before_html, after_html, decisions)
     return "\n\n".join(plain(block) for block in blocks(resultat) if plain(block))
@@ -103,10 +103,10 @@ class ReviewDialog(QDialog):
 
         knappar = QHBoxLayout()
         self.btn_keep_all = QPushButton(_("review_keep_all"))
-        self.btn_keep_all.clicked.connect(lambda: self._sätt_alla(Qt.CheckState.Checked))
+        self.btn_keep_all.clicked.connect(lambda: self._set_all(Qt.CheckState.Checked))
         knappar.addWidget(self.btn_keep_all)
         self.btn_revert_all = QPushButton(_("review_revert_all"))
-        self.btn_revert_all.clicked.connect(lambda: self._sätt_alla(Qt.CheckState.Unchecked))
+        self.btn_revert_all.clicked.connect(lambda: self._set_all(Qt.CheckState.Unchecked))
         knappar.addWidget(self.btn_revert_all)
         knappar.addStretch(1)
         self.btn_apply = QPushButton(_("review_apply"))
@@ -135,9 +135,9 @@ class ReviewDialog(QDialog):
                 else "revert" for i in range(self.lst_changes.count())]
 
     def preview_text(self) -> str:
-        return _förhandsvisning(self.before, self.after, self.decisions())
+        return _preview(self.before, self.after, self.decisions())
 
-    def _sätt_alla(self, läge) -> None:
+    def _set_all(self, läge) -> None:
         self.lst_changes.blockSignals(True)
         for i in range(self.lst_changes.count()):
             self.lst_changes.item(i).setCheckState(läge)

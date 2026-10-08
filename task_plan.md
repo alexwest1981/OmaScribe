@@ -473,10 +473,30 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
 
       *Bonus, samma veva:* knapparnas verktygstips lovade Ctrl+Alt+0–8 utan att genvägarna fanns —
       nu finns de (nivå 0–8, där 4–8 är rollerna). Ett tips skall inte lova något som inte händer.
-- [ ] **5.15** Kompilera ett **urval** och spara flera utskriftsprofiler per bok: välj draft, en
-      del, en samling eller en aktiv markering och kompilera den som en platt lista — samt prefix,
-      kapitelnumrering, filnamnsmall och separata filer per kapitel. Scrivener Compile gör allt
-      detta; vår 5.9 släpper hela boken och vår 5.1 har "ett sparat publiceringsprojekt" kvar. R08
+- [x] **5.15** Kompilera ett **urval**, med **sparade profiler per bok** → `core/compile.py` +
+      `ui/compile_dialog.py`, i menyn under **Fil ▸ Kompilera…**
+
+      *Urvalet:* allt som är öppet (draft, del eller kapitel — läsvyn visar dem redan samlade) eller
+      **markeringen** i editorn. Markeringen utökas till hela block: en halv mening är inget urval,
+      och stycket runt den är det författaren menar. *Delningen:* en fil, eller **en fil per kapitel**
+      vid rubriknivå 1 — det som står *före* första rubriken blir ett eget kapitel, annars tappas en
+      dedikation bort. *Namnen:* en mall med `{n}`, `{title}` och `{project}`, med ett **riktigt**
+      filnamn i förhandsvisningen i stället för en beskrivning av mallen; tecken som `:` och `?` som
+      ett filnamn inte får innehålla tas bort, och två kapitel med samma rubrik blir `…-2` i stället
+      för att den ena skriver över den andra. *Profilerna:* namngivna val per bok i `project.json` —
+      vad 5.1 hade kvar som "ett sparat publiceringsprojekt". Alla fyra kanalerna (EPUB, DOCX, PDF,
+      Markdown) går genom de exportvägar som redan fanns — kompileringen bestämmer bara *vad* som ska
+      ut och *vart*.
+
+      Mätt: `core.compile` (20 kontroller), `ui.compile_dialog` (17) och `ui_smoke` avsnitt 52, som
+      går hela vägen från menyvalet till filen på disk och profilen i projektfilen. R08 → **klart**.
+
+      *Två fel som mätningen fångade på vägen, båda fixade:* (1) en position i dokumentets *slut* är
+      utanför dokumentet (`characterCount()`, inte ett giltigt markörläge) — sista kapitlet tappade
+      sin sista mening tyst; (2) **PyQt6 kraschar med segmenteringsfel** när en signal kopplas till en
+      metod med å/ä/ö i namnet (`sip` klarar inte namnet). Därför bytte fem identifierare namn och
+      `tools/identifier_check.py` vaktar regeln — koden skrivs på engelska, vilket råkar vara exakt
+      vad PyQt kräver.
 - [ ] **5.16** Tryckförberedelsen: widow/orphan-kontroll, PDF/X-1a:2003 med CMYK och inbäddade
       teckensnitt (Vellum publicerar exakt dessa krav i sin spec) samt en large print-utgåva
       (Atticus). Hör ihop med 5.5 och kräver den paginerade målaren. R08

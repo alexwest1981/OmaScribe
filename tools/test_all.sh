@@ -103,7 +103,10 @@ run "elementdialogen" "$PY" -m ui.elements_dialog
 run "relationsgrafen" "$PY" -m ui.codex_graph_dialog
 run "händelserna" "$PY" -m core.events
 run "händelsetabellen" "$PY" -m ui.events_dialog
+run "kompileringen" "$PY" -m core.compile
+run "kompilera-fönstret" "$PY" -m ui.compile_dialog
 run "i18n-nycklarna" "$PY" tools/i18n_keys_check.py
+run "identifierarna" "$PY" tools/identifier_check.py
 run "ui_smoke" "$PY" tools/ui_smoke.py
 run "print_purity" "$PY" tools/print_purity_check.py
 

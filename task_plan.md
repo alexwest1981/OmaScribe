@@ -266,8 +266,14 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 - [~] **5.4** Metadata och ISBN: författare, förlag och ISBN är nu **projektfält** (i
       projektöversikten, där baksidestexten bor) och går rakt in i EPUB:ens metadata — `dc:creator`,
       `dc:publisher`, `dc:identifier` och baksidestexten som `dc:description`. Provat att de överlever
-      till filen. **Kvar:** front matter som *sidor* — halvtitel, titelsida, kolofon, dedikation och
-      tack — alltså genererade sidor i boken, inte bara metadata. R05.4
+      till filen. **Och front matter som sidor:** EPUB:en får en genererad **titelsida** och en
+      **kolofon** (förlag, ISBN, år och rättighetsrad) ur bokens egna uppgifter — bokens första sidor är
+      uppgifter man *har*, inte text man skriver, och skrivna för hand ska de hållas i minne och
+      uppdateras manuellt när förlaget eller ISBN:t ändras. De står först i läsordningen och listar sig
+      inte själva i innehållsförteckningen. Provat: två filer, titel och författare på titelsidan,
+      ISBN/förlag/år i kolofonen, fyra poster i ryggraden och ingen frontmateria i innehållet. **Kvar:**
+      samma sidor i *utskriften* (där skriver författaren dem i dag) samt dedikation och tack som fält.
+      R05.4
 - [~] **5.5** Trycklayout: trim, gutter och spegelmarginaler **beräknas** nu (KDP:s trappa 9,6–22,3 mm
       efter sidantal, ytterkant 6,4 mm, +3,2 mm med blöd) och skrivs in i sidinställningarna med
       `mirror_margins`, udda/ämn sidväxling och folio längst ner. **Och utskriftsvägen verkställer

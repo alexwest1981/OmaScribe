@@ -3386,6 +3386,130 @@ def main() -> int:
     check(win.act_lang["en"].isCheckable() and not win.act_lang["en"].isChecked(),
           "med bara det aktiva språket förkryssat")
 
+    print("\n56. Fokusläget och menyraden")
+    # Menyraden är inte QMainWindow:s egen utan en QMenuBar inuti menywidgeten
+    # (setMenuWidget), så den göms och visas av koden och följer inte fönstret.
+    # Mätt: när läget avgjordes av isFullScreen() gick nästa tryck in i samma gren
+    # om fönsterhanteraren lämnat fullskärm själv — menyn kom då aldrig tillbaka.
+    på_editor56 = win.stack.currentIndex() == 1
+    win._set_focus_mode(False)
+    app.processEvents()
+    check(win.menu_bar.isVisible() and win.status_bar.isVisible(),
+          "utgångsläget har menyrad och statusfält")
+
+    win._toggle_focus_mode()
+    app.processEvents()
+    check(win.isFullScreen(), "F11 går till fullskärm")
+    check(not win.menu_bar.isVisible() and not win.status_bar.isVisible(),
+          "och gömmer menyrad och statusfält")
+    check(not win.toolbar.isVisible() and not win.sidebar.isVisible(),
+          "och verktygsraden och sidopanelen")
+
+    win._toggle_focus_mode()
+    app.processEvents()
+    check(not win.isFullScreen(), "F11 igen lämnar fullskärm")
+    check(win.menu_bar.isVisible() and win.status_bar.isVisible(),
+          "och menyraden kommer tillbaka")
+    if på_editor56:
+        check(win.toolbar.isVisible(), "och verktygsraden, i editorskärmen")
+
+    # Fönsterhanteraren kan lämna fullskärm på egen hand (sin egen genväg, eller
+    # sin egen hantering av F11). Då är isFullScreen() falsk medan menyn är borta
+    # — menyn skall tillbaka ändå, utan att användaren behöver veta varför.
+    win._toggle_focus_mode()
+    app.processEvents()
+    check(win.isFullScreen() and not win.menu_bar.isVisible(), "läget är på igen")
+    win.showNormal()
+    app.processEvents()
+    check(win.menu_bar.isVisible() and win.status_bar.isVisible(),
+          "lämnas fullskärmen av fönsterhanteraren kommer menyn tillbaka")
+    check(not getattr(win, "_focus_mode", True),
+          "och programmet vet att läget är av")
+    win._toggle_focus_mode()
+    app.processEvents()
+    check(win.isFullScreen() and not win.menu_bar.isVisible(),
+          "nästa F11 går in i läget igen, inte i samma gren som förut")
+    win._toggle_focus_mode()
+    app.processEvents()
+    check(win.menu_bar.isVisible(), "och ut igen, med menyn tillbaka")
+
+    print("\n57. Stilknapparna rör inte texten")
+    # Rapporterat av Alex 8/10: "markerar man en text och trycker på h1 så försvinner
+    # den". Ingen av vägarna som går att mäta lokalt tappade något tecken (dokumentet,
+    # HTML-rundturen, filen efter Ctrl+S, omläsningen, ritningen), så det som går att
+    # göra är att hålla hela matrisen mätt: varje stilknapp mot en markering som slutar
+    # inne i ett stycke och en som slutar exakt på ett blockgräns — det senare är
+    # fallet där Qt ser markeringen som noll tecken bred, och där core/richtext.py's
+    # egen docstring varnar för att ett grannblock kan tömmas.
+    stiltext57 = ("<p>Alfa stycket med text.</p><p>Beta stycket med text.</p>"
+                  "<p>Gamma stycket med text.</p><p>Delta stycket.</p>")
+    vantat57 = ("Alfa stycket med text.\nBeta stycket med text.\n"
+                "Gamma stycket med text.\nDelta stycket.")
+    knappar57 = [("Normal", win.toolbar.btn_style_normal), ("H1", win.toolbar.btn_style_h1),
+                 ("H2", win.toolbar.btn_style_h2), ("H3", win.toolbar.btn_style_h3),
+                 ("Citat", win.toolbar.btn_style_quote), ("Kod", win.toolbar.btn_style_code)]
+    tappade57 = []
+    for namn57, knapp57 in knappar57:
+        for sort57 in ("i stycket", "till blockgräns"):
+            ovningsbok.write(ovningsscen.id, stiltext57)
+            win._show_scene_html(ovningsscen.id, stiltext57)
+            for _i in range(3):
+                app.processEvents()
+            doc57 = win.editor.document
+            a57 = doc57.find("Beta").selectionStart()
+            b57 = (doc57.find("Gamma stycket").selectionEnd() if sort57 == "i stycket"
+                   else doc57.find("Gamma stycket").selectionStart())
+            mark57 = QTextCursor(doc57)
+            mark57.setPosition(a57)
+            mark57.setPosition(b57, QTextCursor.MoveMode.KeepAnchor)
+            win.editor.setTextCursor(mark57)
+            app.processEvents()
+            knapp57.click()
+            for _i in range(3):
+                app.processEvents()
+            if win.editor.document.toPlainText() != vantat57:
+                tappade57.append(f"{namn57}/{sort57}: {win.editor.document.toPlainText()!r}")
+    check(not tappade57,
+          f"ingen stilknapp tappar text, i någon av {len(knappar57) * 2} kombinationer "
+          f"({tappade57})")
+
+    # Alex 8/10: "Om något är h2 och jag väljer h1, så försvinner texten.
+    # Kommer tillbaka efter ctrl+z." Exakt den vägen, med rubriken satt först.
+    for fran57, till57, till_knapp57 in (("h2", 1, win.toolbar.btn_style_h1),
+                                         ("h2", 0, win.toolbar.btn_style_normal),
+                                         ("h3", 1, win.toolbar.btn_style_h1),
+                                         ("h1", 2, win.toolbar.btn_style_h2)):
+        rubrik57 = f"<p>Alfa stycket med text.</p><{fran57}>Beta rubrikens text.</{fran57}>"
+        ovningsbok.write(ovningsscen.id, rubrik57)
+        win._show_scene_html(ovningsscen.id, ovningsscen.id and rubrik57)
+        for _i in range(3):
+            app.processEvents()
+        doc57 = win.editor.document
+        mark57 = QTextCursor(doc57)
+        mark57.setPosition(doc57.find("Beta").selectionStart())
+        mark57.setPosition(doc57.find("Beta rubrikens").selectionEnd(),
+                           QTextCursor.MoveMode.KeepAnchor)
+        win.editor.setTextCursor(mark57)
+        app.processEvents()
+        till_knapp57.click()
+        for _i in range(3):
+            app.processEvents()
+        kvar57 = win.editor.document.findBlockByNumber(1)
+        check(kvar57.text() == "Beta rubrikens text.",
+              f"en rubrik byter nivå {fran57} -> {till57} utan att tappa sin text "
+              f"({kvar57.text()!r})")
+        check(kvar57.blockFormat().headingLevel() == till57,
+              f"och nivån blir {till57} ({kvar57.blockFormat().headingLevel()})")
+
+    # Fixturen skall vara oförändrad efteråt: scenen tillbaka till sitt innehåll, och
+    # inga osparade ändringar som får stängningen att fråga efter dem (i huvudlöst
+    # läge finns ingen att fråga, och rökprovet dör i teardown i stället).
+    ovningsbok.write(ovningsscen.id, stiltext57)
+    win._show_scene_html(ovningsscen.id, stiltext57)
+    win.is_modified = False
+    for _i in range(2):
+        app.processEvents()
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

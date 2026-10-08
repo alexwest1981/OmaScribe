@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
     QStackedWidget, QMenu, QDialog, QPushButton, QInputDialog, QTextEdit
 )
 from PyQt6 import QtCore
-from PyQt6.QtCore import Qt, QTimer, QPoint, QMarginsF
+from PyQt6.QtCore import Qt, QTimer, QPoint, QMarginsF, QEvent
 from PyQt6.QtGui import (QAction, QKeySequence, QPalette, QTextCursor, QTextDocument,
                          QPageLayout, QPageSize, QCursor)
 from PyQt6.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
@@ -186,6 +186,7 @@ class MainWindow(QMainWindow):
         self.splitter.addWidget(self.editor)
 
         self.sidebar = SidebarInspector(self.ai, self.theme_mgr, self)
+        self._focus_mode = False     # ägs av programmet, se _set_focus_mode
         self.sidebar.setVisible(self.config.get("show_ai_sidebar", False))
 
         # Anteckningspanelen som egen flik bredvid granskning/disposition
@@ -969,22 +970,41 @@ class MainWindow(QMainWindow):
     def _toggle_focus_mode(self):
         """Distraktionsfritt läge: bort med allt utom texten, och tillbaka igen.
 
-        Enda definitionen — den låg tidigare i två kopior där den sista tyst
-        tog över, så sidopanelen slutade gömmas.
+        Läget ägs av programmet, inte av fönsterhanteraren. Det avgjordes förut av
+        isFullScreen(), och kompositören kan lämna fullskärm på egen hand (sin
+        egen genväg, eller sin egen hantering av F11): då svarar isFullScreen()
+        nej medan menyn fortfarande är borta, nästa tryck går in i samma gren och
+        gömmer allt igen, och menyn kommer aldrig tillbaka. En flagga gör att en
+        tryckning alltid växlar.
         """
-        if self.isFullScreen():
-            self.showNormal()
-            self.menu_bar.setVisible(True)
-            self.status_bar.setVisible(True)
-            if self.stack.currentIndex() == 1:
-                self.toolbar.setVisible(True)
-                self.sidebar.setVisible(self.config.get("show_ai_sidebar", False))
-        else:
-            self.showFullScreen()
-            self.menu_bar.setVisible(False)
-            self.status_bar.setVisible(False)
+        self._set_focus_mode(not getattr(self, "_focus_mode", False))
+
+    def _set_focus_mode(self, on: bool, window: bool = True):
+        """Sätter läget och synligheten. `window=False` när Qt redan bytt läge."""
+        self._focus_mode = on
+        if window:
+            if on:
+                self.showFullScreen()
+            else:
+                self.showNormal()
+        # Menyraden är inte QMainWindow:s egen utan en QMenuBar inuti menywidgeten
+        # (setMenuWidget), så den göms och visas här — den följer inte med fönstret.
+        self.menu_bar.setVisible(not on)
+        self.status_bar.setVisible(not on)
+        if on:
             self.toolbar.setVisible(False)
             self.sidebar.setVisible(False)
+        elif self.stack.currentIndex() == 1:
+            self.toolbar.setVisible(True)
+            self.sidebar.setVisible(self.config.get("show_ai_sidebar", False))
+
+    def changeEvent(self, event):  # noqa: N802 — Qt:s eget namn
+        """Lämnas fullskärmen på annat sätt än med F11 skall menyn tillbaka."""
+        super().changeEvent(event)
+        if (event.type() == QEvent.Type.WindowStateChange
+                and getattr(self, "_focus_mode", False)
+                and not self.isFullScreen()):
+            self._set_focus_mode(False, window=False)
 
     def _toggle_dictation(self):
         self.dictation.toggle_recording()

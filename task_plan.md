@@ -374,6 +374,16 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
       väntar på samma mätning som svenskan fick — en gissning som pekar fel i författarens text är
       värre än ingen varning.
 
+- [x] **4.23** Fokusläget (F11) tappade menyraden. Läget avgjordes av `isFullScreen()`, ett
+      tillstånd fönsterhanteraren äger: lämnar kompositören fullskärm på egen hand (sin egen
+      genväg, eller sin egen hantering av F11) svarar `isFullScreen()` nej medan menyn
+      fortfarande är borta — nästa F11 går då in i samma gren och gömmer allt igen, och menyn
+      kommer aldrig tillbaka. Programmet äger nu sitt eget läge (`_focus_mode`), och
+      `changeEvent` ger tillbaka menyn även när fullskärmen lämnas av någon annan. Menyraden
+      är inte `QMainWindow`:s egen utan en `QMenuBar` inuti menywidgeten (`setMenuWidget`), så
+      den visas och göms uttryckligen. Rökprovets sektion 56 mäter hela vägen, inklusive att
+      nästa F11 går *in* i läget i stället för in i samma gren som förut.
+
 ### Fas 5: Publiceringen
 
 - [~] **5.1** Formatprofiler för KDP, IngramSpark, Lulu, Apple Books och Kobo: `core/publishing.py`
@@ -642,6 +652,18 @@ kontrollistan när faserna är klara.
 - [ ] Kanalprofiler, eftersom mått, blöd och metadataregler skiljer sig. R05
 
 ## Att åtgärda senare (rapporterat av Alex, ej gjort)
+
+- [ ] **H2 → H1 tappar texten — kunde inte återskapas.** Rapporterat av Alex 2026-10-08: "Om något är
+      h2 och jag väljer h1, så försvinner texten. Kommer tillbaka efter ctrl+z." Hans facit säger
+      alltså att det är en **ångringsbar** ändring, inte en ritningsmiss. **Mätt:** dokumentet,
+      HTML-rundturen, filen efter Ctrl+S, omläsningen och hela matrisen av stilknappar — 12
+      kombinationer, dels markering inne i stycket, dels markering som slutar exakt på ett blockgräns —
+      behåller varje tecken, och rubriknivån går 2 → 1 som den skall. Rubrikbytet h2→1, h2→0, h3→1 och
+      h1→2 har därför egna kontroller i rökprovets sektion 57 (778 gröna), så en riktig regression syns
+      i grinden. **Obevisat:** vilken *vy* han såg det i (editorn, pappersarket eller läsvyn — bara
+      editorn är en levande canvas, de andra arken ritas statiskt), och om ordantalet i statusfältet
+      sjunker när det händer. Det skiljer en radering från att texten slutar ritas, och det är nästa
+      mätning — den kräver hans svar.
 
 - [x] **Ctrl+A såg ut att bara markera sista sidan.** Rapporterat av Alex 2026-10-08, mätt och fixat
       samma dag. Han öppnade `sprint-4-vad-jag-gjorde-2026-10-08.md` (15 ark), satte markören i

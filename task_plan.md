@@ -5,9 +5,12 @@
 Allt som ett professionellt författarverktyg har skall in i OmaScribe — manusstruktur,
 författarlagret, revision, sakprosa, publicering och AI — utan att något glöms mellan sessionerna.
 
-Underlaget är `docs/research/author-tools/` (fem agentrapporter, 119 källor, alla
-kodpåståenden verifierade mot fil och rad). Varje punkt nedan bär sin källa som
-`R<xx>.<n>` = rapportens avsnittsnummer, så inget är påhittat här.
+Underlaget är `docs/research/author-tools/` (**nio** agentrapporter i två pass, 214 källor,
+alla kodpåståenden verifierade mot fil och rad — det andra passets källor i
+`VERIFIERING.md`). Varje punkt nedan bär sin källa som `R<xx>.<n>` = rapportens
+avsnittsnummer, `R06`–`R09` = det andra passet, så inget är påhittat här.
+`luckor.md` är sammanställningen: vad de betalda verktygen har, vad vi har, och vad som
+saknas.
 
 **Nuläge mätt:** 13 726 rader i `core/` + `ui/` + `main.py`, 38 moduler. Ett dokument i
 taget (`ui/main_window.py:663`). Se `findings.md`.
@@ -21,6 +24,13 @@ visar arket som det blir. Innan dess är fas 4 stängd: 4.8 (spalter och avstavn
 lämnades medvetet — de står kvar som val, inte som glömda.
 (tidslinje och plot-tavla) som är nästa större punkt. Rutnätet i 2.9 bygger på
 scenmodellen och på att scenens status redan finns.
+
+**Tillagt 2026-10-08 efter det andra researchpasset:** 23 luckor mot de betalda
+verktygen står nu som poster (2.18–2.23, 4.17, 4.19–4.21, 5.13–5.16, 6.16–6.18).
+`luckor.md` rankar dem: normsidan, textelementen, repetitions-/konsistensanalysen,
+scenstatistiken, beat-mallarna, kontextvisaren, uppläsningen och karaktärsintervjun är
+de billiga och avgörande. Ordningen är min rekommendation, inte ett beslut — säg till om
+fas 5 fortsätter först eller om någon av de billiga går före.
 
 ## Current Phase
 
@@ -114,8 +124,29 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       projekt som är öppet just nu i stället för att kopiera texten. Menyväg: Arkiv →
       Projektinstruktioner. Alla tre AI-vägarna (granskning, omskrivning, övningar) går genom samma
       `_system_prompt`, så regeln bor på ett ställe. R03.18
+- [ ] **2.18** Scenstatistik ur modellen: scener per karaktär, karaktärernas inträde och utträde
+      genom berättelsen, POV-fördelning och ord per scen. Allt underlag finns redan i scenens
+      metadata och codexets kopplingar — det är en rapport, inte en ny datamodell. R06 (Fictionary,
+      bibisco)
+- [ ] **2.19** Scenens story-element-checklista och Story Map: Fictionarys 38 element per scen
+      (POV-karaktär och mål, scenfunktion, hook, tension, revelation, action/sequel, läsarens
+      vetande, plats/tid, sinnen, emotion) som en checklista på scenen, samlad i en Story Map.
+      Scenmodellen finns; elementen är data. R06
+- [ ] **2.20** Beat sheet-mallar som data: Save the Cat, tre akter och mysterieformeln som
+      strukturkort i samma form som projektmallarna (1.12), inte som hårdkodade flöden. R07 (Plottr
+      har 20+, Campfire fler)
+- [ ] **2.21** Karaktärsintervjun: en frågesvit per codexpost som fyller posten, genom den
+      befintliga AI-klienten. R07 (bibisco)
+- [ ] **2.22** Relationsgraf i codexet: entiteter och relationer ritade som noder och kanter.
+      `ui/graph_dialog.py` ritar redan valvets graf — skalet finns, datan finns i codex.sqlite.
+      R07 (Campfire, World Anvil)
+- [ ] **2.23** Händelsetabell kopplad till scen: en händelse har tid, beskrivning och scen-id, och
+      kan återanvändas på flera ställen. Detta är *data*-halvan av tidslinjen, utan ritad vy — se
+      beslutet i luckor.md (planen avstod från den ritade vyn i 2.9). R07 (bibisco, World Anvil,
+      Plottr)
 - **Status:** complete (två undantag flyttades till fas 4 som 4.14–4.16: pauspåminnelser, namn- och
-  ordförrådsgenerator, blurb/synopsis — de hörde hemma med sakprosan)
+  ordförrådsgenerator, blurb/synopsis — de hörde hemma med sakprosan). 2.18–2.23 kommer ur det andra
+  researchpasset (2026-10-08) och är **inte byggda**: `[ ]` är hela sanningen om dem.
 
 ### Fas 3: Revision och granskning
 
@@ -248,6 +279,20 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       **projektet**, inte till scenen — de beskriver boken. Provat: att båda sparas och att de står i
       `project.json` på disk. *Flyttad från fas 2 (2.13).* R03.15
 - **Status:** complete (556 rökprov + 54 renhetsprov + modulernas egna, GRÖNT)
+- [ ] **4.17** Repetitions- och konsistensanalys över **hela boken**: upprepade ord och fraser
+      ("Echoes"), och namn/stavning/versalisering som glider mellan scener. Ren lokal kod —
+      scenerna indexeras, codexets namn ger konsistensreglerna — och resultatet är en **klickbar
+      rapport** som sätter markören vid träffen. Den största enskilda funktionsluckan mot
+      ProWritingAid och AutoCrit (båda har den; vi har 0 träffar i koden). R06
+- [ ] **4.19** Ordklasser och stilvarningar i texten: fyllnadsord, adverb, passiv form, klichéer
+      och dialogtaggar. Listbaserat och lokal körning; LanguageTool (4.10) täcker grammatiken men
+      inte stilklasserna. R06 (ProWritingAid, AutoCrit, Papyrus)
+- [ ] **4.20** Uppläsning för korrekturläsning: läs upp stycket, kapitlet eller scenen med
+      TTS — örat hittar det ögat hoppar över. Dabble, AutoCrit och NovelAI har det; vår diktering
+      (Whisper) är bara tal→text. R06, R09
+- [ ] **4.21** Analysrapport per kapitel: LIX, repetitioner, stilvarningar och ordräkning samlade
+      per kapitel med länkar in i texten, i stället för en siffra i sidopanelen. R06 (ProWritingAid
+      Chapter Critique, AutoCrit Summary Report)
 
 ### Fas 5: Publiceringen
 
@@ -337,6 +382,19 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       `SOURCES`, kanalerna delar inte varandras koefficienter (bara KDP har en publicerad formel), och
       en kanal utan belagt tal säger det i stället för att låna ett. Provat: trappans gränser steg för
       steg (150/151, 300/301, 828/829), ryggbredden per papper, och att Lulu får `None`.
+- [ ] **5.13** Normsidan: 30 rader × max 60 tecken, för förlagsinlämning. Papyrus har den och
+      beskriver den som "von Verlagen erwünscht" (ordagrant belagt hos leverantören);
+      `core/pagination.py` räknar redan rader och ark, så detta är en sidmall, inte en ny motor. R08
+- [ ] **5.14** Typografiska textelement i alla tre kanaler: scenbrytning som ornament, versblock
+      och meddelandeblock (sms/chatt). Vellum har dem, och Vellum är det verktyg våra egna böcker
+      jämförs med. R08
+- [ ] **5.15** Kompilera ett **urval** och spara flera utskriftsprofiler per bok: välj draft, en
+      del, en samling eller en aktiv markering och kompilera den som en platt lista — samt prefix,
+      kapitelnumrering, filnamnsmall och separata filer per kapitel. Scrivener Compile gör allt
+      detta; vår 5.9 släpper hela boken och vår 5.1 har "ett sparat publiceringsprojekt" kvar. R08
+- [ ] **5.16** Tryckförberedelsen: widow/orphan-kontroll, PDF/X-1a:2003 med CMYK och inbäddade
+      teckensnitt (Vellum publicerar exakt dessa krav i sin spec) samt en large print-utgåva
+      (Atticus). Hör ihop med 5.5 och kräver den paginerade målaren. R08
 - **Status:** pending
 
 ### Fas 6: AI som författarverktyg
@@ -356,6 +414,17 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 - [ ] **6.13** Flerboks-seriebibel och återanvändning. R04.16 — *låg till medel*
 - [ ] **6.14** Genre, åldersgräns, röst och innehållsgränser som projektprofil. R04.17
 - [ ] **6.15** Diktering in i rätt scen/anteckning (befintlig Whisper kopplas till projektmodellen). R04.19
+- [ ] **6.16** Kontextvisaren: visa exakt vilken text, vilka codexposter och vilken instruktion som
+      skickas med ett anrop — med tokenräkning och orsak per post ("togs med för att namnet nämns
+      i scenen"). NovelAI:s Context Viewer är modellen: färgkodad, budgeterad, granskningsbar. Detta
+      är redan ett **Designkrav** i planen ("Visa vilka textdelar som faktiskt skickas") men har
+      ingen post — nu har den det. R09
+- [ ] **6.17** Valbar kontext per anrop: bocka i scener, kapitel, akter och snippets, och sätt per
+      codexpost om den skickas *alltid*, *vid omnämning* eller *aldrig*. NovelCrafter gör exakt
+      detta; vår 6.3/6.4 beskriver retrieval men inte användarens hand över den. R09
+- [ ] **6.18** Story Bible-genereringen som flöde: braindump → genre → stil → synopsis →
+      karaktärer → värld → outline → scener, där varje steg skriver i codexet och går att ändra
+      efteråt (Sudowrite). 6.1 och 6.6 täcker delarna, inte ordningen. R09
 - **Status:** pending
 
 ## Bordet — kategorins minimikrav (acceptanskriterier)
@@ -453,6 +522,23 @@ kontrollistan när faserna är klara.
   är ett manusverktyg — det är tal- och modell-API:er. Det användbara i punkten (röst → text i
   rätt sammanhang) ligger i 6.15.
 
+## Förkastat efter det andra researchpasset (2026-10-08)
+
+Dessa finns hos de betalda verktygen och skall **inte** byggas. Skälet står i varje rad, så
+frågan inte behöver ställas igen:
+
+| Funktion | Vem har den | Skäl |
+|---|---|---|
+| Molnsynk, realtidssamarbete, iOS-app | Dabble, Ulysses, Campfire | Kräver backend och drift. Boken är en lokal mapp — det är hela poängen |
+| Kartredigerare med lager och markörer | World Anvil, Campfire | Dyrt och nischat; ett tillägg den dag någon frågar |
+| Marknadsplats, community, kursakademi, läsarprenumeration | World Anvil, AutoCrit | Distribution och community, inte författarens verktyg |
+| Kreditvaluta och egen grundmodell | Sudowrite, NovelAI, Squibler | Dubblar leverantörens infrastruktur; vi använder användarens egen nyckel |
+| Plagiatdatabas och AI-textdetektion | ProWritingAid, Grammarly | Kräver extern databas, och detektorns utfall är inte ett bevis |
+| Genrepoäng och marketability-betyg | ProWritingAid, AutoCrit | Går inte att belägga lokalt; AutoCrit säger själv att 100 % inte är målet |
+| Direktpublicering till WordPress/Ghost/Medium | Ulysses | Nätverksskrivning med användarens credentials i ett program som lovar offline |
+| AI-bildgenerering, screenplay-konvertering, butiksuppladdning | NovelAI, LivingWriter, Scrivener | Integrationskostnad utanför kärnan. Omslagsarket är geometri och stannar |
+| Teamfunktioner, varumärkeston, analytics | Grammarly | En användare, en bok |
+
 ## Key Questions
 
 1. Hur mycket av `ui/main_window.py` (1216 rader) skall projektmodellen ta över? Besvaras i fas 0.
@@ -466,6 +552,9 @@ kontrollistan när faserna är klara.
 | En worktree per agent, diffen hämtas in för hand | Mätt: agenters egen självrapport är inte verifiering, och worktreen är isolerad från live-kassan |
 | `core/project.py` utan Qt | Självprovet skall kunna köras utan skärm, och modellen skall kunna läsas av kommandoradsverktyg senare |
 | Nya moduler får engelska kommentarer | Alex regel 23/9 är kod på engelska; äldre moduler lämnas i fred (ingen storskalig omskrivning) |
+| Licensen är GPL-3.0-only | PyQt6 distribueras under GPL v3 endast (mätt ur paketmetadatan i `.venv`), så ett program som länkar den kan inte vara MIT — vilket README påstod. Copyleft var dessutom önskat: en bearbetning måste förbli öppen och bära upphovsrätten |
+| Fyra nya rapporter per PRODUKT, inte per tema | Det första passet var tematiskt och missade de betalda specialistverktygen (ProWritingAid, AutoCrit, Fictionary, Plottr, Campfire, bibisco, Papyrus). Funktionslista per produkt gav 23 luckor som de fem första rapporterna inte hade |
+| Ritad tidslinje fortfarande inte byggd, men händelsetabellen är en post (2.23) | Tre betalda verktyg har tidslinjen och Fictionary rankar scenkopplade händelser högt. Datadelen är billig och vyn är ett eget steg — beslutet väntar på Alex |
 
 ## Errors Encountered
 

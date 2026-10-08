@@ -109,3 +109,29 @@ för en ensam författare och kan vänta.
 | `04-ai-nativa-verktyg.md` | codex, RAG, recap, stilprofil, promptbibliotek, fallgropar | Sudowrite, NovelCrafter, Squibler, Lex, Type, NovelAI, Claude/ChatGPT Projects |
 | `05-publicering-och-export.md` | EPUB 3, tryck-PDF, KDP-mått, DOCX-stilar, metadata | Vellum, Atticus, Scrivener, pandoc, KDP, IngramSpark, Lulu, W3C, Sigil/Calibre |
 | `narvaromatris.txt` | rå mätning av OmaScribes kod mot 26 nyckelord | denna kodbas |
+
+## Andra passet (2026-10-08): produkt för produkt, och vad som saknades
+
+Det första passet var **tematiskt** ("hur gör de X") och täckte därför de kända
+verktygen men missade de betalda specialistverktygen. Frågan den här gången var
+"har vi allt de betalda har?" — alltså en funktionslista per *produkt*, uppifrån och
+ned på leverantörens egen sida. Fyra agenter (codex, en git-worktree var) mot de
+produkter som det första passet inte hade inventerat, plus två agenter på det öppna
+och juridiska: vad de öppna verktygen gör och vilken licens som gäller.
+
+| Fil | Område | Källa till |
+|---|---|---|
+| `06-betald-korrektur.md` | korrektur, stilgranskning, strukturkritik | ProWritingAid, AutoCrit, Fictionary, Grammarly Pro |
+| `07-betald-planering.md` | planering, tidslinje, världsbygge | Plottr, Campfire, World Anvil, bibisco, Scapple |
+| `08-betalda-sviter.md` | hela sviten, funktion för funktion | Scrivener (inkl. Compile), Vellum, Atticus, Ulysses, Dabble, Papyrus |
+| `09-ai-nativa-betalda.md` | AI-verktygen och deras mekanik | Sudowrite, NovelCrafter, Squibler, NovelAI, NovelPad, LivingWriter, Novlr |
+| `10-oppen-kallkod.md` | de öppna verktygen: licens, livsläge, vad de gör | Manuskript, bibisco, Zettlr, novelWriter m.fl. + sökning utanför de namnen |
+| `11-licens.md` | vilken licens som gäller och vad varje alternativ betyder | PyQt6:s villkor, GNU, SPDX, jämförbara projekt |
+| `luckor.md` | **sammanställningen**: vad de betalda har, vad vi har, vad som saknas | min jämförelse av 01–09 mot planen och koden |
+| `VERIFIERING.md` | vilka källor och belopp jag kontrollerade själv, och vad jag inte gjorde | 95 URL:er, 9 punktkontroller |
+
+Kort: **23 luckor** står nu som poster i planen (2.18–2.23, 4.17, 4.19–4.21,
+5.13–5.16, 6.16–6.18), och nio funktionsområden är förkastade med skäl. Det vi har
+som de betalda inte har — projektmodellen, snapshots per scen, förslag i marginalen
+med accept som ett ångra-steg, publiceringskedjan hela vägen till EPUB-validering —
+behålls; inget av det byts bort mot deras funktionslistor.

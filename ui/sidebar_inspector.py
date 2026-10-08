@@ -13,6 +13,7 @@ from ui.chrome import chip, kbd, set_tracking
 
 class SidebarInspector(QWidget):
     apply_suggestion_requested = pyqtSignal(str, str) # (original, replacement)
+    comment_suggestion_requested = pyqtSignal(str, str)  # förslaget som kommentar i marginalen
     outline_item_clicked = pyqtSignal(int) # cursor position
     close_requested = pyqtSignal()         # stängknappen i huvudet
     rewrite_requested = pyqtSignal()       # "Förbättra markeringen"
@@ -387,6 +388,17 @@ class SidebarInspector(QWidget):
             btn_apply.clicked.connect(
                 lambda ch, o=orig, r=repl: self.apply_suggestion_requested.emit(o, r))
             top.addWidget(btn_apply)
+
+            btn_comment = QPushButton("💬")
+            btn_comment.setObjectName("CardAction")
+            btn_comment.setFixedSize(21, 21)
+            btn_comment.setToolTip(_("ai_card_btn_comment"))
+            btn_comment.setCursor(Qt.CursorShape.PointingHandCursor)
+            # Förslaget läggs i marginalen i stället för att skriva över texten:
+            # författaren får bestämma, och texten står kvar orörd.
+            btn_comment.clicked.connect(
+                lambda ch, o=orig, r=repl: self.comment_suggestion_requested.emit(o, r))
+            top.addWidget(btn_comment)
 
             btn_dismiss = QPushButton("✕")
             btn_dismiss.setObjectName("CardAction")

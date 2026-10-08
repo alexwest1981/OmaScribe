@@ -17,7 +17,8 @@ from PyQt6.QtWidgets import (
 )
 
 from core.i18n import _
-from core.revisions import apply_changes, blocks, changes, formatting_changes, plain
+from core.revisions import (apply_changes, blocks, changes, formatting_changes,
+                            plain, word_diff)
 
 MARK = {"added": "+", "removed": "−", "changed": "~"}
 KEPT = "✓"          # behålls
@@ -75,10 +76,15 @@ class ReviewDialog(QDialog):
             item = QListWidgetItem(self._rad(change))
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             item.setCheckState(Qt.CheckState.Checked)      # kryssad = behåll
-            item.setToolTip(_("review_row_tooltip",
-                              before=_kort(change.before_text, 160) or _("review_empty"),
-                              after=_kort(change.after_text, 160) or _("review_empty"),
-                              anchor=_kort(change.anchor, 80)))
+            # Raden visar hela stycket; verktygstipset har detaljnivån — orden som
+            # gick och kom — först, sedan före/efter och ankaret.
+            rader = [_("review_row_tooltip",
+                       before=_kort(change.before_text, 160) or _("review_empty"),
+                       after=_kort(change.after_text, 160) or _("review_empty"),
+                       anchor=_kort(change.anchor, 80))]
+            if change.kind == "changed":
+                rader.insert(0, word_diff(change.before_text, change.after_text))
+            item.setToolTip("\n".join(rader))
             self.lst_changes.addItem(item)
         self.lst_changes.itemChanged.connect(lambda *_: self._uppdatera())
         övre_layout.addWidget(self.lst_changes, 1)

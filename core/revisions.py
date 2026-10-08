@@ -241,6 +241,28 @@ def formatting_changes(before_html: str, after_html: str) -> list:
             if slag == "equal" and gammal != ny and plain(gammal or ny)]
 
 
+def word_diff(before_text: str, after_text: str) -> str:
+    """Ord-för-ord-skillnaden inom ett stycke — detaljnivån i granskningen.
+
+    Besluten tas per stycke; det här är raden som gör ett omskrivet stycke
+    läsbart: vilka ord som gick och vilka som kom. Borttaget står som [-så-] och
+    tillagt som [+så+], så tecknen bär betydelsen även utan färg.
+    """
+    före = (before_text or "").split()
+    efter = (after_text or "").split()
+    bitar = []
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(
+            a=före, b=efter, autojunk=False).get_opcodes():
+        if tag == "equal":
+            bitar.extend(före[i1:i2])
+            continue
+        if i1 < i2:
+            bitar.append("[-" + " ".join(före[i1:i2]) + "-]")
+        if j1 < j2:
+            bitar.append("[+" + " ".join(efter[j1:j2]) + "+]")
+    return " ".join(bitar)
+
+
 def apply_changes(before_html: str, after_html: str, decisions) -> str:
     """Texten efter granskningen: behåll eller avvisa varje ändring.
 
@@ -356,6 +378,15 @@ def _self_test() -> int:
     check("en ändrad stilmall är ingen ändring", changes(qt_fore, qt_efter), [])
     check("och ingen formateringsnot", formatting_changes(qt_fore, qt_efter), [])
     check("men texten i body läses fortfarande", plain(qt_efter), "Hon gick in i källaren.")
+
+    # detaljnivån: ord inom ett stycke, för att kunna läsa en omskrivning
+    check("orddiffen visar vad som gick och kom",
+          word_diff("Nyckeln låg på bordet", "Nyckeln låg kvar på bordet"),
+          "Nyckeln låg [+kvar+] på bordet")
+    check("och ett helt omskrivet stycke blir läsbart",
+          word_diff("Hon gick in", "Hon smög in"), "Hon [-gick-] [+smög+] in")
+    check("oförändrad text ger ingen markering", word_diff("samma", "samma"), "samma")
+    check("och tom text ger tomt", word_diff("", ""), "")
 
     lista_fore = "<ul><li>a</li><li>b</li></ul>"
     lista_efter = "<ul><li>a</li><li>b</li><li>c</li></ul>"

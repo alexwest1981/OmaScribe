@@ -781,5 +781,11 @@
   "review_applied": "Texten är granskad",
   "history_review": "Granska mot texten nu",
   "history_review_tip": "Jämför punkten med scenen som den är nu, och besluta per stycke",
-  "review_formatting": "Samma text, annan formatering i {n} stycken — formateringen hålls åtskild från ändringarna"
+  "review_formatting": "Samma text, annan formatering i {n} stycken — formateringen hålls åtskild från ändringarna",
+  "ai_card_btn_comment": "Lägg förslaget som kommentar i marginalen",
+  "ai_comment_text": "AI föreslår: {replacement}",
+  "ai_comment_added": "Förslaget ligger som kommentar i marginalen",
+  "ai_comment_exists": "Förslaget ligger redan som kommentar på det stället",
+  "ai_apply_not_found": "Hittade inte stället i texten — det kan ha ändrats",
+  "ai_apply_done": "Förslaget är inskrivet (ett ångra-steg)"
 }

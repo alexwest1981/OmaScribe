@@ -705,6 +705,14 @@ class Project:
                 return comment
         return None
 
+    def comment_by_quote(self, node_id: str, quote: str):
+        """Kommentaren som redan hänger på det citatet, om det finns en."""
+        rent = " ".join((quote or "").split())
+        for comment in self.comments_for(node_id):
+            if " ".join(comment["quote"].split()) == rent:
+                return comment
+        return None
+
     def comments_for(self, node_id: str, include_resolved: bool = True) -> list:
         """Kommentarerna på en scen, ogiltiga först."""
         try:

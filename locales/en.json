@@ -781,5 +781,11 @@
   "review_applied": "The text has been reviewed",
   "history_review": "Review against the text now",
   "history_review_tip": "Compare the point with the scene as it is now, and decide per paragraph",
-  "review_formatting": "Same text, different formatting in {n} paragraphs — formatting is kept apart from the changes"
+  "review_formatting": "Same text, different formatting in {n} paragraphs — formatting is kept apart from the changes",
+  "ai_card_btn_comment": "Put the suggestion in the margin as a comment",
+  "ai_comment_text": "The AI suggests: {replacement}",
+  "ai_comment_added": "The suggestion is now a comment in the margin",
+  "ai_comment_exists": "The suggestion is already a comment at that spot",
+  "ai_apply_not_found": "Could not find that spot in the text — it may have changed",
+  "ai_apply_done": "The suggestion has been written in (one undo step)"
 }

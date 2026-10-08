@@ -112,6 +112,7 @@ class MainWindow(QMainWindow):
 
         # Sidebar interactions
         self.sidebar.apply_suggestion_requested.connect(self._apply_ai_suggestion)
+        self.sidebar.comment_suggestion_requested.connect(self.comment_ai_suggestion)
         self.sidebar.outline_item_clicked.connect(self._navigate_to_position)
         self.sidebar.btn_refresh.clicked.connect(self._trigger_ai_review)
         self.sidebar.close_requested.connect(self._toggle_sidebar)
@@ -775,10 +776,37 @@ class MainWindow(QMainWindow):
         self.editor.setTextCursor(cursor)
 
     def _apply_ai_suggestion(self, original, replacement):
+        """Skriver in förslaget — ett markövergrepp, ett ångra-steg (R04.15).
+
+        Ett enskilt insertText över markeringen blir ett steg i
+        ångra-historiken, så ett förslag går att ta tillbaka för sig. Texten
+        sparas först när scenen sparas, som allt annat man skriver.
+        """
         cursor = self.editor.document.find(original)
-        if not cursor.isNull():
-            cursor.insertText(replacement)
-            self.editor.setTextCursor(cursor)
+        if cursor.isNull():
+            self.status_bar.showMessage(_("ai_apply_not_found"), 5000)
+            return
+        cursor.insertText(replacement)
+        self.editor.setTextCursor(cursor)
+        self.is_modified = True
+        self.status_bar.showMessage(_("ai_apply_done"), 5000)
+
+    def comment_ai_suggestion(self, original, replacement) -> bool:
+        """Lägger AI:ns förslag som en kommentar i marginalen (R04.14).
+
+        I stället för att skriva över texten: förslaget hamnar där författaren
+        läser sina egna kommentarer, texten står kvar orörd, och först när man
+        väljer det skrivs det in — som ett eget ångra-steg.
+        """
+        if self.project is None or not self.active_scene_id or not original.strip():
+            return False
+        if self.project.comment_by_quote(self.active_scene_id, original) is not None:
+            self.status_bar.showMessage(_("ai_comment_exists"), 5000)
+            return True
+        if self.add_comment(original, _("ai_comment_text", replacement=replacement)) is None:
+            return False
+        self.status_bar.showMessage(_("ai_comment_added"), 5000)
+        return True
 
     def _navigate_to_position(self, pos):
         cursor = QTextCursor(self.editor.document)

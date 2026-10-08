@@ -14,10 +14,11 @@ taget (`ui/main_window.py:663`). Se `findings.md`.
 
 ## Next Step
 
-Fas 3 punkt 3.7/3.8 (AI-kommentarer i marginalen i stället för överskrivning, och
-acceptans per stycke för AI-förslag som egna undo-steg) — de kopplar ihop AI-arbetet i
-fas 2 med revisionslagret i fas 3. Kvar i fas 3 är också textdiff inom ett ändrat stycke
-(3.2) och 3.6:s historik är klar. 2.7, 2.11 och 2.13 är kvar i fas 2 och markerade låg
+Fas 4 (sakprosan): fotnoter och slutnoter (4.1), korsreferenser (4.2), genererad
+innehållsförteckning (4.3), rubriknavigator (4.4), bildtexter och register (4.5), stilar
+(4.6), avsnittsbrytningar (4.7), autokorrigering (4.9), språk per avsnitt och
+LanguageTool (4.10) samt sök och ersätt med reguljära uttryck (4.12). 4.8 och 4.11 är
+markerade låg. Kvar i fas 2: 2.7, 2.11 och 2.13, också de låga.
 (tidslinje och plot-tavla) som är nästa större punkt. Rutnätet i 2.9 bygger på
 scenmodellen och på att scenens status redan finns.
 
@@ -133,8 +134,9 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       före granskningen sparas som egen punkt, så ingreppet går att ångra. **Jämförelsen läser text,
       inte HTML** — annars vore varje sparning en ändring, eftersom Qt skriver om attributen (det är
       fällan forskningen varnar för). Ett `<ul>` med sina `<li>` är en enhet, så inget beslut kan
-      lämna halv HTML. **Kvar:** textdiff *inom* ett ändrat stycke (ett stycke som skrivs om visas som
-      en helhet, inte ord för ord). R02.1
+      lämna halv HTML. Detaljnivån finns nu också: `word_diff()` visar vilka **ord** som gick och kom
+      i ett omskrivet stycke, i radens verktygstips. Besluten är kvar per stycke — en läsare får
+      ordningen, men tar ställning till stycket. R02.1
 - [x] **3.3** Kommentarer i marginalen med tråd och "löst": kommentarerna, markeringarna i
       texten, hoppa-till-citatet och **löst** fanns redan färdiga i scenpanelen (kontrollerat, inte
       antaget). Det som saknades var **tråden**: `add_reply()` i projektet, en ↳-knapp i panelen och
@@ -158,8 +160,17 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       osparade ändringar, och de sparas först — annars jämförs punkterna mot en text på disk som är
       äldre än den man ser. En återställning sparar texten som låg där **först** som en egen punkt
       ("före återställning"), så ingreppet går att ångra med samma knapp som allt annat. R02.4
-- [ ] **3.7** AI-kommentarer i marginalen i stället för överskrivning. R04.14
-- [ ] **3.8** Acceptans per stycke för AI-förslag, som egna undo-steg. R04.15
+- [x] **3.7** AI-kommentarer i marginalen i stället för överskrivning: varje förslagskort i
+      AI-panelen har nu en 💬-knapp som lägger förslaget som **kommentar på sitt citat** i stället
+      för att skriva över texten. Texten står kvar orörd, författaren läser förslaget där hon läser
+      sina egna kommentarer, och samma förslag två gånger blir en kommentar — inte två. Provat hela
+      vägen: kortets knapp → signalen → kommentaren på citatet med förslaget i sig → syns i
+      marginalen, och manuset tecken för tecken oförändrat. R04.14
+- [x] **3.8** Acceptans per förslag, som eget undo-steg: `+`-knappen skriver in **ett** förslag i
+      taget som ett enskilt `insertText` över markeringen — alltså ett steg i ångra-historiken, och
+      ett ångra tar tillbaka hela förslaget. Provat: förslaget in, ett ångra ut, och ett förslag som
+      inte går att hitta i texten (citatet kan ha ändrats) skriver ingenting utan säger det i
+      statusfältet. R04.15
 - **Status:** pending
 
 ### Fas 4: Sakprosan

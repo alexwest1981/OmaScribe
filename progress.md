@@ -405,3 +405,19 @@
 - **Känd kant, märkt i koden:** parningen följer `difflib`, så ett omskrivet stycke kan visas som
   borttaget + tillagt när grannstycket också ändrats. En läsare ser det som en omskrivning. Räcker
   för granskning; skärps med en egen kostnad för parningen om det blir störande.
+
+### Fas 3.7 och 3.8: AI-förslaget i marginalen, och ett ångra-steg — fas 3 komplett
+
+- **Status:** complete, grindade (489 rökprov + 54 renhetsprov + revisionernas 42 egna, GRÖNT).
+- **3.7:** varje förslagskort i AI-panelen har en 💬-knapp som lägger förslaget som kommentar på sitt
+  citat i stället för att skriva över texten. Förslaget hamnar där författaren läser sina egna
+  kommentarer, texten står kvar orörd, och `comment_by_quote()` gör att samma förslag två gånger
+  blir en kommentar — inte två. Provat hela vägen från kortets knapp.
+- **3.8:** `+`-knappen skriver in ett förslag i taget som ett enskilt `insertText` över markeringen
+  = ett steg i ångra-historiken. Provat: förslaget in, **ett** ångra ut, och ett förslag vars citat
+  inte längre finns skriver ingenting utan säger det i statusfältet.
+- **Detaljnivån i granskningen (resten av 3.2):** `word_diff()` visar vilka ord som gick och kom i
+  ett omskrivet stycke — i radens verktygstips. Besluten är kvar per stycke: en läsare får
+  ordningen, men tar ställning till stycket. Provat: `Nyckeln låg [+kvar+] på bordet.`
+- **Fas 3 är därmed komplett:** 3.1 snapshots, 3.2 spårade ändringar, 3.3 kommentarer med tråd,
+  3.4/3.5 jämförelse och formatering, 3.6 historik, 3.7/3.8 AI-förslag granskningsbara.

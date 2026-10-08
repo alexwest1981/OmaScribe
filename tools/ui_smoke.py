@@ -1773,6 +1773,78 @@ def main() -> int:
     win.editor.document.setModified(False)
     win.is_modified = False
 
+    print("\n35. AI-förslag i marginalen, och ett ångra-steg (fas 3.7 och 3.8)")
+
+    scen35 = ovningsscen
+    kalla_text = ("<p>Hon gick in i källaren och lade nyckeln på bordet. "
+                  "Det var mörkt och hon tände lampan.</p>")
+    ovningsbok.write(scen35.id, kalla_text)
+    win._show_scene_html(scen35.id, kalla_text)
+
+    # 3.7: förslaget hamnar som kommentar, texten står kvar orörd
+    original = "Det var mörkt och hon tände lampan."
+    förslag = "Mörkret var kompakt; hon trevade efter strömbrytaren."
+    texten_fore = win.editor.document.toPlainText()
+    check(win.comment_ai_suggestion(original, förslag),
+          "förslaget kan läggas i marginalen i stället för att skrivas över")
+    kommentar = ovningsbok.comment_by_quote(scen35.id, original)
+    check(kommentar is not None and förslag in kommentar["text"],
+          f"och kommentaren hänger på citatet med förslaget i sig "
+          f"({kommentar['text'][:40] if kommentar else None!r})")
+    check(win.editor.document.toPlainText() == texten_fore,
+          "och texten står kvar orörd — inget skrivs över")
+    check(win.comment_ai_suggestion(original, förslag),
+          "samma förslag två gånger")
+    kommentarer = ovningsbok.comments_for(scen35.id)
+    check(len([k for k in kommentarer if k["quote"] == original]) == 1,
+          f"blir en kommentar, inte två ({len(kommentarer)} kommentarer)")
+
+    # AI-förslagets kommentar syns i panelen och går att markera som löst
+    win.scene_inspector.set_scene(ovningsbok, ovningsbok.by_id(scen35.id))
+    rader35 = win.scene_inspector.lst_comments
+    check(rader35.count() >= 1 and any("AI föreslår" in rader35.item(i).text()
+                                       for i in range(rader35.count())),
+          f"och den syns i marginalen ({[rader35.item(i).text()[:28] for i in range(rader35.count())]})")
+
+    # panelen: kortet för ett förslag har en väg till marginalen
+    from PyQt6.QtWidgets import QPushButton
+    win.sidebar._on_review_received({"suggestions": [
+        {"type": "style", "original": "Det var mörkt",
+         "replacement": "Mörkret var kompakt", "explanation": "kortare"}]})
+    knappar = [k for k in win.sidebar.findChildren(QPushButton)
+               if k.toolTip() == tr("ai_card_btn_comment")]
+    check(len(knappar) == 1, f"kortet i panelen har en kommentarsknapp ({len(knappar)})")
+    fangat_kort = []
+    win.sidebar.comment_suggestion_requested.connect(
+        lambda o, r: fangat_kort.append((o, r)))
+    knappar[0].click()
+    check(fangat_kort == [("Det var mörkt", "Mörkret var kompakt")],
+          f"och den skickar citatet och förslaget ({fangat_kort})")
+
+    # 3.8: att skriva in förslaget är ett ångra-steg
+    win.editor.document.clearUndoRedoStacks()
+    win._apply_ai_suggestion(original, förslag)
+    efter_text = win.editor.document.toPlainText()
+    check(förslag in efter_text and original not in efter_text,
+          "förslaget kan skrivas in i efterhand")
+    check("ångra-steg" in win.status_bar.currentMessage()
+          or win.status_bar.currentMessage() != "", "och det sägs vad som hände")
+    win.editor.document.undo()
+    check(win.editor.document.toPlainText() == texten_fore,
+          f"och ett enda ångra tar tillbaka hela förslaget "
+          f"({win.editor.document.toPlainText()[:30]!r})")
+    check(not win._apply_ai_suggestion("finns inte i texten", "något"),
+          "och ett förslag som inte går att hitta skriver inte")
+    win.editor.document.setModified(False)
+    win.is_modified = False
+
+    # orddiffen: detaljnivån i granskningsrutan
+    ruta35 = ReviewDialog("<p>Nyckeln låg på bordet.</p>", "<p>Nyckeln låg kvar på bordet.</p>", "ord", win)
+    check("[+kvar+]" in ruta35.lst_changes.item(0).toolTip(),
+          f"och ord-för-ord-skillnaden står i radens verktygstips "
+          f"({ruta35.lst_changes.item(0).toolTip().splitlines()[0][:40]!r})")
+    ruta35.close()
+
     # Arken: ett ark per sida med ett mellanrum där ytan syns, och texten delad
     # mellan rader. Mätt i en riktig rendering, med temats färger.
     from PyQt6.QtCore import QPointF as QtPunkt, QRect as QtRect

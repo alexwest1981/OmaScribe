@@ -69,6 +69,28 @@ if bad:
     raise SystemExit(1)
 PYEOF
 
+# Portabilitet: sounddevice paketerar inte PortAudio. Saknas biblioteket i
+# systemet kastar importen OSError — inte ImportError — och den gick tidigare
+# rakt igenom fångsten och dödade appen vid start på en maskin med ren
+# Python-installation. Provet lägger en trasig sounddevice framför de riktiga
+# paketen och kräver att importen ändå går igenom.
+run "utan ljudbibliotek" "$PY" - <<'PYEOF'
+import os, subprocess, sys, tempfile
+root = tempfile.mkdtemp(prefix="scribentia-utan-ljud-")
+with open(os.path.join(root, "sounddevice.py"), "w", encoding="utf-8") as f:
+    f.write('raise OSError("PortAudio library not found")\n')
+with open(os.path.join(root, "faster_whisper.py"), "w", encoding="utf-8") as f:
+    f.write('raise OSError("libwhisper missing")\n')
+env = dict(os.environ, PYTHONPATH=root)
+proc = subprocess.run([sys.executable, "-c",
+                       "import core.dictation_engine as d; "
+                       "assert d.sd is None and d.WhisperModel is None; print('ok, dikteringen stängs av')"],
+                      capture_output=True, text=True, env=env)
+print(proc.stdout.strip() or proc.stderr.strip()[-400:])
+if proc.returncode != 0:
+    raise SystemExit(f"appen dog utan ljudbibliotek: {proc.stderr.strip()[-300:]}")
+PYEOF
+
 run "projektmodellen" "$PY" -m core.project
 run "epub-exporten" "$PY" -m core.epub
 run "snapshots" "$PY" -m core.snapshots

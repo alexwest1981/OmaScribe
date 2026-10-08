@@ -363,6 +363,17 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
       att krascha (hittat av `ui_smoke`, inte av mig). 18 kontroller i panelen, 6 i `ui_smoke`
       avsnitt 49. R06 (ProWritingAid Chapter Critique, AutoCrit Summary Report)
 
+- [x] **4.22** Stilanalys på alla elva språken: svenska och engelska har sina listor i
+      `core/style_rules.py` (stramade efter mätningen på tre romaner), och de nio nya hämtar sina
+      ur `resources/style_words.json`. Listorna **väljs av manusets språk** — elva listor samtidigt
+      gör varje homograf till en falsk träff ("halt" är ett tyskt fyllnadsord och en svensk paus) —
+      och de bär bara det entydiga: färgade dialogtaggar och flerordiga fraser. Rådet namnger
+      manusets eget ord (`style_note_consider_said` med `{word}`, ifyllt per språk), franska taggar
+      matchas före bindestrecket ("chuchota-t-elle"), och självprovet bevisar att svenskan **inte**
+      larmar om tyskans tagg. **Kvar:** enkelords-fyllnadsord och adverbändelser för de nya språken
+      väntar på samma mätning som svenskan fick — en gissning som pekar fel i författarens text är
+      värre än ingen varning.
+
 ### Fas 5: Publiceringen
 
 - [~] **5.1** Formatprofiler för KDP, IngramSpark, Lulu, Apple Books och Kobo: `core/publishing.py`
@@ -527,6 +538,20 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
       `ui_smoke` prövar **förhållandet** i texten (72 → 48 tecken per rad, 3 → 6 sidor) — att bara
       kräva "fler sidor" gick igenom även med dubbelskalningen. R08 → **klart**.
 - **Status:** pending
+
+- [x] **5.17** Installation på andra distributioner än den här maskinen. `install.sh` **kontrollerar
+      i stället för att anta**: ingen `uv` behövs (skriptet skapar `.venv` och installerar med pip
+      själv, och lägger in pip med `ensurepip` när venven kommer från en uv-installation), Qt:s
+      X11-klientbibliotek läses med `ldd` på plattformspluginen och paketnamnet skrivs ut för
+      Arch/CachyOS, Debian och Fedora, och applikationen **provstartas huvudlöst i åtta sekunder** så
+      att en installation som inte kan starta programmet inte rapporteras som lyckad. `--check` och
+      `--uninstall` finns. Tre fel som var verkliga, inte befarade: systemets `python3` saknade PyQt6
+      när `uv` inte fanns, `sounddevice` kastar `OSError` (inte `ImportError`) när PortAudio saknas och
+      dödade appen vid start, och hjulet innehöll inte `locales/`, `resources/`, `main.py` eller
+      `icon.png` — `packages = [...]` i hatchling betyder "bara de mapparna", så en pip-installerad
+      kopia skulle visa i18n-nycklar i stället för text. Provat i färsk venv (översättningarna läses ur
+      paketet) och i fejkad hemkatalog med `desktop-file-validate`. **Kvar:** AUR/CachyOS-paket eller
+      Flatpak, och en fryst beroendelista.
 
 ### Fas 6: AI som författarverktyg
 

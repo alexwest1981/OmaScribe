@@ -42,4 +42,14 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["core", "ui"]
+# `packages = ["core", "ui"]` såg rätt ut men betyder "bara de här mapparna", och
+# då hjälper ingen include: hjulet innehöll 91 filer och ingen av dem var en
+# översättning. En explicit lista i stället.
+include = [
+    "core",
+    "ui",
+    "main.py",
+    "icon.png",
+    "locales",
+    "resources",
+]

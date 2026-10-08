@@ -45,10 +45,14 @@ provider for you.
 ```
 
 `install.sh` puts a launcher in `~/.local/bin`, an icon and a `.desktop` entry in place,
-and uses `uv` for a private environment when `uv` is installed (otherwise your system
-`python3`). It refuses to run if document files (`*.docx`, `*.pdf`, `*.odt`, `*.key`,
-`*.pem` …) are lying in the project folder — API keys end up in documents people save
-next to their code.
+and then verifies the three things a fresh machine gets wrong. It needs no `uv` — without
+it, it creates `.venv` and installs the dependencies with pip itself. It checks that Qt's
+X11 client libraries are present instead of assuming them. And it starts the application
+headless for eight seconds at the end, so an install that cannot start the app is not
+reported as successful. It refuses to run if document files (`*.docx`, `*.pdf`, `*.odt`,
+`*.key`, `*.pem` …) are lying in the project folder — API keys end up in documents people
+save next to their code. `--check` runs the checks without changing anything;
+`--uninstall` removes the launcher, the icon and the menu entry.
 
 | | |
 |---|---|
@@ -57,7 +61,24 @@ next to their code.
 | **Python packages** | PyQt6 ≥ 6.6, python-docx, markdown, httpx, diff-match-patch, numpy, sounddevice, soundfile, pyphen, lxml |
 | **Optional: Ghostscript** | only for PDF/X-1a export. Without it the menu item says so instead of writing a file that claims to be PDF/X. |
 | **Optional: faster-whisper** | only for dictation. The model runs locally (`base` by default) and is downloaded on first use. |
+| **Optional: PortAudio** | only for dictation. `sounddevice` wraps it but does not ship it; without it the app starts and the dictation menu says the microphone is unavailable. |
 | **Optional: EPUBCheck** | only if you want the EPUB validated. Offered as an option, never a requirement. |
+
+**Other distributions.** The PyQt6 wheel carries Qt but not the X11/Wayland client
+libraries Qt links against. Where `libxcb-cursor`, `libxkbcommon-x11` or `libGL` are
+missing, Qt dies before a window exists and the error says nothing useful — so
+`install.sh` reads `/etc/os-release`, runs `ldd` on `libqxcb.so` and prints the command
+for your family, using the library name it actually found missing:
+
+| Library | Arch, CachyOS, EndeavourOS | Debian, Ubuntu, Mint | Fedora, RHEL |
+|---|---|---|---|
+| `libxcb-cursor.so.0` | `xcb-util-cursor` | `libxcb-cursor0` | `xcb-util-cursor` |
+| `libxkbcommon-x11.so.0` | `libxkbcommon-x11` | `libxkbcommon-x11-0` | `libxkbcommon-x11` |
+| `libGL.so.1`, `libEGL.so.1` | `libglvnd` | `libgl1` | `mesa-libGL` |
+| `libxcb-icccm.so.4` | `xcb-util-wm` | `libxcb-icccm4` | `xcb-util-wm` |
+
+The Arch column is measured with `pacman -Qoq` against the library paths on this machine.
+The other two are the published package names for the same libraries.
 
 `macOS` and `Windows` are **untested** — the app is written for Linux and nothing else
 has been tried. Say so rather than expect it to work.
@@ -289,9 +310,14 @@ betyder att programmet säger att ingenting skickades i stället för att välja
 ```
 
 `install.sh` lägger en startare i `~/.local/bin`, en ikon och en `.desktop`-fil, och
-använder `uv` för en egen miljö om `uv` finns (annars din `python3`). Den vägrar köra om
-dokumentfiler (`*.docx`, `*.pdf`, `*.odt`, `*.key`, `*.pem` …) ligger i projektmappen —
-API-nycklar hamnar i dokument som folk sparar bredvid sin kod.
+kontrollerar sedan de tre saker en ren maskin brukar falla på. Den kräver ingen `uv` —
+finns den inte skapar skriptet `.venv` och installerar beroendena med pip själv. Den
+kontrollerar att Qt:s X11-klientbibliotek finns i stället för att anta det. Och den
+startar programmet huvudlöst i åtta sekunder på slutet, så en installation som inte kan
+starta programmet rapporteras inte som lyckad. Den vägrar köra om dokumentfiler (`*.docx`,
+`*.pdf`, `*.odt`, `*.key`, `*.pem` …) ligger i projektmappen — API-nycklar hamnar i
+dokument som folk sparar bredvid sin kod. `--check` gör kontrollerna utan att ändra något;
+`--uninstall` tar bort startaren, ikonen och menyvalet.
 
 | | |
 |---|---|
@@ -300,7 +326,24 @@ API-nycklar hamnar i dokument som folk sparar bredvid sin kod.
 | **Paket** | PyQt6 ≥ 6.6, python-docx, markdown, httpx, diff-match-patch, numpy, sounddevice, soundfile, pyphen, lxml |
 | **Frivilligt: Ghostscript** | bara för PDF/X-1a. Utan det säger menyn det i stället för att skriva en fil som påstår sig vara PDF/X. |
 | **Frivilligt: faster-whisper** | bara för diktering. Modellen körs lokalt (`base` som standard) och hämtas vid första användningen. |
+| **Frivilligt: PortAudio** | bara för diktering. `sounddevice` är ett skal kring det men levererar det inte; utan det startar programmet och dikteringsmenyn säger att mikrofonen inte är tillgänglig. |
 | **Frivilligt: EPUBCheck** | bara om du vill validera EPUB:en. Ett val, aldrig ett krav. |
+
+**Andra distributioner.** PyQt6-hjulet bär Qt men inte de X11-/Wayland-klientbibliotek som
+Qt länkar mot. Saknas `libxcb-cursor`, `libxkbcommon-x11` eller `libGL` dör Qt innan det
+finns ett fönster, och felet säger ingenting användbart. Därför läser `install.sh`
+`/etc/os-release`, kör `ldd` på `libqxcb.so` och skriver kommandot för din familj, med det
+biblioteksnamn som faktiskt saknades:
+
+| Bibliotek | Arch, CachyOS, EndeavourOS | Debian, Ubuntu, Mint | Fedora, RHEL |
+|---|---|---|---|
+| `libxcb-cursor.so.0` | `xcb-util-cursor` | `libxcb-cursor0` | `xcb-util-cursor` |
+| `libxkbcommon-x11.so.0` | `libxkbcommon-x11` | `libxkbcommon-x11-0` | `libxkbcommon-x11` |
+| `libGL.so.1`, `libEGL.so.1` | `libglvnd` | `libgl1` | `mesa-libGL` |
+| `libxcb-icccm.so.4` | `xcb-util-wm` | `libxcb-icccm4` | `xcb-util-wm` |
+
+Arch-kolumnen är uppmätt med `pacman -Qoq` mot bibliotekssökvägarna på den här maskinen.
+De två andra är de publicerade paketnamnen för samma bibliotek.
 
 `macOS` och `Windows` är **oprövade** — programmet är skrivet för Linux och inget annat
 har försökts.

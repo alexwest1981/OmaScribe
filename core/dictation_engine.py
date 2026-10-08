@@ -4,14 +4,21 @@ import threading
 import numpy as np
 from PyQt6.QtCore import QObject, pyqtSignal
 
+# Båda är frivilliga: dikteringen är en tjänst ovanpå redigeraren, och appen ska
+# starta utan den. De får inte fälla starten — och de kan fela på två sätt.
+# Ett saknat paket ger ImportError, men sounddevice paketerar inte PortAudio:
+# finns inte biblioteket på maskinen kastar importen OSError i stället, och den
+# gick rakt igenom den gamla fångsten och dödade appen vid start.
 try:
     import sounddevice as sd
-except ImportError:
+except (ImportError, OSError) as e:
+    print(f"[dictation] microphone input is unavailable: {e}")
     sd = None
 
 try:
     from faster_whisper import WhisperModel
-except ImportError:
+except (ImportError, OSError) as e:
+    print(f"[dictation] transcription is unavailable: {e}")
     WhisperModel = None
 
 class DictationEngine(QObject):
@@ -51,7 +58,7 @@ class DictationEngine(QObject):
 
     def start_recording(self):
         if sd is None:
-            self.error.emit("sounddevice library not installed.")
+            self.error.emit("Microphone input is unavailable — the sounddevice package and the PortAudio library are required for dictation.")
             return
 
         if self.is_recording:

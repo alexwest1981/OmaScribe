@@ -17,7 +17,7 @@ arkets innermått i stället för att flöda vidare över kanten.
 from PyQt6.QtCore import QPointF, QRectF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
     QAbstractTextDocumentLayout, QColor, QFont, QFontMetricsF, QPainter, QPalette,
-    QPen, QTextCursor,
+    QPen, QTextCharFormat, QTextCursor,
 )
 from PyQt6.QtWidgets import QFrame, QSizePolicy, QWidget
 
@@ -308,6 +308,21 @@ class PagedPaper(QWidget):
         ctx = QAbstractTextDocumentLayout.PaintContext()
         ctx.palette = self._paper_palette(colors)
         ctx.clip = QRectF(0.0, offset, innehall.width(), höjd)
+        # Markeringen hör till dokumentet, men bara det ark editorn sitter i ritar
+        # den själv. Utan detta syns en Ctrl+A bara på ett ark — texten är
+        # markerad, men det ser ut som att bara sista sidan blev det, och då
+        # vågar man inte trycka Delete (mätt: 1,7 % av ytan ändrades, exakt ett
+        # ark). Färgerna tas från editorn, så arken och arket man skriver i ser
+        # likadana ut.
+        markering = self.canvas.textCursor()
+        if markering.hasSelection():
+            val = QAbstractTextDocumentLayout.Selection()
+            val.cursor = markering
+            stil = QTextCharFormat()
+            stil.setBackground(self.canvas.palette().highlight())
+            stil.setForeground(self.canvas.palette().highlightedText())
+            val.format = stil
+            ctx.selections = [val]
         layout.draw(painter, ctx)
         painter.restore()
 

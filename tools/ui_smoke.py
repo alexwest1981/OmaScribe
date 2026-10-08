@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from typing import cast  # noqa: E402
 
-from PyQt6.QtWidgets import QApplication  # noqa: E402
+from PyQt6.QtWidgets import QApplication, QTextEdit  # noqa: E402
 from PyQt6.QtGui import QImage, QColor, QTextDocument, QTextCursor  # noqa: E402
 
 from core import templates, print_style  # noqa: E402
@@ -94,6 +94,48 @@ def main() -> int:
     check(canvas.page_settings.get("page_number_pos") == "bottom-alternating",
           "växlande sidnummer når arbetsytan")
     check(canvas.page_settings.get("header_text") == "Testhuvud", "sidhuvudet når arbetsytan")
+
+    # Ctrl+A markerar hela dokumentet, men bara det ark editorn sitter i ritar
+    # markeringen själv — de andra arken ritas statiskt. Utan fixen syntes alltså
+    # en Ctrl+A bara på ett ark (mätt: 1,7 % av ytan ändrades = exakt ett ark),
+    # och en användare som markerar allt och trycker Delete ser fel sak hända.
+    # Här mäts det i pixlar: ett ark som *inte* är aktivt skall ändras av Ctrl+A.
+    from ui.paged_paper import PagedPaper
+    prov_canvas = QTextEdit()
+    ark = PagedPaper(prov_canvas, win.editor.page_frame.theme_mgr)
+    ark.resize(ark.width(), 2400)
+    prov_canvas.setPlainText("\n".join(
+        f"Rad {i} med text som fyller ut arket så att provet får flera sidor." for i in range(1, 200)))
+    # Provet sätter bredden själv: i huvudlöst läge kommer inte alltid den
+    # storleksändring som annars ger dokumentet sin bredd (samma tal som Qt ger).
+    prov_canvas.document().setTextWidth(float(ark.content_rect(0).width()))
+    slut = time.time() + 3
+    while time.time() < slut and prov_canvas.document().size().height() <= 1:
+        app.processEvents()
+    prov_canvas.moveCursor(prov_canvas.textCursor().MoveOperation.End)
+    ark.refresh()
+    app.processEvents()
+    check(len(ark.pages) >= 3, f"provdokumentet får flera ark ({len(ark.pages)})")
+
+    def ark_pixlar(img, i):
+        """Pixlar som skiljer sig från grundbilden på ark i."""
+        rad0 = int(ark.sheet_rect(i).y())
+        rad1 = rad0 + int(ark.sheet_rect(i).height())
+        return sum(1 for y in range(max(0, rad0), min(rad1, img.height()), 3)
+                   for x in range(0, img.width(), 3)
+                   if img.pixel(x, y) != utan_img.pixel(x, y))
+
+    utan_img = ark.grab().toImage()
+    prov_canvas.selectAll()
+    app.processEvents()
+    med_img = ark.grab().toImage()
+    check(len(prov_canvas.textCursor().selectedText()) > 1000, "Ctrl+A markerar hela provdokumentet")
+    check(ark.active == len(ark.pages) - 1, f"provets aktiva ark är det sista ({ark.active})")
+    andra_ark = ark_pixlar(med_img, 0)
+    check(andra_ark > 0,
+          f"och markeringen ritas även på ett ark som inte är aktivt ({andra_ark} pixlar)")
+    prov_canvas.setParent(None)
+    ark.setParent(None)
 
     print("\n3. Mallbiblioteket")
     for t in templates.TEMPLATES:

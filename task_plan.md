@@ -611,6 +611,25 @@ kontrollistan när faserna är klara.
 
 ## Att åtgärda senare (rapporterat av Alex, ej gjort)
 
+- [x] **Ctrl+A såg ut att bara markera sista sidan.** Rapporterat av Alex 2026-10-08, mätt och fixat
+      samma dag. Han öppnade `sprint-4-vad-jag-gjorde-2026-10-08.md` (15 ark), satte markören i
+      slutet och tryckte Ctrl+A: allt bleknade utom sista arket. **Mätt i hans fil:** markeringen
+      *var* komplett — 12 005 av 12 006 tecken — men bara det ark editorn satt i ritade den: 1,7 %
+      av ytan ändrades, exakt ett ark. Orsaken är att `PagedPaper` lägger **en** editor över det
+      aktiva arket och ritar de övriga arken statiskt ur dokumentets layout; den statiska målningen
+      skickade ingen markering till Qt (`PaintContext.selections` var tom), så markeringen fanns
+      utan att synas. Fixen ger `PaintContext` samma markering som editorn har, med editorns egna
+      färger, så arken ser likadana ut. **Mätt efteråt:** 14,0 % av ytan ändras och ett ark som inte
+      är aktivt ändras med 36 046 pixlar (0 utan fixen). Rökprovet mäter det i pixlar per ark.
+
+- [ ] **Rökprovets sidlayout kräver att dokumentet får en bredd.** I huvudlöst läge (offscreen) får
+      editorns dokument ibland aldrig sin `textWidth` — Qt sätter den vid en storleksändring, och
+      utan skärm kommer ingen. Då blir dokumentets höjd 0, allt räknas som **ett** ark och proven som
+      rör sidor mäter ingenting (mätt: `textWidth` 0,0 mot 646,0 i samma körning med färsk respektive
+      befintlig inställningsfil). Rökprovets nya Ctrl+A-prov sätter därför bredden själv, med samma
+      tal som Qt skulle gett. Kvar att utreda: om appen kan hamna i samma läge på en riktig skärm —
+      då vore fixen att `refresh()` alltid sätter dokumentets bredd ur arkets innermått.
+
 - [ ] **Analysens notiser är svenska i båda gränssnitten.** `core/analysis.py` och
       `core/style_rules.py` bygger notistexten ("4 gånger tätt, 5 i boken, tätast 1 ord isär") som
       färdig svensk text, och panelen visar den rakt av. Med engelskt gränssnitt blir listan

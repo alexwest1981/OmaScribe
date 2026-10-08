@@ -407,6 +407,8 @@ class MainWindow(QMainWindow):
         self.act_exp_html = self._add_action(self.menu_file, _("menu_file_export_html"), self.export_html)
         self.act_exp_epub = self._add_action(self.menu_file, _("menu_file_export_epub"), self.export_epub_book)
         self.act_release = self._add_action(self.menu_file, _("menu_file_release"), self.release_book)
+        self.act_epubcheck = self._add_action(self.menu_file, _("menu_file_epubcheck"),
+                                              self.check_epub_with_epubcheck)
         self.menu_file.addSeparator()
         self.act_exit = self._add_action(self.menu_file, _("menu_file_exit"), self.close, "Ctrl+Q")
 
@@ -2068,6 +2070,40 @@ class MainWindow(QMainWindow):
         except Exception as e:                            # noqa: BLE001
             QMessageBox.critical(self, _("export_error_title"), str(e))
 
+    def check_epub_with_epubcheck(self, path: str | None = None):
+        """EPUBCheck som val: kontrollen mitt i menyn, med besked om den saknas (R05.8).
+
+        Ett eget menyval och inte ett krav i exporten: EPUBCheck är ett
+        Java-program, och Java finns inte på varje dator. Går det inte att köra
+        ska boken ändå kunna skrivas — men beskedet ska säga exakt vad som
+        fattas och var man lägger det.
+        """
+        from core.epubcheck import SEARCH_PATHS, java_available, validate
+
+        if not path:
+            path, _valt = QFileDialog.getOpenFileName(
+                self, _("menu_file_epubcheck"), "", "EPUB (*.epub)")
+        if not path:
+            return
+        svar = validate(path)
+        if svar.get("reason") == "no_epubcheck":
+            QMessageBox.information(
+                self, _("epubcheck_missing_title"),
+                _("epubcheck_missing_text",
+                  java=_("epubcheck_java_yes") if svar.get("java") else _("epubcheck_java_no"),
+                  paths="\n".join("• " + str(p) for p in SEARCH_PATHS)))
+            return
+        if not svar.get("ran"):
+            QMessageBox.warning(self, _("epubcheck_result_title"),
+                                _("epubcheck_run_failed", error="; ".join(svar.get("messages", []))))
+            return
+        if svar["clean"]:
+            QMessageBox.information(self, _("epubcheck_result_title"), _("epubcheck_clean"))
+            return
+        rader = [_("epubcheck_counts", errors=str(svar["errors"]), warnings=str(svar["warnings"]))]
+        rader += ["", *svar["messages"]]
+        QMessageBox.information(self, _("epubcheck_result_title"), "\n".join(rader))
+
     def release_book(self, folder: str | None = None):
         """Släpp boken: EPUB, tryck-PDF och rapport i en mapp (R05.9, R05.10).
 
@@ -2096,6 +2132,17 @@ class MainWindow(QMainWindow):
             varningar.append(_("release_epub_failed", error=str(e)))
         if not self._render_release_pdf(pdf_sökväg):
             varningar.append(_("release_pdf_failed"))
+
+        # EPUBCheck körs när den finns — och säger till när den inte gjorde det,
+        # så att "inte kontrollerad" står i rapporten i stället för att tigas bort.
+        from core.epubcheck import validate as _validera
+
+        kontroll = _validera(epub_sökväg)
+        if not kontroll.get("ran"):
+            varningar.append(_("release_unchecked", reason=kontroll.get("reason", "?")))
+        elif kontroll.get("errors"):
+            varningar.append(_("release_check_errors", errors=str(kontroll["errors"])))
+            varningar += kontroll["messages"]
 
         rapport = build_release(folder, [epub_sökväg, pdf_sökväg], uppgifter, varningar)
         text = _("release_done_text", folder=folder, count=str(len(rapport["files"])))

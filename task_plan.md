@@ -295,11 +295,14 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       belägga en gemensam formel, och en felaktig ryggbredd syns först i tryck. **Kvar:** rita själva
       omslagsarket med ryggtext och streckkodszon. R05.6
 - [x] **5.7** DOCX med namngivna Word-stilar: citat blir `Quote` (finns i Words standardmall), kod blir `Code Block` — stilen **skapas i filen** när mallen inte har den, vilket är hela poängen: en redaktör ska kunna restyla bokens kodblock i ett svep i stället för att jaga direkt formatering. Rubrikerna använder redan `Heading 1–3`. Stilnamnen är språkoberoende i filen och visas på svenska i svenskt Word. Provat: `['Heading 1', 'Normal', 'Quote', 'Code Block']` läst ur den skrivna filen. R05.7
-- [~] **5.8** Tillgänglighetsmetadata finns: `accessMode`, `accessibilityFeature` och
-      `accessibilityHazard` skrivs i OPF:en (EPUB Accessibility 1.1:s MUST-krav) och provas i
-      rökprovet. **Kvar:** EPUBCheck-validering — den kräver Java och ett EPUBCheck-paket på datorn,
-      så den ska köras som ett *val* med tydligt besked när verktyget saknas, inte som ett krav i
-      exporten. R05.8
+- [x] **5.8** Tillgänglighetsmetadata (`accessMode`, `accessibilityFeature`, `accessibilityHazard`)
+      skrivs i OPF:en och provas i rökprovet. **Och EPUBCheck som val:** Arkiv → Kontrollera EPUB
+      med EPUBCheck… kör den riktiga kontrollen — det förlag och butiker själva kör — och släppet
+      kör den automatiskt när den finns. Är den inte installerad kommer ett **tydligt besked**: om
+      Java finns, var `epubcheck.jar` ska läggas (fem kända platser, eller `EPUBCHECK_JAR`), och att
+      boken redan är skriven — kontrollen är ett val, inte ett krav. Ett program som startar men inte
+      svarar som EPUBCheck **säger det**: en trasig jar får aldrig bli "inga fel", för en ren
+      förklaring på en okontrollerad bok är det farligaste svaret av alla. R05.8
 - [~] **5.9** Slutkontrollen: **Arkiv → Släpp boken…** samlar EPUB:en, tryck-PDF:en och en rapport i
       en mapp. Rapporten (`RAPPORT.md` + `release.json`) säger vad som ligger där, när det byggdes,
       vad varje fil väger och dess **SHA-256**, så att frågan "är det här samma fil som i går?" går att

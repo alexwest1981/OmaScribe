@@ -629,3 +629,22 @@
      stycke; nu mäter den stycket.
 - **Kvar:** inget i 5.10 — menyvalet för typografin fanns sedan fas 4, och exporten rör fortfarande
   aldrig författarens text i smyg.
+
+### Fas 5: EPUBCheck som val, med ett tydligt besked (5.8)
+
+- **Vad som blev gjort:** `core/epubcheck.py` + Arkiv → **Kontrollera EPUB med EPUBCheck…**. Det är det
+  verktyg förlagen och butikerna själva kör, och den enda riktiga kontrollen av en EPUB — men det är ett
+  Java-program, så det är ett **val** och inte ett krav: går det inte att köra skrivs boken ändå.
+- **Beskedet när den saknas** är mätt på den här datorn (Java 21 finns, EPUBCheck gör det inte): om Java
+  finns, de fem platser den letar på (plus `EPUBCHECK_JAR`), och att boken redan är skriven. Släppet kör
+  kontrollen automatiskt när den finns och skriver i rapporten när den *inte* kunde köras — "inte
+  kontrollerad" står där i stället för att tigas bort.
+- **Ett farligt svar som blev ett annat:** en kontroll vars program startar men inte svarar som EPUBCheck
+  (trasig jar, fel java) hade gett *"0 fel, 0 varningar"* — en ren förklaring på en bok som aldrig blev
+  kontrollerad. Nu blir det `unreadable_output` med verktygets egna rader. **En kontroll som inte kunde
+  köras är inte en ren bok.**
+- **Fyra gånger samma familj i samma fas** (funktionslokal bindning skuggar namnet): EPUB-exporten, den
+  skrivna filens stil, `export_epub46` och till sist `_` självt, som redan är en slingvariabel i
+  rökprovets `main()`. Rökprovsfilen hade redan svaret — `from core.i18n import _ as trNN` med en
+  kommentar om varför — och nu följer avsnitt 47 samma mönster i stället för att hitta på ett eget.
+  Skillen (Qt, punkt 30) har fått regeln: **varje avsnitt importerar och bygger sina egna namn.**

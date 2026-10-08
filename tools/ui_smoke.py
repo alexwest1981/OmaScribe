@@ -1816,6 +1816,64 @@ def main() -> int:
     win.editor.document.setModified(False)
     win.is_modified = False
 
+    print("\n47. EPUBCheck som val, med besked när den saknas (fas 5.8)")
+
+    from ui import main_window as _mw47
+
+    from core import epubcheck as _ec47
+    from core.epub import export_epub as _export47
+    from core.i18n import _ as tr47          # `_` är en slingvariabel i main()
+
+    check(win.act_epubcheck is not None and win.act_epubcheck.isEnabled(),
+          f"menyposten finns ({win.act_epubcheck.text()!r})")
+    check(_ec47.find_epubcheck(paths=[], which=lambda _n: None) is None,
+          "och utan epubcheck på datorn blir svaret None, inte ett kraschande anrop")
+
+    # Det tydliga beskedet: vilka platser den letade på, och om java finns
+    klass47 = _mw47.QMessageBox
+    fångat47 = []
+    _mw47.QMessageBox = type("TystRuta", (), {
+        "information": staticmethod(lambda *a, **k: fångat47.append(a)),
+        "critical": staticmethod(lambda *a, **k: fångat47.append(a)),
+        "warning": staticmethod(lambda *a, **k: fångat47.append(a))})
+    try:
+        doc47 = QTextDocument()
+        QTextCursor(doc47).insertHtml("<h1>Ett kapitel</h1><p>Ett stycke text.</p>")
+        epub47 = os.path.join(tempfile.mkdtemp(prefix="ec47-"), "boken.epub")
+        _export47(epub47, doc47, win.book_metadata())
+        win.check_epub_with_epubcheck(path=epub47)
+    finally:
+        _mw47.QMessageBox = klass47
+    check(len(fångat47) == 1, "en ruta visas när kontrollen inte kan köras")
+    rubrik47, text47 = (_titel := fångat47[0][1]), fångat47[0][2]
+    check(rubrik47 == tr47("epubcheck_missing_title"),
+          f"och den säger att EPUBCheck saknas ({rubrik47!r})")
+    check(_ec47.SEARCH_PATHS[0] in text47 or "epubcheck.jar" in text47,
+          "och var man lägger den")
+    check(tr47("epubcheck_java_yes") in text47 or tr47("epubcheck_java_no") in text47,
+          f"med besked om java ({text47.splitlines()[2] if len(text47.splitlines()) > 2 else text47[:40]!r})")
+
+    # Och en epubcheck som *finns* men inte går att köra säger det i stället för att tigas
+    från47, sparat47 = os.environ.get("EPUBCHECK_JAR"), os.environ.copy()
+    mapp47 = tempfile.mkdtemp(prefix="ec47-")
+    falsk47 = os.path.join(mapp47, "epubcheck.jar")
+    with open(falsk47, "w", encoding="utf-8") as fil:
+        fil.write("inte en jar")
+    os.environ["EPUBCHECK_JAR"] = falsk47
+    try:
+        check(_ec47.find_epubcheck() == ["java", "-jar", falsk47],
+              "miljövariabeln pekar ut kontrollen")
+        svar47 = _ec47.validate(epub47)
+        check(svar47["ran"] is False and bool(svar47.get("reason")),
+              f"och en som inte går att köra ger ett skäl, inte ett undantag ({svar47.get('reason')})")
+        check(svar47.get("clean") is not True,
+              "och den säger aldrig 'inga fel' om något den inte kunde läsa")
+    finally:
+        if från47 is None:
+            os.environ.pop("EPUBCHECK_JAR", None)
+        else:
+            os.environ["EPUBCHECK_JAR"] = från47
+
     print("\n46. Rollerna blir namngivna stilar i varje kanal (fas 5.3, 5.7)")
 
     from PyQt6.QtGui import QTextBlockFormat

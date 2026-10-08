@@ -902,5 +902,16 @@
   "release_no_isbn": "No ISBN — without it the book cannot be ordered in a bookshop.",
   "release_odd_pages": "The page count is odd ({pages}) — the book gets a blank last page.",
   "release_epub_failed": "The EPUB could not be written: {error}",
-  "release_pdf_failed": "The print PDF could not be written."
+  "release_pdf_failed": "The print PDF could not be written.",
+  "menu_file_epubcheck": "Check EPUB with EPUBCheck…",
+  "epubcheck_missing_title": "EPUBCheck is not on this computer",
+  "epubcheck_missing_text": "The book cannot be checked from here yet.\n\nJava: {java}\n\nGet epubcheck.jar from https://www.w3.org/publishing/epubcheck/ and put it in one of these places — or set EPUBCHECK_JAR to its path:\n{paths}\n\nThe book is already written; the check is an option, not a requirement.",
+  "epubcheck_java_yes": "present",
+  "epubcheck_java_no": "missing",
+  "epubcheck_result_title": "EPUBCheck",
+  "epubcheck_clean": "No errors and no warnings. The book is clean.",
+  "epubcheck_counts": "{errors} errors and {warnings} warnings:",
+  "epubcheck_run_failed": "The check could not run: {error}",
+  "release_unchecked": "EPUBCheck could not run ({reason}) — the book is not checked.",
+  "release_check_errors": "EPUBCheck found {errors} errors in the book."
 }

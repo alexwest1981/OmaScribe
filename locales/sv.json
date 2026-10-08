@@ -902,5 +902,16 @@
   "release_no_isbn": "ISBN saknas — utan det går boken inte att beställa i en bokhandel.",
   "release_odd_pages": "Sidantalet är udda ({pages}) — boken får en blank sista sida.",
   "release_epub_failed": "EPUB:en kunde inte skrivas: {error}",
-  "release_pdf_failed": "Tryck-PDF:en kunde inte skrivas."
+  "release_pdf_failed": "Tryck-PDF:en kunde inte skrivas.",
+  "menu_file_epubcheck": "Kontrollera EPUB med EPUBCheck…",
+  "epubcheck_missing_title": "EPUBCheck finns inte på datorn",
+  "epubcheck_missing_text": "Boken kan inte kontrolleras härifrån ännu.\n\nJava: {java}\n\nHämta epubcheck.jar från https://www.w3.org/publishing/epubcheck/ och lägg den på någon av dessa platser — eller sätt EPUBCHECK_JAR till dess sökväg:\n{paths}\n\nBoken är redan skriven; kontrollen är ett val, inte ett krav.",
+  "epubcheck_java_yes": "finns",
+  "epubcheck_java_no": "saknas",
+  "epubcheck_result_title": "EPUBCheck",
+  "epubcheck_clean": "Inga fel och inga varningar. Boken är ren.",
+  "epubcheck_counts": "{errors} fel och {warnings} varningar:",
+  "epubcheck_run_failed": "Kontrollen kunde inte köras: {error}",
+  "release_unchecked": "EPUBCheck kunde inte köras ({reason}) — boken är inte kontrollerad.",
+  "release_check_errors": "EPUBCheck hittade {errors} fel i boken."
 }

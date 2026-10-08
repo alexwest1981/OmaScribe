@@ -315,6 +315,9 @@ class Project:
         # Utskriftsprofiler (5.1/5.15): namngivna kompileringsval per bok, så en
         # tryckfärdig inställning inte behöver sättas om varje gång.
         self.profiles: list[dict] = []            # [{"name","fmt","scope",...}]
+        # Vad codexposterna gör i ett AI-anrop (6.17): alltid, vid omnämning
+        # eller aldrig. Standard är "vid omnämning" och sparas inte alls.
+        self.context_policy: dict = {}            # {entity_id: "always"|"never"}
         self._words: dict[str, int] = {}          # cache per nod-id
 
     # ------------------------------------------------------------- skapa/ladda
@@ -378,6 +381,10 @@ class Project:
             for p in (data.get("profiles") or [])
             if p.get("name")
         ]
+        project.context_policy = {
+            str(k): str(v) for k, v in (data.get("context_policy") or {}).items()
+            if str(v) in ("always", "never")
+        }
         return project
 
     def save(self) -> None:
@@ -391,6 +398,7 @@ class Project:
             "links": [dict(l) for l in self.links],
             "events": [dict(e) for e in self.events],
             "profiles": [dict(p) for p in self.profiles],
+            "context_policy": dict(self.context_policy),
         }
         self.root.mkdir(parents=True, exist_ok=True)
         atomic_write_text(

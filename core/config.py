@@ -49,6 +49,9 @@ DEFAULT_CONFIG = {
     "ai_endpoint": DEFAULT_AI_ENDPOINT,
     "ai_key": "",
     "ai_model": DEFAULT_AI_MODEL,
+    # Hur mycket text ett AI-anrop får bära (tecken). Urvalet byggs i
+    # core/context.py och stryks i prioritetsordning när budgeten tar slut.
+    "ai_context_budget": 8000,
     "dictation_model": "base",
     "dictation_lang": "auto",
     "dictation_auto_punctuate": True,

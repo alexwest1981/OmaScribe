@@ -3152,6 +3152,107 @@ def main() -> int:
           f"och graden blir {_ps53.LARGE_PRINT_FACTOR} gånger större, mätt i texten "
           f"({förhållande53:.2f} gånger färre tecken per rad)")
 
+    print("\n54. Fråga manuset (fas 6.3, 6.4, 6.16, 6.17)")
+
+    import core.context as _ctx54
+    import ui.ask_panel as _ask54
+    from PyQt6.QtCore import QUrl as _QUrl54
+
+    panel54 = win.ask
+    win.open_ask_panel()
+    check(not win.sidebar.isHidden() and win.sidebar.tabs.currentWidget() is panel54,
+          "menyvalet visar fliken Fråga manuset")
+
+    panel54.input_question.setText("var är nyckeln?")
+    items54 = panel54.build_items("var är nyckeln?")
+    check(items54 != [], f"frågan bygger ett urval ur projektet ({[i.label for i in items54]})")
+    check(panel54.lbl_context.text() != "", "och urvalets storlek visas i panelen")
+    check(all(i.tokens > 0 for i in items54), "varje del har sin tokenräkning")
+
+    # Anropet: AIWorker byts mot en attrapp, så provet rör inget nätverk. Patchen
+    # gäller modulens egen namnrymd (ui_smoke kör filen importerad, inte med -m).
+    fångat54 = []
+    klass54 = _ask54.AIWorker
+    _ask54.AIWorker = type("Tyst54", (object,), {
+        "finished": type("S54", (), {"connect": staticmethod(lambda *_: None)})(),
+        "error": type("S54", (), {"connect": staticmethod(lambda *_: None)})(),
+        "__init__": lambda self, *a: fångat54.append(a),
+        "start": lambda self: None})
+    sparat54 = (win.config.get("ai_endpoint"), win.config.get("ai_model"),
+                win.config.get("ai_key"))
+    try:
+        win.config.set("ai_endpoint", "http://127.0.0.1:20128/v1")
+        win.config.set("ai_model", "OmniRoute")
+        win.config.set("ai_key", "prov-nyckel")
+        text54 = panel54.ask()
+    finally:
+        _ask54.AIWorker = klass54
+        win.config.set("ai_endpoint", sparat54[0])
+        win.config.set("ai_model", sparat54[1])
+        win.config.set("ai_key", sparat54[2])
+
+    check(len(fångat54) == 1, "och ett anrop skickas")
+    check(text54.startswith("## scen:") and "## instruktion: fråga" in text54,
+          f"med urvalet som anropets text ({text54.splitlines()[0][:40]!r})")
+    check(fångat54 and fångat54[0][0] == "http://127.0.0.1:20128/v1",
+          "till den slutpunkt användaren valt")
+    check(fångat54 and fångat54[0][2] == "OmniRoute", "med den valda modellen")
+
+    # Svaret: citatet blir en länk, och ett klick öppnar scenen det kom ifrån.
+    etikett54 = next((i.label for i in items54 if i.scene_id), "")
+    panel54.items = items54
+    panel54._on_answer({"content": f"Svaret står i [{etikett54}]."})
+    html54 = panel54.view_answer.toHtml()
+    check("href=" in html54 and etikett54 in html54,
+          f"och citatet i svaret blir en länk ({etikett54!r})")
+    mål54 = next(i.scene_id for i in items54 if i.label == etikett54)
+    panel54._on_anchor(_QUrl54(f"scene:{mål54}"))
+    check(win.active_scene_id == mål54, "och ett klick öppnar scenen citatet kom ifrån")
+    check(len(panel54.history) == 1 and panel54.lst_history.count() == 1,
+          "och frågan och svaret hamnar i historiken")
+
+    # En codexpost som är kopplad till den öppna scenen skall följa med i urvalet
+    # — det är den vägen 6.17:s val gäller, och den prövas här från codexet.
+    ent54_obj = None
+    if win.codex is not None and win.active_scene_id:
+        ent54_obj = win.codex.add_entity("Provperson", "character",
+                                         summary="Skapad av rökprovet.")
+        win.codex.link(ent54_obj.id, win.active_scene_id)
+        items54 = panel54.build_items("var är nyckeln?")
+        post54 = next((i for i in items54 if i.kind == _ctx54.KIND_CODEX), None)
+        check(post54 is not None and "kopplad" in post54.reason,
+              f"en codexpost kopplad till scenen följer med i urvalet "
+              f"({[(i.kind, i.label) for i in items54]})")
+    else:
+        check(False, "projektet borde ha ett codex att pröva mot")
+
+    visare54 = _ask54.ContextView(items54, panel54, project=win.project)
+    check(visare54.lst.count() == len(items54),
+          f"kontextvisaren listar varje del ({visare54.lst.count()})")
+    check(all("—" in visare54.lst.item(r).text() for r in range(visare54.lst.count())),
+          "med skälet till att var och en är med")
+    codex54 = next((r for r in range(visare54.lst.count())
+                    if "codex" in visare54.lst.item(r).text()), None)
+    if codex54 is not None:
+        visare54.lst.setCurrentRow(codex54)
+        visare54.combo_policy.setCurrentIndex(2)        # aldrig
+        ent54 = visare54.lst.item(codex54).data(Qt.ItemDataRole.UserRole).entity_id
+        win.project.save()
+        omlast54 = type(win.project).load(win.project.root)
+        check(_ctx54.codex_policies(omlast54).get(ent54) == _ctx54.POLICY_NEVER,
+              "och ett codexval i visaren följer med i projektfilen")
+        efter54 = panel54.build_items("var är nyckeln?")
+        check(not any(i.entity_id == ent54 for i in efter54),
+              "och posten stryks ur nästa urval")
+        _ctx54.set_codex_policy(win.project, ent54, _ctx54.POLICY_MENTION)
+        win.project.save()
+    else:
+        check(False, "en codexpost borde finnas i urvalet")
+
+    if ent54_obj is not None:
+        win.codex.unlink(ent54_obj.id, win.active_scene_id)
+        win.codex.delete_entity(ent54_obj.id)
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

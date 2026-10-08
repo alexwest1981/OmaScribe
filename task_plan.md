@@ -350,9 +350,10 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
       och de färgade dialogtaggarna ("skrek", "mumlade", "utbrast") syns som en egen klass.
       Fyndet hamnar i den scen där ordet är tätast, och klicket markerar ordet i texten
       (`ui_smoke` avsnitt 49). R06 (ProWritingAid, AutoCrit, Papyrus)
-- [ ] **4.20** Uppläsning för korrekturläsning: läs upp stycket, kapitlet eller scenen med
+- [ ] **4.20** *Uppskjutet efter beslut (Alex 8/10):* Uppläsning för korrekturläsning: läs upp stycket, kapitlet eller scenen med
       TTS — örat hittar det ögat hoppar över. Dabble, AutoCrit och NovelAI har det; vår diktering
       (Whisper) är bara tal→text. R06, R09
+      Uppläsning kostar pengar per tecken och är inte värt det än. Ingen kod skriven.
 - [x] **4.21** Analysrapport per kapitel: panelen kan gruppera samma fynd under sin kapitelrubrik
       med kapitlets ordtal ("7 fynd · 3 140 ord") — den vy en författare arbetar igenom kapitel för
       kapitel, i stället för en lista över hela boken. Grupperingen bygger på
@@ -535,12 +536,20 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
       panelen hade ingen väg till dem. Nu finns en namn/värde-tabell på karaktärsbladet
       ("Ögonfärg: grå"), en tom rad blir inget attribut, och en borttagen rad försvinner ur
       codexet — provat i `ui_smoke`. Relationsgraf: se 2.22. R04.1
-- [~] **6.2** Kontinuitet och aktiverat berättelseminne: de **scenkopplade posterna finns** —
+- [x] **6.2** Kontinuitet och aktiverat berättelseminne: de scenkopplade posterna finns —
       codexpanelen visar vilka entiteter scenen är kopplad till, vilka som nämns i texten
-      (även via alias) och räknar omnämnandena. **Kvar:** att visa vilken kontext som faktiskt
-      skickas till AI:n är 6.16, och den är inte byggd. R04.13
-- [ ] **6.3** Manusfrågor och RAG: chunka per scen/stycke, svara med källhänvisning. R04.3
-- [ ] **6.4** Chatta med helt manus eller valt kapitel, med kontextchip och historik. R04.4
+      (även via alias) och räknar omnämnandena. Att visa *vilken* kontext som skickas är 6.16,
+      och den är byggd (se nedan). R04.13
+- [x] **6.3** Manusfrågor: frågan byggs till ett urval i `core/context.py` och svaret kommer med
+      **källhänvisning** — varje scen som låg bakom står som en länk i svaret, och ett klick öppnar
+      den. Hämtningen är nyckelordsöverlapp mellan frågan och scenerna, inte embeddings: en författare
+      frågar "var nämns nyckeln?" och då räcker orden (`# ponytail`-noten i `relevant_scenes` säger
+      när det skall bytas). Mätt mot en riktig modell: frågan "Vem hade nyckeln, och hur fick Anna
+      den?" gav ett svar med `[Nyckeln][Anna]` och `[Stranden][Bo]` — alla fyra etiketterna blev
+      länkar till rätt scen. R04.3
+- [x] **6.4** Fråga hela manuset eller bara scenen du har öppen, med **historik** och klickbara
+      citat (`ui/ask_panel.py`, fliken *Fråga manuset*, Ctrl+Shift+Q). Anropet går genom samma
+      `AIWorker` som resten av appen, och urvalet står i panelen innan det skickas. R04.4
 - [ ] **6.5** Recap per scen och kapitel, redigerbar, aldrig automatisk kanon. R04.5
 - [ ] **6.6** Kapitelplan, disposition och synopsis genererad som strukturerad data. R04.6
 - [ ] **6.7** Brainstorm: konflikt, twist, karaktärsbåge, med "får inte ändras". R04.7
@@ -552,14 +561,17 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
 - [ ] **6.13** Flerboks-seriebibel och återanvändning. R04.16 — *låg till medel*
 - [ ] **6.14** Genre, åldersgräns, röst och innehållsgränser som projektprofil. R04.17
 - [ ] **6.15** Diktering in i rätt scen/anteckning (befintlig Whisper kopplas till projektmodellen). R04.19
-- [ ] **6.16** Kontextvisaren: visa exakt vilken text, vilka codexposter och vilken instruktion som
-      skickas med ett anrop — med tokenräkning och orsak per post ("togs med för att namnet nämns
-      i scenen"). NovelAI:s Context Viewer är modellen: färgkodad, budgeterad, granskningsbar. Detta
-      är redan ett **Designkrav** i planen ("Visa vilka textdelar som faktiskt skickas") men har
-      ingen post — nu har den det. R09
-- [ ] **6.17** Valbar kontext per anrop: bocka i scener, kapitel, akter och snippets, och sätt per
-      codexpost om den skickas *alltid*, *vid omnämning* eller *aldrig*. NovelCrafter gör exakt
-      detta; vår 6.3/6.4 beskriver retrieval men inte användarens hand över den. R09
+- [x] **6.16** Kontextvisaren (**Vad skickas?** i frågepanelen): varje del med sitt **slag**, sin
+      **etikett**, **skälet** till att den är med ("nämns i scenen", "frågan pekar hit (styrka 1,2)",
+      "scenen du har öppen") och sin **tokenräkning**, plus summan för hela anropet. Färgen per slag
+      förstärker bara — raden säger sitt slag i klartext. Budgeten (`ai_context_budget`, 8000 tecken)
+      stryker i prioritetsordning och **säger vad som ströks**; ett objekt som är för stort kortas med
+      en anteckning i stället för att försvinna tyst. Designkravet "Visa vilka textdelar som faktiskt
+      skickas" är därmed uppfyllt. R09
+- [~] **6.17** Per codexpost: **alltid / vid omnämning / aldrig**, valt i kontextvisaren och sparat på
+      boken (`project.json` → `context_policy`) — mätt hela vägen till filen, och posten stryks ur
+      nästa urval. **Kvar:** bocka i scener, kapitel, akter och snippets för hand; nu styr omfånget
+      (scenen / hela manuset) och hämtningen vilka scener som följer med. R09
 - [ ] **6.18** Story Bible-genereringen som flöde: braindump → genre → stil → synopsis →
       karaktärer → värld → outline → scener, där varje steg skriver i codexet och går att ändra
       efteråt (Sudowrite). 6.1 och 6.6 täcker delarna, inte ordningen. R09

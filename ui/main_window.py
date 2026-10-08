@@ -24,6 +24,7 @@ from ui.start_screen import StartScreen
 from ui.notes_panel import NotesPanel
 from ui.insight_panel import InsightPanel
 from ui.research_dialog import ResearchDialog
+from ui.ask_panel import AskPanel
 from ui.ghostwriter_dialog import GhostwriterDialog
 from ui.graph_dialog import GraphDialog
 from ui.code_dialog import CodeDialog
@@ -233,6 +234,14 @@ class MainWindow(QMainWindow):
         self.insight.status_message.connect(
             lambda m: self.status_bar.showMessage(m, 6000))
         self.sidebar.add_tab(self.insight, "sidebar_tab_insight")
+
+        # Fråga manuset (6.3, 6.4): urvalet byggs i core/context och visas
+        # innan det skickas. Klick i ett citat öppnar scenen det kom ifrån.
+        self.ask = AskPanel(self.ai, self.config)
+        self.ask.scene_requested.connect(self._open_node)
+        self.ask.status_message.connect(
+            lambda meddelande: self.status_bar.showMessage(meddelande, 6000))
+        self.sidebar.add_tab(self.ask, "sidebar_tab_ask")
 
         self.splitter.addWidget(self.sidebar)
 
@@ -541,6 +550,7 @@ class MainWindow(QMainWindow):
         self.menu_ai.addSeparator()
         self.act_research = self._add_action(self.menu_ai, "🔎 " + _("menu_ai_research"), self._open_research, "Ctrl+Shift+R")
         self.act_ghost = self._add_action(self.menu_ai, "👻 " + _("menu_ai_ghostwriter"), self._open_ghostwriter, "Ctrl+Shift+G")
+        self.act_ask = self._add_action(self.menu_ai, "❓ " + _("menu_ai_ask"), self.open_ask_panel, "Ctrl+Shift+Q")
         self.act_ins_link = self._add_action(self.menu_ai, "🔗 " + _("menu_ai_insert_link"), self._insert_wikilink_dialog, "Ctrl+L")
         self.act_gen_para = self._add_action(self.menu_ai, "✎ " + _("menu_ai_paragraph"), self._open_generate_paragraph, "Ctrl+Shift+A")
         self.act_code = self._add_action(self.menu_ai, "⌨ " + _("menu_ai_code"), self._open_code_analysis, "Ctrl+Shift+K")
@@ -1146,6 +1156,7 @@ class MainWindow(QMainWindow):
         self.scene_inspector.set_codex(self.codex)
         self.codex_panel.set_project(project, self.codex)
         self.insight.set_project(project, self.codex)
+        self.ask.set_project(project, self.codex)
         return self.codex
 
     def _close_codex(self):
@@ -1158,6 +1169,7 @@ class MainWindow(QMainWindow):
         self.scene_inspector.set_codex(None)
         self.codex_panel.set_project(None, None)
         self.insight.set_project(None, None)
+        self.ask.set_project(None, None)
 
     def _deactivate_project(self):
         """Lämnar projektläget. Projektet ligger kvar på disk."""
@@ -1172,6 +1184,8 @@ class MainWindow(QMainWindow):
         self.plot_grid.set_project(None)
         self.binder.setVisible(False)
         self.scene_inspector.set_scene(None, None)
+        if hasattr(self, "ask"):
+            self.ask.set_scene("")
         self._refresh_comment_marks()
         self.act_view_scrivenings.setEnabled(False)
         self.act_view_variants.setEnabled(False)
@@ -1241,6 +1255,7 @@ class MainWindow(QMainWindow):
         self.current_filepath = str(path) if path else None
         self.is_modified = False
         self.scene_inspector.set_scene(self.project, node)
+        self.ask.set_scene(getattr(node, "id", ""))
         self._refresh_comment_marks()
         self.notes_panel.set_current_document(self._current_note_title())
         self.notes_panel.set_current_file(self.current_filepath or "")
@@ -2132,6 +2147,20 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, _("export_success_title"),
                                 _("prepress_pdfx_done", path=mål))
         return mål
+
+    def open_ask_panel(self) -> None:
+        """Öppnar fliken Fråga manuset och sätter markören i frågefältet.
+
+        Panelen fälls ut om den är infälld: ett menyval som inte syns har inte
+        hänt, och användaren skall inte behöva leta efter den.
+        """
+        if self.project is None:
+            return
+        self.sidebar.setVisible(True)
+        self.config.set("show_ai_sidebar", True)
+        self.sidebar.tabs.setCurrentWidget(self.ask)
+        self.ask.set_scene(self.active_scene_id or "")
+        self.ask.input_question.setFocus()
 
     def open_compile_dialog(self) -> None:
         """Kompilera det som är öppet, eller markeringen (5.15).

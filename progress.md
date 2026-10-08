@@ -669,3 +669,17 @@
   bröt den i nästa avsnitt jag skrev (avsnitt 48 anropade avsnitt 47:s namn, och avsnitten körs i en
   annan ordning än de skrivs ut). Regeln gäller, men vanan kommer efter den — nu står den i filens
   eget mönster också.
+
+### Grinden: två blinda fläckar som inte var kod (process)
+
+- **Fyra moduler hade egna prov som aldrig kördes.** `core/vault.py` (Obsidian-valvet),
+  `core/ai_client.py`, `core/code_analyzer.py` och `core/directives.py` har alla ett `__main__`-prov,
+  men ingen av dem stod i `tools/test_all.sh`. Grinden var grön *utan* att ha prövat dem — en grön grind
+  som inte mäter allt den ser ut att mäta. Nu körs de (och mina nya `core/release.py`, `core/cover.py`
+  och `core/epubcheck.py` med, 40 prov som annars aldrig hade körts i grinden).
+- **Applikationen startade aldrig i någon kontroll.** Importkontrollen ser varje modul, och `ui_smoke`
+  bygger sin *egen* ruta — men själva ingången (`main.py`, plugin-laddningen, konfigvägen) prövades
+  ingenstans. Nu finns steget "startar applikationen": den ska leva vidare efter åtta sekunder utan
+  traceback; en app som dör direkt ger en annan kod. Mätt i den här miljön: den startar och står kvar.
+- **Lärdomen är om grinden, inte om koden:** en grind ska räkna vad den *kör*, inte vad den *ser*. Att
+  lista modulerna den kör mot modulerna som har prov är en rad, och den hittade fyra luckor.

@@ -46,6 +46,11 @@ run() {
   fi
 }
 
+run "valvet" "$PY" -m core.vault
+run "ai-klienten" "$PY" -m core.ai_client
+run "kodanalysen" "$PY" -m core.code_analyzer
+run "direktiven" "$PY" -m core.directives
+
 run "importkontroll" "$PY" - <<'PYEOF'
 import glob, importlib, os, sys
 sys.path.insert(0, os.getcwd())
@@ -78,6 +83,9 @@ run "sök och ersätt" "$PY" -m core.find_replace
 run "autokorrigeringen" "$PY" -m core.autocorrect
 run "fälten" "$PY" -m core.fields
 run "publiceringen" "$PY" -m core.publishing
+run "släppet" "$PY" -m core.release
+run "omslaget" "$PY" -m core.cover
+run "epubcheck" "$PY" -m core.epubcheck
 
 # Vakten mot att i18n-funktionen `_` skuggas i en metod som använder den.
 run "skuggningen av _" "$PY" tools/i18n_shadow_check.py
@@ -87,6 +95,23 @@ run "samlingarna" "$PY" -m core.collections
 run "samlingspanelen" "$PY" -m ui.collections_panel
 run "ui_smoke" "$PY" tools/ui_smoke.py
 run "print_purity" "$PY" tools/print_purity_check.py
+
+# Att applikationen *startar* prövas ingen annanstans: importkontrollen ser
+# modulerna, ui_smoke bygger sin egen ruta — men själva ingången (main.py,
+# plugin-laddningen, konfigvägen) är oprövad. Att den lever vidare efter åtta
+# sekunder, utan traceback, är svaret; en app som dör direkt ger en annan kod.
+printf '\n### startar applikationen\n'
+start_log="$(mktemp)"
+timeout 8 env OMASCRIBE_CONFIG_PATH="$(mktemp)" "$PY" main.py >"$start_log" 2>&1
+start_kod=$?
+if [ "$start_kod" -eq 124 ] && ! grep -q "Traceback" "$start_log"; then
+  echo "  ✓ applikationen startar och står kvar (stoppad efter 8 s)"
+else
+  echo "  ✗ applikationen startar inte (exit $start_kod)"
+  tail -8 "$start_log"
+  fail=1
+fi
+rm -f "$start_log"
 
 rm -f "$LOG"
 printf '\n==============================================\n'

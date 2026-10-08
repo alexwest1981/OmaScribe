@@ -1048,5 +1048,6 @@
   "prepress_no_document": "Inget manus att mäta.",
   "prepress_pdfx_done": "Tryckfilen ligger i {path}",
   "prepress_pdfx_unverified": "Filen kunde inte bekräftas som PDF/X — den är inte tryckfärdig.",
-  "prepress_fonts_missing": "Teckensnitt utan inbäddning: {fonts}"
+  "prepress_fonts_missing": "Teckensnitt utan inbäddning: {fonts}",
+  "publish_large_print": "Stor stil (large print) — större grad och radavstånd"
 }

@@ -1048,5 +1048,6 @@
   "prepress_no_document": "No manuscript to measure.",
   "prepress_pdfx_done": "The print file is at {path}",
   "prepress_pdfx_unverified": "The file could not be confirmed as PDF/X — it is not print-ready.",
-  "prepress_fonts_missing": "Fonts without embedding: {fonts}"
+  "prepress_fonts_missing": "Fonts without embedding: {fonts}",
+  "publish_large_print": "Large print — larger type and leading"
 }

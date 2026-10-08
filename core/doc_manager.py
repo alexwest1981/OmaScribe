@@ -53,6 +53,7 @@ DEFAULT_PAGE_SETTINGS = {
     "footer_text": "",                   # Löpande sidfot
     "clean_print": True,                 # Rena svartvita exporter (papper, inte tema)
     "grayscale_images": False,           # Gör inbäddade bilder gråskaliga vid export
+    "large_print": False,                # Stor stil: större grad och radavstånd (5.16)
 }
 
 
@@ -296,6 +297,12 @@ class DocumentManager:
                 doc_clone, grayscale_images=bool(cfg.get("grayscale_images", False))
             )
 
+        # 3c. Stor stil (5.16): utskriftsvägen gör sin egen klon och gick därför
+        # förbi _export_clone — utan det här blev en large print-utgåva i PDF
+        # exakt lika stor som originalupplagan (mätt: 10 sidor före och efter).
+        if cfg.get("large_print"):
+            print_style.scale_for_large_print(doc_clone)
+
         DocumentManager._hyphenate_clone(doc_clone, cfg.get("language", "sv"))
         doc_clone.setPageSize(QSizeF(content_w, content_h))
         page_count = max(1, doc_clone.pageCount())
@@ -496,16 +503,22 @@ class DocumentManager:
 
     @staticmethod
     def _export_clone(text_document: QTextDocument, page_settings: dict | None) -> QTextDocument:
-        """Klon för export, rensad om sidinställningarna begär det."""
+        """Klon för export, rensad — och i stor stil — om inställningarna vill det."""
         cfg = DEFAULT_PAGE_SETTINGS.copy()
         if page_settings:
             cfg.update(page_settings)
         clone = text_document.clone()
-        if clone is not None and cfg.get("clean_print", True):
+        if clone is None:
+            return text_document
+        if cfg.get("clean_print", True):
             print_style.normalize_document(
                 clone, grayscale_images=bool(cfg.get("grayscale_images", False))
             )
-        return clone if clone is not None else text_document
+        # Large print (5.16): samma bok i större grad. Efter reningen, så att
+        # skalningen gäller den form som faktiskt skrivs ut.
+        if cfg.get("large_print"):
+            print_style.scale_for_large_print(clone)
+        return clone
 
     @staticmethod
     def save_file(filepath, text_document: QTextDocument, colors=None, page_settings: dict = None):

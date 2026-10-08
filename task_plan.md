@@ -497,7 +497,7 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
       metod med å/ä/ö i namnet (`sip` klarar inte namnet). Därför bytte fem identifierare namn och
       `tools/identifier_check.py` vaktar regeln — koden skrivs på engelska, vilket råkar vara exakt
       vad PyQt kräver.
-- [~] **5.16** Tryckförberedelsen → `core/prepress.py` + knappar i **Fil ▸ Publicera…**
+- [x] **5.16** Tryckförberedelsen → `core/prepress.py` + knappar i **Fil ▸ Publicera…**
 
       *Ensamma rader:* `widows_and_orphans()` mäter stycken vars första eller sista rad hamnar
       ensam över ett sidbrott, mot **samma sidmodell som förhandsvisningen ritar med** (radens y i
@@ -514,8 +514,17 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
       som om den vore klar. *Mätt:* vanlig PDF (13 578 byte) → PDF/X (8 249 byte) med
       `GTS_PDFXVersion` i filen och teckensnitten inbäddade.
 
-      **Kvar:** *large print-utgåvan* (Atticus), som kräver att tryckklonen skalar teckengrad och
-      radavstånd — hör ihop med 5.5 och den paginerade målaren. R08
+      *Large print:* `print_style.scale_for_large_print()` skalar teckengrad och radavstånd i
+      tryckklonen (1,5 ×, Atticus-nivå), valt med en kryssruta i publiceringsrutan och buret av
+      `page_settings["large_print"]`. **Två fällor, båda mätta i utdata och inte i avsikten:**
+      (1) graden sitter i *teckensnittet*, inte i `fontPointSize()` — den senare är 0 för text som
+      ärver sin grad, och att bara sätta den gjorde ingenting (10 sidor före, 10 efter); (2)
+      utskriftsvägen gör sin **egen** klon och gick därför förbi `_export_clone`. Den första
+      versionen skalade dessutom två gånger — blockets teckenformat skalades först, och fragmentet
+      läste då blockets *nya* grad och skalade en gång till: 1,5 blev 2,0 i den färdiga PDF:en
+      (72 tecken per rad blev 36). Nu sker det i två faser, storlekarna läses innan något skrivs, och
+      `ui_smoke` prövar **förhållandet** i texten (72 → 48 tecken per rad, 3 → 6 sidor) — att bara
+      kräva "fler sidor" gick igenom även med dubbelskalningen. R08 → **klart**.
 - **Status:** pending
 
 ### Fas 6: AI som författarverktyg

@@ -20,7 +20,7 @@ from pathlib import Path
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import (
     QTextDocument, QTextCursor, QTextCharFormat, QTextBlockFormat, QColor,
-    QBrush, QTextTable, QTextImageFormat, QTextFormat, QTextFrameFormat,
+    QBrush, QTextTable, QTextImageFormat, QTextFormat, QTextFrameFormat, QFont,
 )
 
 # ------------------------------------------------------------------ pappret
@@ -357,6 +357,100 @@ def _desaturate_resources(doc: QTextDocument, names: set[str]) -> int:
                         grayscale_image(img))
         replaced += 1
     return replaced
+
+
+LARGE_PRINT_FACTOR = 1.5           # 11 pt blir 16,5 — Atticus och de andra ligger där
+LARGE_PRINT_LINE_FACTOR = 1.3
+
+
+def _scaled_font(font, factor: float):
+    """Teckensnittet i större grad, eller None om det inte har någon grad alls."""
+    ny = QFont(font)
+    if ny.pointSizeF() > 0:
+        ny.setPointSizeF(ny.pointSizeF() * factor)
+        return ny
+    if ny.pixelSize() > 0:
+        ny.setPixelSize(max(1, int(round(ny.pixelSize() * factor))))
+        return ny
+    return None
+
+
+def scale_for_large_print(doc: QTextDocument, factor: float = LARGE_PRINT_FACTOR,
+                          line_factor: float = LARGE_PRINT_LINE_FACTOR) -> int:
+    """Stor stil: skalar teckengrad och radavstånd i en klon (5.16).
+
+    En large print-utgåva är samma bok i större grad — författaren skriver inte
+    om texten, och därför rörs bara formen. Graden sitter i *teckensnittet*, inte
+    i ``fontPointSize()``: den senare är 0 för text som ärver sin grad, och att
+    bara sätta den gjorde ingenting (mätt: 10 sidor före och 10 efter).
+
+    Priset är en platsfråga: boken blir fler sidor, och då ändras gutter och
+    ryggbredd. Därför är det en *utgåva* man väljer, inte en inställning som
+    ligger på i tysthet.
+    """
+    if doc is None or factor <= 0:
+        return 0
+    # Två faser, med flit: storlekarna läses *innan* något skrivs. Läste man
+    # fragmentets grad efter att blockets teckenformat skalats fick man blockets
+    # nya grad (texten ärver den) och skalade en gång till — mätt i utdata blev
+    # 1,5 gånger till 2,0 (72 tecken per rad blev 36).
+    poster: list[tuple[str, int, int, object]] = []
+    bas = doc.defaultFont().pointSizeF()
+    block = doc.begin()
+    while block.isValid():
+        b_font = block.charFormat().font()
+        if b_font.pointSizeF() > 0:
+            poster.append(("block", block.position(), 0, QFont(b_font)))
+        it = block.begin()
+        while not it.atEnd():
+            frag = it.fragment()
+            if frag.isValid():
+                f_font = frag.charFormat().font()
+                if f_font.pointSizeF() > 0:
+                    poster.append(("frag", frag.position(), frag.length(), QFont(f_font)))
+            it += 1
+        block = block.next()
+
+    ändrade = 0
+    markor = QTextCursor(doc)
+    markor.beginEditBlock()
+    try:
+        if bas > 0:
+            stor = _scaled_font(doc.defaultFont(), factor)
+            if stor is not None:
+                doc.setDefaultFont(stor)
+                ändrade += 1
+        for slag, start, längd, font in poster:
+            nyfont = _scaled_font(font, factor)
+            if nyfont is None:
+                continue
+            fmt = QTextCharFormat()
+            fmt.setFont(nyfont)
+            markor.setPosition(start)
+            if slag == "frag":
+                markor.setPosition(start + längd, QTextCursor.MoveMode.KeepAnchor)
+                markor.mergeCharFormat(fmt)
+            else:
+                block = doc.findBlock(start)
+                bcf = QTextCharFormat(block.charFormat())
+                bcf.setFont(nyfont)
+                markor.setBlockCharFormat(bcf)
+            ändrade += 1
+
+        # Radavståndet skalas i samma redigering, av samma skäl som förut.
+        block = doc.begin()
+        while block.isValid():
+            bfmt = block.blockFormat()
+            if bfmt.lineHeight() > 0:
+                ny = QTextBlockFormat(bfmt)
+                ny.setLineHeight(bfmt.lineHeight() * line_factor, bfmt.lineHeightType())
+                markor.setPosition(block.position())
+                markor.mergeBlockFormat(ny)
+                ändrade += 1
+            block = block.next()
+    finally:
+        markor.endEditBlock()
+    return ändrade
 
 
 def normalize_document(doc: QTextDocument, grayscale_images: bool = False,

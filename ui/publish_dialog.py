@@ -81,6 +81,9 @@ class PublishDialog(QDialog):
 
         self.chk_bleed = QCheckBox(_("publish_bleed"))
         form.addRow(QLabel(""), self.chk_bleed)
+
+        self.chk_large = QCheckBox(_("publish_large_print"))
+        form.addRow(QLabel(""), self.chk_large)
         layout.addLayout(form)
 
         # Siffrorna, och källan de kommer ifrån
@@ -192,7 +195,8 @@ class PublishDialog(QDialog):
     def settings(self) -> dict | None:
         """Appens sidinställningar för profilen."""
         return publishing.page_settings_for(self.trim(), self.pages(), self.paper(),
-                                            self.chk_bleed.isChecked(), self.channel())
+                                            self.chk_bleed.isChecked(), self.channel(),
+                                            large_print=self.chk_large.isChecked())
 
     def _apply(self) -> None:
         ny = self.settings()

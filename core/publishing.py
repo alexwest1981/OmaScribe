@@ -108,7 +108,8 @@ def cover_mm(trim: str, pages: int, paper: str = "white", bleed: bool = True,
 
 
 def page_settings_for(trim: str, pages: int, paper: str = "white", bleed: bool = False,
-                      channel: str = "kdp", top_mm: float = 15.0, bottom_mm: float = 20.0):
+                      channel: str = "kdp", top_mm: float = 15.0, bottom_mm: float = 20.0,
+                      large_print: bool = False):
     """Appens sidinställningar för en tryckprofil (R05.5).
 
     Inner- och yttermarginalen sätts var för sig och speglas sedan av
@@ -137,6 +138,9 @@ def page_settings_for(trim: str, pages: int, paper: str = "white", bleed: bool =
         "page_number_pos": "bottom-alternating",
         "page_number_format": "number",
         "skip_first_page": True,
+        # Stor stil (5.16): bok i större grad. En egen utgåva, inte en detalj —
+        # sidantalet och därmed gutter och ryggbredd ändras av den.
+        "large_print": bool(large_print),
     }
 
 

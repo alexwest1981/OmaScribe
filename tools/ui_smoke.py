@@ -3097,6 +3097,61 @@ def main() -> int:
     else:
         print("  ..  Ghostscript saknas — PDF/X-delen prövas inte här")
 
+    # Stor stil (large print, 5.16): samma bok i större grad, mätt i sidantal.
+    from core import print_style as _ps53
+    from core.doc_manager import DocumentManager as _dm53
+
+    lång53 = QTextDocument()
+    m53 = QTextCursor(lång53)
+    for i in range(60):
+        m53.insertText(f"Stycke {i + 1}. Hon vände nyckeln i handen och lyssnade "
+                       "efter trappan, och ljuset låg kvar över taken medan "
+                       "kvällen kom in från sjön och blev till mörker.")
+        m53.insertBlock(QTextBlockFormat())
+    klon53 = lång53.clone()
+    ändrade53 = _ps53.scale_for_large_print(klon53)
+    check(ändrade53 > 0, f"stor stil skalar formen ({ändrade53} format)")
+    grad53 = klon53.defaultFont().pointSizeF() / lång53.defaultFont().pointSizeF()
+    check(abs(grad53 - _ps53.LARGE_PRINT_FACTOR) < 0.01,
+          f"och teckengraden blir {_ps53.LARGE_PRINT_FACTOR} gånger större ({grad53:.2f})")
+    check(lång53.defaultFont().pointSizeF() != klon53.defaultFont().pointSizeF(),
+          "medan originalet står kvar orört")
+
+    mapp53b = tempfile.mkdtemp(prefix="stor53-")
+    vanlig53 = os.path.join(mapp53b, "vanlig.pdf")
+    stor53 = os.path.join(mapp53b, "stor.pdf")
+    inst53 = {"page_size": "A4", "clean_print": True}
+    _dm53.save_file(vanlig53, lång53, {}, {**inst53, "large_print": False})
+    _dm53.save_file(stor53, lång53, {}, {**inst53, "large_print": True})
+
+    def _sidor53(sökväg):
+        from subprocess import run as _run53
+        text = _run53(["pdfinfo", sökväg], capture_output=True, text=True).stdout
+        for rad in text.splitlines():
+            if rad.startswith("Pages:"):
+                return int(rad.split()[1])
+        return 0
+
+    def _tecken_per_rad53(sökväg):
+        """Snittet antal tecken per rad i den färdiga PDF:en — utdata, inte avsikten."""
+        from subprocess import run as _run53
+        text = _run53(["pdftotext", "-layout", sökväg, "-"], capture_output=True,
+                      text=True).stdout
+        rader = [r for r in text.splitlines() if r.strip()]
+        if not rader:
+            return 0.0
+        return sum(len(r) for r in rader) / len(rader)
+
+    check(_sidor53(vanlig53) >= 1 and _sidor53(stor53) > _sidor53(vanlig53),
+          f"och den stora utgåvan blir fler sidor ({_sidor53(vanlig53)} → {_sidor53(stor53)})")
+    # Förhållandet, inte riktningen: den första versionen skalade två gånger
+    # (1,5 blev 2,0) och sidantalet växte ändå, så bara "fler sidor" räckte inte.
+    förhållande53 = (_tecken_per_rad53(vanlig53) / _tecken_per_rad53(stor53)
+                     if _tecken_per_rad53(stor53) else 0.0)
+    check(abs(förhållande53 - _ps53.LARGE_PRINT_FACTOR) < 0.15,
+          f"och graden blir {_ps53.LARGE_PRINT_FACTOR} gånger större, mätt i texten "
+          f"({förhållande53:.2f} gånger färre tecken per rad)")
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

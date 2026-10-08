@@ -4,6 +4,11 @@ version = "0.1.0"
 description = "OmaScribe - AI-Powered Rich Text Editor with Real-Time Review, Whisper Dictation, and DOCX/PDF Export"
 readme = "README.md"
 requires-python = ">=3.11"
+# PyQt6 is GPL-3.0-only, so the whole program is GPL-3.0-only: not "or later",
+# and not a permissive licence. See the License section in README.md.
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
+
 dependencies = [
     "PyQt6>=6.6.0",
     "python-docx>=1.1.0",

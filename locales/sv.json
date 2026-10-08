@@ -220,6 +220,7 @@
   "export_success_text": "Dokumentet har exporterats till:\n{path}",
   "export_error_title": "Exportfel",
   "about_desc": "AI-driven textredigerare för Linux & Omarchy med stöd för Word, Markdown och röst-diktering.",
+  "about_license": "Fri programvara under GNU GPL v3 (GPL-3.0-only) © 2026 Alex Weström. Ingen garanti. Källkoden: github.com/alexwest1981/OmaScribe",
   "tb_style_code_tooltip": "Kodblock (Ctrl+Alt+5)",
   "lix_very_easy": "Mycket lättläst",
   "lix_easy": "Lättläst",

@@ -1008,6 +1008,10 @@ class MainWindow(QMainWindow):
             f"<h3>{_('app_title')}</h3>"
             f"<p>Version 0.1.0</p>"
             f"<p>{_('about_desc')}</p>"
+            # GPL v3 section 5d: an interactive interface must display its
+            # legal notices. One line, plus the source link a recipient is
+            # entitled to.
+            f"<p>{_('about_license')}</p>"
         )
 
     # -------------------------------------------------------------------------

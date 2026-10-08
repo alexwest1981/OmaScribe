@@ -238,4 +238,22 @@ installer enforces for you:
 - **Never commit your config or `.env`.** Both are ignored.
 
 ## 📄 License
-MIT License © 2026 [Alex Weström](https://github.com/alexwest1981)
+
+**GNU General Public License v3.0 only** (`GPL-3.0-only`) © 2026 [Alex Weström](https://github.com/alexwest1981).
+Full text: [LICENSE](LICENSE).
+
+OmaScribe **can't** be MIT or Apache, and the reason is in the dependency list:
+the program links [PyQt6](https://riverbankcomputing.com/software/pyqt/), which
+Riverbank distributes under the GPL v3 *only* (or a commercial licence). A work
+that links it must therefore be GPL v3 as well.
+
+That suits the project: the licence is **copyleft**. Anyone may run, study,
+change and share this code — including for money, and including for free. What
+they may not do is turn a modified version into closed source: a work based on
+it must carry prominent notices that it was modified (GPL v3 §5a), keep the
+copyright and licence notices intact (§4, §5b), be licensed as a whole under the
+same licence (§5c), and — since the app has an interactive interface — display
+its legal notices (§5d, which is what `Hjälp → Om OmaScribe` does).
+
+There is no warranty of any kind (§15–17).
+

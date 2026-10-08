@@ -135,6 +135,45 @@ def _render_table(table, document, images):
     return result
 
 
+def _front_matter(meta: dict, title: str, language: str) -> list:
+    """Titelsida och kolofon som egna XHTML-sidor (R05.4).
+
+    Bokens första sidor är inte text man skriver — de är uppgifter man *har*:
+    titeln, författaren, förlaget, ISBN och året. Att skriva dem för hand i en
+    scen betyder att de ska hållas i minne och uppdateras för hand när något
+    ändras; här kommer de ur projektet.
+    """
+    from datetime import date
+
+    from core.i18n import _
+
+    sidor = []
+    titel_sida = etree.Element(_tag("h1"))
+    titel_sida.text = title
+    forfattare = etree.Element(_tag("p"))
+    forfattare.set("class", "author")
+    forfattare.text = str(meta.get("author") or "")
+    sidor.append(("front-000-titel.xhtml", title, [titel_sida, forfattare]))
+
+    kolofon_rader = [_("colophon_publisher", name=str(meta.get("publisher")))]
+    if meta.get("identifier"):
+        kolofon_rader.append(_("colophon_isbn", isbn=str(meta["identifier"])))
+    kolofon_rader.append(_("colophon_year", year=str(meta.get("year") or date.today().year)))
+    if meta.get("author"):
+        kolofon_rader.append(_("colophon_rights", author=str(meta["author"])))
+    noder = []
+    rubrik = etree.Element(_tag("h2"))
+    rubrik.text = _("colophon_title")
+    noder.append(rubrik)
+    for rad in kolofon_rader:
+        stycke = etree.Element(_tag("p"))
+        stycke.set("class", "colophon")
+        stycke.text = rad
+        noder.append(stycke)
+    sidor.append(("front-001-kolofon.xhtml", _("colophon_title"), noder))
+    return sidor
+
+
 def export_epub(path: str, document: QTextDocument, metadata: dict, page_settings: dict | None = None) -> str:
     """Exporterar QTextDocument som en EPUB 3-bok."""
     del page_settings  # EPUB har flytande layout och använder inte utskriftens sidmått.
@@ -181,6 +220,12 @@ def export_epub(path: str, document: QTextDocument, metadata: dict, page_setting
         chapter_no += 1
         chapters.append((f"chapter-{chapter_no:03d}.xhtml", current_title or title, current_nodes))
 
+    # Bokens första sidor läggs först, och hålls utanför innehållsförteckningen:
+    # en titelsida listar sig inte själv i en innehållsförteckning.
+    fran = _front_matter(meta, title, language)
+    framsidor = {filnamn for filnamn, _titel, _noder in fran}
+    chapters = fran + chapters
+
     # Ankare per H2/H3 blir lokala till respektive kapitel.
     chapter_nodes = []
     for filename, chapter_title, nodes in chapters:
@@ -196,6 +241,8 @@ def export_epub(path: str, document: QTextDocument, metadata: dict, page_setting
     etree.SubElement(toc, _tag("h1")).text = "Contents"
     ol = etree.SubElement(toc, _tag("ol"))
     for idx, (filename, chapter_title, nodes) in enumerate(chapter_nodes):
+        if filename in framsidor:
+            continue
         li = etree.SubElement(ol, _tag("li"))
         a = etree.SubElement(li, _tag("a")); a.set("href", filename + "#" + next((n.get("id") for n in nodes if n.tag == _tag("h1")), "")); a.text = chapter_title
         headings = [(int(n.tag[-1]), "".join(n.itertext()).strip(), n.get("id")) for n in nodes if n.tag in (_tag("h2"), _tag("h3"))]

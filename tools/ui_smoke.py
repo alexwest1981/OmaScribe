@@ -1911,6 +1911,27 @@ def main() -> int:
         kapitel43 = [n for n in namn43 if "chapter" in n]
         check(len(kapitel43) >= 2, f"och kapitlen delade vid rubrikerna ({len(kapitel43)} filer)")
 
+        # Bokens första sidor: titelsida och kolofon, ur projektets uppgifter
+        fram43 = [n for n in namn43 if "front-" in n]
+        check(len(fram43) == 2, f"och bokens första sidor är genererade ({fram43})")
+        titel43 = next((n for n in namn43 if "front-000" in n), None)
+        kolofon43 = next((n for n in namn43 if "front-001" in n), None)
+        titeltext43 = bok43.read(titel43).decode("utf-8") if titel43 else ""
+        kolofonstext43 = bok43.read(kolofon43).decode("utf-8") if kolofon43 else ""
+        check("Alex Lind" in titeltext43 and ovningsbok.title in titeltext43,
+              f"titelsidan bär titeln och författaren ({titeltext43[-40:]!r})")
+        check("978-91-0000000-0" in kolofonstext43 and "Eget förlag" in kolofonstext43,
+              f"och kolofonen ISBN och förlag ({kolofonstext43[-60:]!r})")
+        check(str(__import__("datetime").date.today().year) in kolofonstext43,
+              "och året")
+        # Första sidorna står först i läsordningen, men listar sig inte i innehållet
+        rygg43 = innehåll43.split("<spine>")[-1] if "<spine>" in innehåll43 else ""
+        check(rygg43.count("<itemref") == 4,
+              f"och de står först i läsordningen ({rygg43.count('<itemref')} poster i ryggraden)")
+        nav43 = bok43.read("OEBPS/nav.xhtml").decode("utf-8")
+        check("front-" not in nav43 and nav43.count("<li") >= 2,
+              f"men titelsidan listar sig inte själv i innehållet ({nav43.count('<li')} rader)")
+
     print("\n42. Publiceringsprofilen: kanalernas siffror (fas 5.1, 5.5, 5.6, 5.12)")
 
     from core import publishing as pub42

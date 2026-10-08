@@ -885,5 +885,10 @@
   "overview_publisher": "Publisher",
   "overview_publisher_hint": "The publisher or your own name",
   "overview_isbn": "ISBN",
-  "overview_isbn_hint": "The book's ISBN, if it has one"
+  "overview_isbn_hint": "The book's ISBN, if it has one",
+  "colophon_title": "About this book",
+  "colophon_publisher": "Published by {name}",
+  "colophon_isbn": "ISBN {isbn}",
+  "colophon_year": "© {year}",
+  "colophon_rights": "The author {author} holds the rights to the text."
 }

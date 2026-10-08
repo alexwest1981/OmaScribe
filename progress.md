@@ -553,3 +553,17 @@
   funktionen.** I rökprovets `main()` gjorde en sen `from core.doc_manager import DocumentManager` att
   exportkontrollerna *tidigare* i samma funktion fick `UnboundLocalError` — samma sak som `_`-skuggan
   i fas 4 och 5. Rättat med ett eget namn i avsnittet.
+
+### Fas 5: bokens första sidor genereras (5.4)
+
+- **Status:** grindad (602 rökprov + 54 renhetsprov + modulernas egna, GRÖNT).
+- **Vad som blev gjort:** EPUB:en får nu **titelsida och kolofon** som genererade XHTML-sidor ur
+  bokens egna uppgifter — titel, författare, förlag, ISBN, året och en rättighetsrad. Poängen är att
+  bokens första sidor inte är text man skriver utan uppgifter man *har*: skrivna för hand ska de
+  hållas i minne och uppdateras manuellt när förlaget eller ISBN:t ändras.
+- **Läsordningen är rätt:** de står först i ryggraden (4 poster: två framsidor + två kapitel) och
+  listar sig **inte** i innehållsförteckningen — en titelsida listar sig inte själv.
+- **Provat i filen:** två frontmateria-filer, titel och författare på titelsidan, ISBN, förlag och år
+  i kolofonen, och nav.xhtml utan `front-`.
+- **Kvar:** samma sidor i utskriften (där skriver författaren dem i dag, och det är rimligt — en
+  utskrift kommer från ett dokument, en EPUB från ett projekt), samt dedikation och tack som fält.

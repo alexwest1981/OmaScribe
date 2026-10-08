@@ -885,5 +885,10 @@
   "overview_publisher": "Förlag",
   "overview_publisher_hint": "Förlaget eller det egna namnet",
   "overview_isbn": "ISBN",
-  "overview_isbn_hint": "Bokens ISBN, om den har ett"
+  "overview_isbn_hint": "Bokens ISBN, om den har ett",
+  "colophon_title": "Om boken",
+  "colophon_publisher": "Utgiven av {name}",
+  "colophon_isbn": "ISBN {isbn}",
+  "colophon_year": "© {year}",
+  "colophon_rights": "Författaren {author} äger rättigheterna till texten."
 }

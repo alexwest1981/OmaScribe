@@ -139,13 +139,59 @@ Medelstora, efter ovanstående:
   World Anvil) och rapporten rankar "tidslinje med händelser kopplade till scener" högt.
   Den är medelstor, inte liten: en händelsetabell kopplad till scen-id kan byggas utan
   ny ritad vy, och vyn ovanpå den är ett eget steg. Säg till om händelsetabellen skall in.
-- 🟠 **Licensen** är avgjord och byggd (GPL-3.0-only — PyQt6 tvingar den), se README
-  och `LICENSE`. Underlag: `11-licens.md` när den är klar; `10-oppen-kallkod.md` för
-  vad de öppna verktygen använder.
+- 🟠 **Licensen är avgjord och byggd** — `GPL-3.0-only`, tvingad av PyQt6 (Riverbanks egen
+  rad: "PyQt is dual licensed on all supported platforms under the GNU GPL v3 and the
+  Riverbank Commercial License. Unlike Qt, PyQt is not available under the LGPL.").
+  `LICENSE`, `pyproject.toml` och `Hjälp → Om OmaScribe` bär den, och hjulet är byggt och
+  kontrollerat. Andra åsikten (`11-licens.md`) landar i samma identifierare. Det som
+  återstår är inte tekniskt: vill du skydda **namnet** OmaScribe är varumärket det enda
+  som gör det — licensen täcker koden, inte identiteten.
+
+## Den öppna sidan (R10) — vad de andra öppna verktygen gör
+
+Alla relevanta öppna skrivverktyg bär **GPL-3.0** (novelWriter, Manuskript, Zettlr,
+FocusWriter, Ghostwriter, KIT Scenarist, bibisco, Calibre, Sigil) — alltså samma licens som
+OmaScribe nu tvingas till, och därför förenliga att läsa och låna mönster från, förutsatt
+tillskrivning. Typst är Apache-2.0, Pandoc GPL-2.0.
+
+Den närmaste grannen är **novelWriter** (PyQt6, GPL-3.0, aktivt: pushad 2026-10-07,
+v26.2.1 2026-09-26, 3 172 stjärnor). Det gör offline, scenbaserat, med metadata per scen.
+Det som saknas där är exakt det vi har: WYSIWYG i stället för markup, egen tryckfärdig
+sättning i stället för Pandoc, och AI/diktering. **Manuskript** (2 446 stjärnor) har
+indexkort, versioner och Snowflake-metoden men exporterar via Pandoc och är daterat i
+gränssnittet. **KIT Scenarist är arkiverat** (senaste push 2023-08-01) och **bibiscos
+öppna repo är vilande** (2024-09-27) — de är inte alternativ någon väljer i dag.
+**oStorybook**: mätt nu, 7 stjärnor, senaste push 2023-10-24. Det finns alltså **ingen
+öppen konkurrent som gör publiceringskedjan**: de öppna verktygen slutar där de betalda
+börjar (Vellum/Atticus).
+
+### Utvärderat och avvisat: anropa Pandoc/Typst/Calibre under huven
+
+Rapport 10 föreslår att lägga Typst eller Pandoc som lokal backend i stället för att
+underhålla egen konvertering, och kallar det "relativt lite" arbete. Det är inte byggt och
+blir ingen planpost, av tre skäl som är mätta, inte tyckta:
+
+1. **Kedjan finns och är provad.** `core/epub.py`, `core/doc_manager.py` och
+   `ui/main_window.py` skriver EPUB 3, DOCX med namngivna Word-stilar och PDF, och grinden
+   läser tillbaka filerna (EPUB:en packas upp och OPF:en kontrolleras i rökprovet). En
+   extern binär hade bytt en verifierad väg mot en oprövad.
+2. **Ett externt program är ett nytt krav på användarens maskin.** Paketering, uppdatering
+   och felmeddelanden när binären saknas är arbete som inte syns i en jämförelsetabell.
+3. **Det löser inget vi saknar i dag** — luckorna i publiceringen är normsidan,
+   widow/orphan, PDF/X-1a och urvalskompilering, och ingen av dem kräver Typst.
+
+Där står det kvar som ett *val*: vill du ha PDF/X-1a ur en färdig typsättningsmotor är
+Typst den billigaste vägen dit (5.16), men det är i så fall ett medvetet nytt beroende, inte
+en omskrivning av det som fungerar.
+
+Det öppna projektet bekräftar också vårt filformat: novelWriter sparar scener som enkla
+textfiler med id-baserad metadata "vilket gör programmet extremt versionshanteringsvänligt"
+— samma val OmaScribe gjorde med `project.json` + en HTML-fil per scen.
 
 ## Vad den här sammanställningen inte är
 
-De nio rapporterna är webresearch mot leverantörernas egna sidor — inget av det säger
-något om hur svårt något är att bygga här, och kostnadsuppskattningarna i "i ordning"
-är mina, inte agenternas. Siffertabeller hos leverantörer ändras; se `VERIFIERING.md`
-för vilka belopp och påståenden som är kontrollerade av mig och vilka som inte är det.
+De elva rapporterna är webresearch mot leverantörernas egna sidor och mot GitHub-API:et —
+inget av det säger något om hur svårt något är att bygga här, och kostnadsuppskattningarna i
+"i ordning" är mina, inte agenternas. Siffertabeller hos leverantörer ändras; se
+`VERIFIERING.md` för vilka belopp och påståenden som är kontrollerade av mig och vilka som
+inte är det.

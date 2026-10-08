@@ -45,3 +45,46 @@ Varje rad: påståendet i rapporten → vad jag själv fick ur källan.
 - Rapport 09:s rubrikrad är kvar från briefen ("Research-brief D: de AI-nativa
   betalverktygen") i stället för en egen titel. Innehållet är rätt; rubriken är kosmetisk
   och står kvar som spår av att den skrevs mot en brief.
+
+## Rapport 10 och 11 (det öppna och juridiska) — kontrollerade 2026-10-08
+
+Rapport 10 bygger på GitHub-API:et. Jag körde om varje rad själv (`gh api` för 12 repon):
+
+| Påstående | Utfall |
+|---|---|
+| novelWriter: GPL-3.0, pushad 2026-10-07, release v26.2.1 2026-09-26, 111 issues | **Håller exakt**, och repot ligger verkligen på `saga-soft/novelWriter` (`vkbo/novelWriter` svarar "Moved Permanently" dit) |
+| Manuskript: GPL-3.0, pushed 2026-09-01, 588 issues | **Håller** |
+| Zettlr: GPL-3.0, pushed 2026-10-06, 548 issues | **Håller** |
+| FocusWriter 2026-10-08 / 20 issues, KDE/ghostwriter 2026-10-08 / 22 issues | **Håller** |
+| KIT Scenarist: **arkiverat**, senaste push 2023-08-01 | **Håller** (`archived=true`, 350 stjärnor) |
+| bibisco: senaste push i öppna repot 2024-09-27, 107 issues | **Håller** |
+| Calibre, Sigil: GPL-3.0. Pandoc: GPL-2.0. Typst: Apache-2.0 | **Håller** |
+| oStorybook: "UNVERIFIED" i rapporten | **Nu mätt:** repot finns (`favdb/oStorybook`), GPL-3.0, senaste push 2023-10-24, 7 stjärnor — i praktiken vilande |
+
+Två fel i rapporten som jag rättar i stället för att låta stå:
+
+- **Felaktig källhänvisning:** Manuskripts licens anges som
+  `github.com/milotype/manuskript/blob/master/LICENSE` — den URL:en svarar **404**, och
+  filen heter `COPYING` (inte `LICENSE`). Rätt källa är
+  `github.com/olivierkes/manuskript/blob/master/COPYING`, och den innehåller GPL v3:s
+  text. Om det är `-only` eller `-or-later` går inte att se ur filen; GitHub-API:et svarar
+  bara `GPL-3.0` för båda. **Därför står `or-later` som obelagt.**
+- **Ett citat som inte finns i källan:** novelWriters licenscitat ("Permissions of this
+  strong copyleft license are conditioned on making available complete source code…")
+  finns **inte** i repots `LICENSE.md` (0 träffar) — det är GitHubs egen sammanfattning av
+  GPL-3.0. Projektets egen rad är "novelWriter is licenced under GPLv3" i README. Licensen
+  håller alltså; citatet var fel attribuerat.
+
+Rapport 11:s bärande citat håller ordagrant mot Riverbanks egen sida:
+
+> "PyQt is dual licensed on all supported platforms under the GNU GPL v3 and the
+> Riverbank Commercial License. Unlike Qt, PyQt is not available under the LGPL."
+
+Det är första hand, från leverantören, och det är hela grunden för att GPL-3.0-only är
+tvingad — inte vald. Två rättelser till rapport 11:
+
+- Den föreslår `license = { text = "GPL-3.0-only" }` i `pyproject.toml`. Det är den gamla
+  tabellformen; PEP 639 ersatte den med `license = "GPL-3.0-only"` +
+  `license-files = ["LICENSE"]`. Det är den formen som är byggd, och den är **verifierad i
+  det byggda hjulet** (`License-Expression: GPL-3.0-only`, LICENSE i `dist-info/licenses/`).
+- Licensfilen i repot är hela GPL v3:s text (674 rader ur gnu.org), inte ett utdrag.

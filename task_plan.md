@@ -5,11 +5,11 @@
 Allt som ett professionellt författarverktyg har skall in i OmaScribe — manusstruktur,
 författarlagret, revision, sakprosa, publicering och AI — utan att något glöms mellan sessionerna.
 
-Underlaget är `docs/research/author-tools/` (**nio** agentrapporter i två pass; 119
-källänkar i det första, 95 i det andra, överlappet dem emellan inte avräknat, och
-alla kodpåståenden verifierade mot fil och rad — det andra passets källor i
-`VERIFIERING.md`). Varje punkt nedan bär sin källa som `R<xx>.<n>` = rapportens
-avsnittsnummer, `R06`–`R09` = det andra passet, så inget är påhittat här.
+Underlaget är `docs/research/author-tools/` (**elva** rapporter i två pass; 119 källänkar i
+det första, 95 i det andra, plus GitHub-API:et och licensfilerna i de två sista — överlappet
+passen emellan inte avräknat, och alla kodpåståenden verifierade mot fil och rad; det andra
+passets källor i `VERIFIERING.md`). Varje punkt nedan bär sin källa som `R<xx>.<n>` =
+rapportens avsnittsnummer, `R06`–`R11` = det andra passet, så inget är påhittat här.
 `luckor.md` är sammanställningen: vad de betalda verktygen har, vad vi har, och vad som
 saknas.
 
@@ -558,6 +558,7 @@ frågan inte behöver ställas igen:
 | Licensen är GPL-3.0-only | PyQt6 distribueras under GPL v3 endast (mätt ur paketmetadatan i `.venv`), så ett program som länkar den kan inte vara MIT — vilket README påstod. Copyleft var dessutom önskat: en bearbetning måste förbli öppen och bära upphovsrätten |
 | Fyra nya rapporter per PRODUKT, inte per tema | Det första passet var tematiskt och missade de betalda specialistverktygen (ProWritingAid, AutoCrit, Fictionary, Plottr, Campfire, bibisco, Papyrus). Funktionslista per produkt gav 29 mätta luckor som de fem första rapporterna inte hade, varav 17 blev nya planposter (`luckor.md`) |
 | Ritad tidslinje fortfarande inte byggd, men händelsetabellen är en post (2.23) | Tre betalda verktyg har tidslinjen och Fictionary rankar scenkopplade händelser högt. Datadelen är billig och vyn är ett eget steg — beslutet väntar på Alex |
+| Inget externt typsättningsprogram (Pandoc, Typst, Calibre) som backend | R10 föreslår det och kallar det billigt. Kedjan finns redan och grinden läser tillbaka EPUB/DOCX/PDF; ett externt program är dessutom ett nytt krav på användarens maskin. Kvar som *val* för PDF/X-1a (5.16) om det visar sig kräva en riktig typsättningsmotor |
 
 ## Errors Encountered
 

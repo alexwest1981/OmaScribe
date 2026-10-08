@@ -7,7 +7,8 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt, QTimer, QPoint, QMarginsF
-from PyQt6.QtGui import QAction, QKeySequence, QPalette, QTextCursor, QPageLayout, QPageSize, QCursor
+from PyQt6.QtGui import (QAction, QKeySequence, QPalette, QTextCursor, QTextDocument,
+                         QPageLayout, QPageSize, QCursor)
 from PyQt6.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
 
 from core.i18n import _, i18n
@@ -51,6 +52,11 @@ from core import richtext, directives
 # Ett ord: bokstäver (även svenska), siffror och apostrof — samma avgränsning
 # som core/autocorrect.py använder för hela ord.
 _WORD_PATTERN = r"[\w\u00c0-\u024f']+"
+
+
+# Innehållsförteckningens markeringar — samma form som appens andra direktiv.
+_TOC_OPEN = "[innehåll]"
+_TOC_CLOSE = "[/innehåll]"
 
 
 def _all_blocks(document):
@@ -477,6 +483,12 @@ class MainWindow(QMainWindow):
         self.act_gfonts = self._add_action(self.menu_format, "🌐 " + _("menu_format_google_fonts"), self._open_google_fonts_dialog)
         self.menu_format.addSeparator()
         self.act_fmt_directives = self._add_action(self.menu_format, "⌗ " + _("menu_format_directives"), self._format_directives, "Ctrl+Shift+M")
+        self.menu_format.addSeparator()
+        self.act_fld_note = self._add_action(self.menu_format, _("menu_format_note"), lambda: self.insert_field("not"), "Ctrl+Alt+F")
+        self.act_fld_figure = self._add_action(self.menu_format, _("menu_format_figure"), lambda: self.insert_field("figur"))
+        self.act_fld_table = self._add_action(self.menu_format, _("menu_format_table"), lambda: self.insert_field("tabell"))
+        self.act_fld_ref = self._add_action(self.menu_format, _("menu_format_ref"), self.insert_reference)
+        self.act_fld_toc = self._add_action(self.menu_format, _("menu_format_toc"), self.insert_toc, "Ctrl+Alt+I")
 
         # AI Assistant Menu
         self.menu_ai = mb.addMenu(_("menu_ai"))
@@ -1573,6 +1585,9 @@ class MainWindow(QMainWindow):
         sparning och när kommentarerna ändras).
         """
         canvas = self.editor.canvas
+        # Registret över noter och bildtexter följer scenen, även när ingen
+        # kommentar finns och även utan projekt.
+        self.sidebar.set_fields(self.editor.document.toPlainText(), self.field_labels())
         if self.project is None or not self.active_scene_id:
             canvas.setExtraSelections([])
             return
@@ -1928,6 +1943,124 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 QMessageBox.critical(self, _("export_error_title"), str(e))
 
+    def field_labels(self) -> dict:
+        """Orden fälten visas med — core/fields.py är språkoberoende."""
+        return {"note": _("field_name_note"), "figure": _("field_name_figure"),
+                "table": _("field_name_table"),
+                "ref_see": _("field_ref_see"), "notes_heading": _("field_notes_heading"),
+                "note_ref": '<sup><a href="#not{n}">{n}</a></sup>'}
+
+    def _fields_available(self) -> bool:
+        return self.active_canvas is not None and self.active_canvas.document() is not None
+
+    def insert_field(self, kind: str) -> bool:
+        """Infogar en fältmarkering vid markören (R02.5, R02.8).
+
+        Markeringen är vanlig text i scenen — den syns, den går att flytta och
+        den överlever allt som händer med filen. Numret räknas fram, inte skrivs.
+        """
+        if not self._fields_available():
+            return False
+        namn = _("field_" + kind)
+        text, ok = QInputDialog.getText(self, _("field_dialog_title", kind=namn),
+                                        _("field_dialog_prompt", kind=namn))
+        if not ok or not text.strip():
+            return False
+        cursor = self.active_canvas.textCursor()
+        cursor.insertText(f"[{kind}: {' '.join(text.split())}]")
+        self.is_modified = True
+        self._refresh_comment_marks()
+        self.status_bar.showMessage(_("field_inserted", kind=namn), 4000)
+        return True
+
+    def insert_reference(self) -> bool:
+        """En hänvisning till en rubrik i dokumentet (R02.6).
+
+        Rubrikerna visas med sina kapitelnummer, så man väljer rätt kapitel i
+        stället för att skriva dess text och hoppas att den stämmer.
+        """
+        if not self._fields_available():
+            return False
+        rubriker, nummer = self.headings_and_numbers()
+        if not rubriker:
+            self.status_bar.showMessage(_("toc_none"), 5000)
+            return False
+        val = [f"{n}. {r}" for n, r in zip(nummer, rubriker)]
+        valt, ok = QInputDialog.getItem(self, _("field_ref_title"), _("field_ref_prompt"), val, 0, False)
+        if not ok or not valt:
+            return False
+        text = valt.split(". ", 1)[-1].strip()
+        cursor = self.active_canvas.textCursor()
+        cursor.insertText(f"[ref: {text}]")
+        self.is_modified = True
+        self.status_bar.showMessage(_("field_inserted", kind=_("field_ref")), 4000)
+        return True
+
+    def headings_and_numbers(self, document=None) -> tuple:
+        """Rubrikerna i dokumentet och deras kapitelnummer (R02.7)."""
+        from core.fields import number_headings
+
+        doc = document
+        if doc is None and self.active_canvas is not None:
+            doc = self.active_canvas.document()
+        if doc is None:
+            return [], []
+        rubriker, nivaer = [], []
+        block = doc.begin()
+        while block.isValid():
+            if block.blockFormat().headingLevel() and block.text().strip():
+                rubriker.append(block.text().strip())
+                nivaer.append(block.blockFormat().headingLevel())
+            block = block.next()
+        return rubriker, number_headings(nivaer)
+
+    def insert_toc(self) -> bool:
+        """Infogar eller uppdaterar innehållsförteckningen (R02.7).
+
+        Innehållet står mellan ``[innehåll]`` och ``[/innehåll]``, som appens
+        andra markeringar: skriver man om ett kapitel trycker man en gång till
+        och listan är uppdaterad, i stället för att redigera den för hand.
+        """
+        rubriker, nummer = self.headings_and_numbers()
+        if not rubriker:
+            self.status_bar.showMessage(_("toc_none"), 5000)
+            return False
+        rader = "\n".join(f"{n}. {r}" for n, r in zip(nummer, rubriker))
+        document = self.active_canvas.document()
+        cursor = document.find(_TOC_OPEN)
+        if not cursor.isNull():
+            slut = document.find(_TOC_CLOSE, cursor.selectionEnd())
+            if not slut.isNull():
+                # Uppdatera på plats: allt mellan markeringarna byts ut.
+                cursor.setPosition(cursor.selectionEnd())
+                cursor.setPosition(slut.selectionStart(), QTextCursor.MoveMode.KeepAnchor)
+                cursor.insertText("\n" + rader + "\n")
+                self.is_modified = True
+                self.status_bar.showMessage(_("toc_updated"), 4000)
+                return True
+        cursor = self.active_canvas.textCursor()
+        cursor.insertText(f"{_TOC_OPEN}\n{rader}\n{_TOC_CLOSE}")
+        self.is_modified = True
+        self.status_bar.showMessage(_("toc_inserted"), 4000)
+        return True
+
+    def _resolved_for_export(self, document):
+        """Löser upp fälten inför export: en fotnot ska bli en not i filen.
+
+        En kopia byggs bara när det finns något att lösa upp — annars går samma
+        dokument vidare. Markeringen är text, så den här är det enda stället
+        fälten behöver kännas vid för att filen ska bli riktig.
+        """
+        from core import fields as fields_module
+
+        text = document.toHtml()
+        if "[" not in text:
+            return document
+        rubriker, nummer = self.headings_and_numbers(document)
+        kopia = QTextDocument()
+        kopia.setHtml(fields_module.resolve(text, rubriker, nummer, self.field_labels()))
+        return kopia
+
     def _save_document(self, filepath, text_document=None):
         """Sparar eller exporterar med appens aktuella sidinställningar.
 
@@ -1935,9 +2068,10 @@ class MainWindow(QMainWindow):
         och då fick samma dokument olika rening och geometri beroende på väg —
         DOCX-exporten tappade dem medan PDF-exporten hade dem.
         """
+        document = text_document if text_document is not None else self.editor.document
         DocumentManager.save_file(
             filepath,
-            text_document if text_document is not None else self.editor.document,
+            self._resolved_for_export(document),
             page_settings=self.page_settings,
         )
 
@@ -2331,6 +2465,10 @@ class MainWindow(QMainWindow):
         self.act_gen_para.setText("✎ " + _("menu_ai_paragraph"))
         self.act_code.setText("⌨ " + _("menu_ai_code"))
         self.act_fmt_directives.setText("⌗ " + _("menu_format_directives"))
+        for act, key in ((self.act_fld_note, "menu_format_note"), (self.act_fld_figure, "menu_format_figure"),
+                         (self.act_fld_table, "menu_format_table"), (self.act_fld_ref, "menu_format_ref"),
+                         (self.act_fld_toc, "menu_format_toc")):
+            act.setText(_(key))
 
         self.menu_notes.setTitle(_("menu_notes"))
         self.act_notes_new.setText("➕ " + _("menu_notes_new"))

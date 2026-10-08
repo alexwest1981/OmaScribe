@@ -173,11 +173,27 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 
 ### Fas 4: Sakprosan
 
-- [ ] **4.1** Fotnoter och slutnoter med automatisk numrering och navigering. R02.5
-- [ ] **4.2** Korsreferenser till rubriker, figurer och tabeller (fält, inte rå text). R02.6
-- [ ] **4.3** Genererad innehållsförteckning i dokumentet, uppdaterbar och klickbar. R02.7
+- [x] **4.1** Fotnoter med automatisk numrering och navigering: markeringen `[not: …]` står i texten
+      och **numret räknas fram ur ordningen**, så att flytta ett stycke är att numrera om. Panelen har
+      fliken *Noter och figurer* — registret — där varje not står med sitt nummer, och ett klick sätter
+      markören vid markeringen. Exporten gör markeringen till en riktig upphöjd notlänk och samlar
+      noterna under "Noter" i filen. Provat: infogning, numrering i ordning, registret, klicket och
+      exporten. R02.5
+- [x] **4.2** Korsreferenser till rubriker (fält, inte rå text): `[ref: Rubrikens text]` blir
+      "se kapitel 2" — man väljer rubrik i en lista med kapitelnumren, i stället för att skriva dess
+      text och hoppas. Rubriken slås upp utan hänsyn till skiftläge och inledande nummer, och en
+      hänvisning som inte hittar sin rubrik **står kvar orörd** i stället för att bli en tyst felaktig
+      siffra. Provat: vägran utan rubriker, uppslagningen, och den färdiga texten i exporten. R02.6
+- [x] **4.3** Genererad innehållsförteckning, uppdaterbar: rubrikerna läses ur dokumentets
+      rubriknivåer, får kapitelnummer (`number_headings`: 1, 1.1, 1.2, 2 — och en överhoppad nivå blir
+      1.1, inte 1.0.1), och listan står mellan `[innehåll]` och `[/innehåll]`. Trycker man en gång till
+      **uppdateras listan i stället för att en ny läggs till** — provat (en förekomst, inte två).
+      Klickbarheten ligger i panelens rubriklista, som hoppar till rubriken i texten. R02.7
 - [ ] **4.4** Snabbnavigering och rubriknavigator (utöka befintlig outline-panel). R02.17
-- [ ] **4.5** Bildtexter med automatisk numrering + figur-/tabellregister. R02.8
+- [x] **4.5** Bildtexter med automatisk numrering + register: `[figur: …]` och `[tabell: …]` får
+      egna serier (Figur 1, Tabell 1) och blir "Figur 1. Trappan från hallen." i filen. Registret är
+      samma panelflik som noterna — figurerna och tabellerna med sina nummer, i textens ordning.
+      Provat både i registret och i den exporterade texten. R02.8
 - [ ] **4.6** Stycke- och teckenstilar, stilinspektör och stilmallar. R02.9
 - [ ] **4.7** Avsnittsbrytningar med separata sidhuvuden/sidfötter. R02.10
 - [ ] **4.8** Spalter och avstavning. R02.11 — *låg*

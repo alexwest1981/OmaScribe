@@ -1773,6 +1773,94 @@ def main() -> int:
     win.editor.document.setModified(False)
     win.is_modified = False
 
+    print("\n37. Fält i texten: fotnoter, bildtexter, korsreferenser och innehåll (fas 4.1–4.5)")
+
+    from PyQt6.QtWidgets import QInputDialog
+
+    tomt = "<p>Källaren var mörk.</p><p>Hon tände lampan.</p>"
+    ovningsbok.write(ovningsscen.id, tomt)
+    win._show_scene_html(ovningsscen.id, tomt)
+
+    # Rutan frågar bara om texten; provet svarar åt den och prövar resten.
+    QInputDialog.getText = staticmethod(lambda *a, **k: ("Hon hade varit där förut.", True))
+    check(win.insert_field("not"), "en fotnot kan infogas vid markören")
+    text37 = win.editor.document.toPlainText()
+    check("[not: Hon hade varit där förut.]" in text37,
+          f"och markeringen står i texten — inte en skriven siffra ({text37[:22]!r})")
+
+    # Utan rubriker finns inget att hänvisa till, och då sägs det
+    check(not win.insert_reference(),
+          "en hänvisning utan rubriker infogas inte")
+    check("Inga rubriker" in win.status_bar.currentMessage(),
+          f"och det står varför ({win.status_bar.currentMessage()!r})")
+
+    # En rubrik, och sedan en hänvisning till den
+    doc37 = win.editor.document
+    rubrikmarkor = QTextCursor(doc37)
+    rubrikmarkor.setPosition(0)
+    fmt37 = rubrikmarkor.blockFormat(); fmt37.setHeadingLevel(1); rubrikmarkor.setBlockFormat(fmt37)
+    rubrikmarkor.insertText("Källaren")
+    rubrikmarkor.insertBlock()                       # rubriken är ett eget stycke
+    fmt37b = rubrikmarkor.blockFormat(); fmt37b.setHeadingLevel(0); rubrikmarkor.setBlockFormat(fmt37b)
+    rubriker37, nummer37 = win.headings_and_numbers()
+    check(rubriker37 == ["Källaren"] and nummer37 == ["1"],
+          f"dokumentets rubriker får kapitelnummer ({rubriker37} {nummer37})")
+
+    QInputDialog.getItem = staticmethod(lambda *a, **k: ("1. Källaren", True))
+    check(win.insert_reference(), "och en hänvisning till rubriken kan infogas")
+    QInputDialog.getText = staticmethod(lambda *a, **k: ("Trappan från hallen.", True))
+    win.insert_field("figur")
+    QInputDialog.getText = staticmethod(lambda *a, **k: ("Ord per kapitel.", True))
+    win.insert_field("tabell")
+    QInputDialog.getText = staticmethod(lambda *a, **k: ("Och ljuset.", True))
+    win.insert_field("not")
+    text37 = win.editor.document.toPlainText()
+    check("[figur: Trappan från hallen.]" in text37 and "[tabell: Ord per kapitel.]" in text37
+          and "[ref: Källaren]" in text37,
+          f"bildtext, tabelltext och hänvisning står i texten ({text37[-52:]!r})")
+
+    from core.fields import of_kind
+    noter37 = of_kind(text37, "note")
+    check([n.number for n in noter37] == [1, 2],
+          f"och noterna numreras i textens ordning ({[n.number for n in noter37]})")
+
+    # Registret i panelen: nummer, text och ett klick som hoppar
+    win.scene_inspector.set_scene(ovningsbok, ovningsbok.by_id(ovningsscen.id))
+    win._refresh_comment_marks()
+    rader37 = [win.sidebar.list_fields.item(i).text() for i in range(win.sidebar.list_fields.count())]
+    check(any(r.startswith("Not 1.") for r in rader37), f"registret visar noten ({rader37[:1]})")
+    check(any(r.startswith("Figur 1.") for r in rader37), f"och bildtexten ({rader37[1:2]})")
+    check(any(r.startswith("Tabell 1.") for r in rader37), f"och tabelltexten ({rader37[2:3]})")
+    check(len(rader37) == 4, f"men inte hänvisningen — den läses i texten ({len(rader37)} rader)")
+    win.sidebar._on_field_clicked(win.sidebar.list_fields.item(0))
+    markor37 = win.editor.textCursor()
+    runt37 = win.editor.document.toPlainText()[markor37.position():markor37.position() + 12]
+    check(runt37.startswith("[not: "),
+          f"och ett klick i registret sätter markören vid markeringen ({runt37!r})")
+
+    # Innehållsförteckningen: genereras, och uppdateras på plats
+    check(win.insert_toc(), "innehållsförteckningen kan infogas")
+    text37b = doc37.toPlainText()
+    check("[innehåll]" in text37b and "1. Källaren" in text37b,
+          f"och den listar rubriken med sitt kapitelnummer ({text37b[:26]!r})")
+    win.insert_toc()
+    text37c = doc37.toPlainText()
+    check(text37c.count("[innehåll]") == 1 and text37c.count("1. Källaren") == 1,
+          f"och en gång till uppdaterar listan i stället för att lägga en ny "
+          f"({text37c.count('1. Källaren')} förekomster)")
+
+    # Exporten löser upp fälten: riktiga noter, numrerade bildtexter, färdig hänvisning
+    export37 = win._resolved_for_export(doc37).toHtml()
+    check('href="#not1"' in export37, "exporten gör fotnoten till en riktig not")
+    check("Noter" in export37 and "Hon hade varit där förut." in export37,
+          "och samlar noterna under en rubrik")
+    check("Figur 1. Trappan från hallen." in export37,
+          f"bildtexten får sitt nummer i filen")
+    check("Tabell 1. Ord per kapitel." in export37, "och tabellen sitt")
+    check("se kapitel 1" in export37, "och hänvisningen blir en hänvisning")
+    check("[not:" not in export37 and "[figur:" not in export37 and "[ref:" not in export37,
+          "inga markeringar står kvar i den exporterade texten")
+
     print("\n36. Sök och ersätt, och autokorrigering (fas 4.9 och 4.12)")
 
     text36 = ('<p>Jag <b>skrev</b> teh bok och sa "hej"...</p>'

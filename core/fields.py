@@ -128,6 +128,51 @@ def ref_number(value: str, headings: list[str], numbers: list[str]) -> str | Non
     return None
 
 
+def resolve(html: str, headings: list[str] | None = None,
+            numbers: list[str] | None = None, labels: dict | None = None) -> str:
+    """Texten med fälten utbytta mot sin visning — för export och förhandsvisning.
+
+    Fotnoten blir en upphöjd länk och samlas i slutet under en rubrik (där orden
+    kommer från `labels`, så modulen är språkoberoende), bildtexten och tabellen
+    får sina nummer, och en hänvisning blir ``se kapitel 2``. Texten runt omkring
+    rörs inte alls, och en hänvisning som inte hittar sin rubrik står kvar precis
+    som den skrevs — en synlig hänvisning som inte stämmer är bättre än en tyst
+    felaktig.
+    """
+    labels = labels or {}
+    headings = headings or []
+    numbers = numbers or []
+    noter: list[Field] = []
+    bitar: list[str] = []
+    förra = 0
+    for field in fields(html):
+        bitar.append(html[förra:field.start])
+        förra = field.end
+        if field.kind == "note":
+            noter.append(field)
+            mall = labels.get("note_ref", '<sup><a href="#not{n}">{n}</a></sup>')
+            bitar.append(mall.format(n=field.number))
+        elif field.kind in ("figure", "table"):
+            namn = labels.get(field.kind, field.kind.title())
+            siffra = f"{namn} {field.number}" if field.number else namn
+            bitar.append(f"{siffra}. {field.value}")
+        elif field.kind == "ref":
+            kapitel = ref_number(field.value, headings, numbers)
+            if kapitel:
+                bitar.append(labels.get("ref_see", "se kapitel {n}").format(n=kapitel))
+            else:
+                bitar.append(f"[ref: {field.value}]")
+    bitar.append(html[förra:])
+    text = "".join(bitar)
+
+    if noter and "notes_heading" in labels:
+        rader = "\n".join(
+            f'<p class="note" id="not{field.number}"><sup>{field.number}</sup> {field.value}</p>'
+            for field in noter)
+        text = f'{text}\n<h2>{labels["notes_heading"]}</h2>\n{rader}'
+    return text
+
+
 def _self_test() -> int:
     grönt = 0
 
@@ -182,6 +227,23 @@ def _self_test() -> int:
     # En halvskriven markering ska lämnas orörd, som direktiven
     check("oavslutad markering rörs inte", fields("Här [not: utan slut"), [])
     check("och vanliga hakparenteser är inget fält", fields("se [bilaga 3]"), [])
+
+    # Upplösningen: noter samlas i slutet, bildtexter får nummer, hänvisningar blir text
+    etiketter = {"figure": "Figur", "table": "Tabell", "notes_heading": "Noter",
+                 "ref_see": "se kapitel {n}"}
+    upplöst = resolve("<p>Mörkt.[not: Hon hade varit där.]</p>"
+                      "<p>[figur: Trappan.]</p>"
+                      "<p>Se [ref: Andra kapitlet].</p>",
+                      headings=rubriker, numbers=nummer, labels=etiketter)
+    check("noten blir en upphöjd länk", 'href="#not1">1</a>' in upplöst, True)
+    check("bildtexten får sitt nummer", "Figur 1. Trappan." in upplöst, True)
+    check("hänvisningen blir en hänvisning", "se kapitel 2" in upplöst, True)
+    check("och noten samlas i slutet", "<h2>Noter</h2>" in upplöst and "Hon hade varit där." in upplöst, True)
+    check("texten runt omkring står kvar", upplöst.startswith("<p>Mörkt."), True)
+    check("hänvisningen utan rubrik står kvar orörd",
+          "se kapitel 9" not in resolve("Se [ref: Nionde kapitlet].", rubriker, nummer, etiketter), True)
+    check("och en tabell räknas för sig",
+          "Tabell 1. Ord per kapitel." in resolve("[tabell: Ord per kapitel.]", labels=etiketter), True)
     return grönt
 
 

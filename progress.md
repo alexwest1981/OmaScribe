@@ -421,3 +421,30 @@
   ordningen, men tar ställning till stycket. Provat: `Nyckeln låg [+kvar+] på bordet.`
 - **Fas 3 är därmed komplett:** 3.1 snapshots, 3.2 spårade ändringar, 3.3 kommentarer med tråd,
   3.4/3.5 jämförelse och formatering, 3.6 historik, 3.7/3.8 AI-förslag granskningsbara.
+
+### Fas 4: sök, autokorrigering och fältlagret (4.9, 4.12, 4.1–4.3, 4.5)
+
+- **Status:** delvis klar och grindad (524 rökprov + 54 renhetsprov + modulernas egna, GRÖNT).
+- **Det genomgående fyndet:** `core/find_replace.py`, `core/autocorrect.py` och `core/spellcheck.py`
+  var **skrivna men oanvända** — ingen meny, ingen ruta, ingen väg in. Samma mönster som
+  plot-tavlan i fas 3 och snapshots i 3.1. Först kopplas de, sedan byggs det som saknas.
+- **4.12 sök och ersätt** i Redigera-menyn (Ctrl+F, Ctrl+H), icke-modal med räknare (ental rättat:
+  "1 träff", inte "1 träffar"), mönster, skiftläge, hela ord och bakåtreferenser. Ersätt alla går i
+  ett edit block = **ett** ångra-steg.
+- **4.9 autokorrigering** (Ctrl+Shift+K) över scenen: `changed_spans()` ger varje sammanhangande
+  ändring ur en teckendiff, så bara det som skiljer skrivs om — fetstilen i resten av stycket står
+  kvar (mätt: vikten 700 om ordet). Ett edit block. Rättelserna samlas först och skrivs bakifrån,
+  eftersom ett `QTextBlock` blir ogiltigt så snart dokumentet ändras.
+- **core/fields.py** — fältlagret för sakprosan: 27 egna kontroller. `[not: …]`, `[figur: …]`,
+  `[tabell: …]`, `[ref: Rubrik]`, numrering ur textens ordning, kapitelnummer ur rubriknivåerna och
+  `resolve()` för export. Språkoberoende (orden kommer från gränssnittet).
+- **4.1/4.5 registret:** ny panelflik *Noter och figurer* med nummer och text; klick sätter markören
+  vid markeringen (samma väg som rubriklistan).
+- **4.2/4.3:** hänvisningar till rubriker (med en lista att välja ur), och en innehållsförteckning
+  mellan `[innehåll]` och `[/innehåll]` som **uppdateras på plats**. En hänvisning som inte hittar
+  sin rubrik står kvar orörd — hellre synligt fel än tyst felaktigt.
+- **Exporten** löser upp fälten i `_save_document()`, den enda vägen alla sju exporterna går genom:
+  en kopia byggs bara när texten innehåller en markering.
+- **Kvar i fas 4:** 4.4 (verifiera rubriknavigatorn), 4.6 (roller/stilmallar), 4.7 (avsnittsbrytningar
+  — medvetet inte gjord: hör till utskriften), 4.8 och 4.13 (låga), 4.10 (språk per avsnitt och
+  LanguageTool), 4.11 (låg), samt de flyttade 4.14–4.16.

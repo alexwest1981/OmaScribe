@@ -82,15 +82,18 @@ class SidebarInspector(QWidget):
         self.tabs.tabBar().setExpanding(False)   # annars kläms flikarna i stället för att skrolla
         self.tabs.tabBar().setElideMode(Qt.TextElideMode.ElideNone)
         self.tab_review = QWidget()
+        self.tab_fields = QWidget()
         self.tab_outline = QWidget()
         self.tab_metrics = QWidget()
 
         self._init_review_tab()
         self._init_outline_tab()
+        self._init_fields_tab()
         self._init_metrics_tab()
 
         self.tabs.addTab(self.tab_review, _("sidebar_tab_review"))
         self.tabs.addTab(self.tab_outline, _("sidebar_tab_outline"))
+        self.tabs.addTab(self.tab_fields, _("sidebar_tab_fields"))
         self.tabs.addTab(self.tab_metrics, _("sidebar_tab_metrics"))
 
         layout.addWidget(self.tabs, 1)
@@ -162,6 +165,40 @@ class SidebarInspector(QWidget):
         self.list_outline.setObjectName("OutlineList")
         self.list_outline.itemClicked.connect(self._on_outline_clicked)
         layout.addWidget(self.list_outline)
+
+    def _init_fields_tab(self):
+        layout = QVBoxLayout(self.tab_fields)
+        layout.setContentsMargins(12, 12, 12, 12)
+
+        self.list_fields = QListWidget()
+        self.list_fields.setObjectName("FieldsList")
+        self.list_fields.itemClicked.connect(self._on_field_clicked)
+        layout.addWidget(self.list_fields)
+
+    def set_fields(self, text: str, labels: dict) -> None:
+        """Noter, figurer och tabeller i scenen, med sina nummer (R02.5, R02.8).
+
+        Listan är registret: numren kommer från textens ordning, så flyttar man
+        ett stycke flyttar numren med. Ett klick hoppar till stället i texten, och
+        går samma väg som rubriklistan, så navigeringen beter sig likadant.
+        """
+        from core.fields import fields as hitta_falt
+
+        self.list_fields.clear()
+        for falt in hitta_falt(text or ""):
+            if falt.kind == "ref":
+                continue                      # hänvisningar listas inte, de läses i texten
+            namn = labels.get(falt.kind, falt.kind)
+            rad = f"{namn} {falt.number}. {falt.value}" if falt.number else falt.value
+            item = QListWidgetItem(rad)
+            item.setData(Qt.ItemDataRole.UserRole, falt.start)
+            item.setToolTip(rad)
+            self.list_fields.addItem(item)
+
+    def _on_field_clicked(self, item):
+        pos = item.data(Qt.ItemDataRole.UserRole)
+        if pos is not None:
+            self.outline_item_clicked.emit(int(pos))
 
     def _init_metrics_tab(self):
         layout = QVBoxLayout(self.tab_metrics)

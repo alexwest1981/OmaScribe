@@ -1005,5 +1005,11 @@
   "events_attach": "Koppla scenen",
   "events_detach": "Lossa scenen",
   "grid_btn_events": "Händelser",
-  "grid_events_tooltip": "Händelserna i berättelsen, kopplade till scener"
+  "grid_events_tooltip": "Händelserna i berättelsen, kopplade till scener",
+  "tb_style_break": "⁂ Scenbrytning",
+  "tb_style_break_tooltip": "Scenbrytning (Ctrl+Alt+6)",
+  "tb_style_verse": "❦ Vers",
+  "tb_style_verse_tooltip": "Versblock — radbrytningarna står kvar (Ctrl+Alt+7)",
+  "tb_style_message": "✉ Sms",
+  "tb_style_message_tooltip": "Sms eller chatt — smalare spalt i fast bredd (Ctrl+Alt+8)"
 }

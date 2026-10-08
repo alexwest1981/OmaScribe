@@ -13,6 +13,7 @@ Rollerna ligger på QTextFormat.UserProperty, det villkoret Qt avsätter för
 applikationer, så de krockar inte med Qts egna egenskaper.
 """
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import (
     QTextBlockFormat, QTextCharFormat, QTextFormat, QTextCursor, QTextDocument,
     QFont, QFontDatabase, QColor, QBrush,
@@ -23,6 +24,12 @@ LANG_PROPERTY = QTextFormat.Property.UserProperty + 2
 
 ROLE_CODE = "code"
 ROLE_QUOTE = "quote"
+# Typografiska textelement (5.14): samma innehåll, samma betydelse och samma
+# utseende i alla tre kanaler. Rollen är det som gör att blocket överlever
+# exporten — utseendet på skärmen är bara hur den ser ut här.
+ROLE_BREAK = "break"        # scenbrytning: en rad för sig, centrerad
+ROLE_VERSE = "verse"        # versblock: radbrytningarna är meningen
+ROLE_MESSAGE = "message"    # sms eller chatt: vem som säger vad
 
 # Teckensnitt i tur och ordning — första som finns på systemet vinner
 MONO_PREFERENCES = ["JetBrains Mono", "Fira Code", "Cascadia Code", "Source Code Pro",
@@ -129,6 +136,76 @@ def quote_char_format(colors: dict) -> QTextCharFormat:
     return fmt
 
 
+def break_block_format(colors: dict) -> QTextBlockFormat:
+    """Scenbrytning: sin egen rad, centrerad, med luft omkring."""
+    fmt = QTextBlockFormat()
+    fmt.setHeadingLevel(0)
+    fmt.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+    fmt.setTopMargin(10)
+    fmt.setBottomMargin(10)
+    set_role(fmt, ROLE_BREAK)
+    return fmt
+
+
+def break_char_format(colors: dict) -> QTextCharFormat:
+    fmt = QTextCharFormat()
+    fmt.setFontItalic(False)
+    muted = colors.get("text_muted")
+    if muted:
+        fmt.setForeground(QColor(muted))
+    return fmt
+
+
+def verse_block_format(colors: dict) -> QTextBlockFormat:
+    """Versblock: indraget, utan första radens indrag, radbrytningarna kvar."""
+    fmt = QTextBlockFormat()
+    fmt.setHeadingLevel(0)
+    fmt.setLeftMargin(30)
+    fmt.setTopMargin(4)
+    fmt.setBottomMargin(8)
+    try:
+        fmt.setNonBreakableLines(False)
+    except Exception:
+        pass
+    set_role(fmt, ROLE_VERSE)
+    return fmt
+
+
+def verse_char_format(colors: dict) -> QTextCharFormat:
+    """Versens text: kursiv.
+
+    Kursiven kommer från *formen*, inte från texten — därför sätter den här
+    teckenformaten kursiv (editorn och trycket), Word-stilen sin egen kursiv och
+    EPUB:ens CSS sin. Markdown-exporten hoppar över stjärnorna för versen, så
+    dikten står som block och inte som kursivmarkerad text.
+    """
+    fmt = QTextCharFormat()
+    fmt.setFontItalic(True)
+    return fmt
+
+
+def message_block_format(colors: dict) -> QTextBlockFormat:
+    """Sms eller chatt: smalare spalt och ett indrag, som en skärm i texten."""
+    fmt = QTextBlockFormat()
+    fmt.setHeadingLevel(0)
+    fmt.setLeftMargin(22)
+    fmt.setRightMargin(48)
+    fmt.setTopMargin(4)
+    fmt.setBottomMargin(4)
+    set_role(fmt, ROLE_MESSAGE)
+    return fmt
+
+
+def message_char_format(colors: dict) -> QTextCharFormat:
+    fmt = QTextCharFormat()
+    fmt.setFontFixedPitch(True)
+    fmt.setFontFamilies([mono_family()])
+    muted = colors.get("text_muted")
+    if muted:
+        fmt.setForeground(QColor(muted))
+    return fmt
+
+
 # ------------------------------------------------------------------ tillämpning
 
 def _block_range(cursor: QTextCursor):
@@ -176,6 +253,15 @@ def _formats_for(role: str, colors: dict, lang: str = ""):
     elif role == ROLE_QUOTE:
         bfmt = quote_block_format(colors)
         cfmt = quote_char_format(colors)
+    elif role == ROLE_BREAK:
+        bfmt = break_block_format(colors)
+        cfmt = break_char_format(colors)
+    elif role == ROLE_VERSE:
+        bfmt = verse_block_format(colors)
+        cfmt = verse_char_format(colors)
+    elif role == ROLE_MESSAGE:
+        bfmt = message_block_format(colors)
+        cfmt = message_char_format(colors)
     else:  # rensa rollen och återställ vanligt stycke
         bfmt = QTextBlockFormat()
         bfmt.setHeadingLevel(0)

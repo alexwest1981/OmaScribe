@@ -176,10 +176,15 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
       klickträffen finns på ett ställe. Knappen (🕸) står vid relationerna i codexpanelen.
       9 egna kontroller plus 4 i `ui_smoke`, som fångar dialogen genom att byta ut `exec` och
       prövar att en borttagen relation försvinner ur grafen. R07 (Campfire, World Anvil)
-- [ ] **2.23** Händelsetabell kopplad till scen: en händelse har tid, beskrivning och scen-id, och
-      kan återanvändas på flera ställen. Detta är *data*-halvan av tidslinjen, utan ritad vy — se
-      beslutet i luckor.md (planen avstod från den ritade vyn i 2.9). R07 (bibisco, World Anvil,
-      Plottr)
+- [x] **2.23** Händelsetabell kopplad till scen: `core/events.py` (20 egna kontroller) ger en
+      händelse en tid, en beskrivning och en **lista av scen-id:n** — samma händelse kan alltså
+      återanvändas i flera scener, och en scen kan ha flera händelser. Scenens egen tid (`when`)
+      säger *var* den ligger, händelsens tid *vad* som händer; de två behöver inte vara samma.
+      `ui/events_dialog.py` (14 egna kontroller) är tabellen: tid och beskrivning skrivs direkt,
+      och scenen som är öppen kopplas med en knapp. 📅 i plot-tavlan (där tidslinjen sorteras)
+      begär den, och fönstret sparar manifestet — `ui_smoke` avsnitt 51 kör hela vägen från
+      knappen till projektfilen på disk. En borttagen scen lämnar ingen tom rad i listan.
+      Ingen ritad vy, som beslutet i 2.9 säger. R07 (bibisco, World Anvil, Plottr)
 - **Status:** complete (två undantag flyttades till fas 4 som 4.14–4.16: pauspåminnelser, namn- och
   ordförrådsgenerator, blurb/synopsis — de hörde hemma med sakprosan). 2.18–2.23 kommer ur det andra
   researchpasset (2026-10-08) och är **inte byggda**: `[ ]` är hela sanningen om dem.
@@ -453,9 +458,21 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
       kräver. Papyrus har funktionen och beskriver den som "von Verlagen erwünscht" (ordagrant
       belagt hos leverantören). **Kvar:** ingen knapp och ingen meny — ingen väg från gränssnittet
       till profilen ännu. R08
-- [ ] **5.14** Typografiska textelement i alla tre kanaler: scenbrytning som ornament, versblock
-      och meddelandeblock (sms/chatt). Vellum har dem, och Vellum är det verktyg våra egna böcker
-      jämförs med. R08
+- [x] **5.14** Typografiska textelement i alla kanaler: **scenbrytning** (`ROLE_BREAK`), **versblock**
+      (`ROLE_VERSE`) och **meddelandeblock** (`ROLE_MESSAGE`) är roller som citat och kod, med var sin
+      knapp i verktygsraden. Rollen bär betydelsen, formen bär utseendet — och kursiven kommer från
+      formen, inte från texten: teckenformen (editorn och trycket), Word-stilen `Verse`, EPUB:ens
+      `p.verse`. Markdown-exporten hoppar därför över stjärnorna för versen, annars blev dikten
+      kursivmarkerad text i stället för ett block. *Vers och meddelande behåller sina radbrytningar i
+      alla kanaler*: Qts mjuka radbrytning blir `<br/>` i EPUB:en, `add_break()` i Word och två
+      avslutande blanksteg i markdown — förut försvann dikten till en enda rad. Scenbrytningen blir ett
+      eget centrerat stycke (`p.scene-break`), meddelandet en smalare spalt i fast bredd. Ingen
+      avstavning rör vers eller meddelande: där ÄR radbrytningarna innehållet. Mätt i `ui_smoke`
+      avsnitt 46 (Word-stilar, `<br/>`, CSS-regler, markdown) och på en riktig provsida genom PDF.
+      R08 → **klart**.
+
+      *Bonus, samma veva:* knapparnas verktygstips lovade Ctrl+Alt+0–8 utan att genvägarna fanns —
+      nu finns de (nivå 0–8, där 4–8 är rollerna). Ett tips skall inte lova något som inte händer.
 - [ ] **5.15** Kompilera ett **urval** och spara flera utskriftsprofiler per bok: välj draft, en
       del, en samling eller en aktiv markering och kompilera den som en platt lista — samt prefix,
       kapitelnumrering, filnamnsmall och separata filer per kapitel. Scrivener Compile gör allt

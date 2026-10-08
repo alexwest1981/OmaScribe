@@ -9,7 +9,7 @@ from PyQt6.QtPrintSupport import QPrinter
 
 try:
     import docx
-    from docx.shared import Pt, Inches, RGBColor
+    from docx.shared import Pt, Cm, Inches, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.enum.style import WD_STYLE_TYPE
 except ImportError:
@@ -61,6 +61,9 @@ DEFAULT_PAGE_SETTINGS = {
 DOCX_ROLE_STYLES = {
     richtext.ROLE_QUOTE: "Quote",          # finns i Words standardmall
     richtext.ROLE_CODE: "Code Block",      # skapas om den inte finns
+    richtext.ROLE_BREAK: "Scene Break",
+    richtext.ROLE_VERSE: "Verse",
+    richtext.ROLE_MESSAGE: "Message",
 }
 DOCX_CODE_FONT = "Consolas"
 
@@ -434,7 +437,7 @@ class DocumentManager:
 
     @staticmethod
     def _docx_style(doc, stil: str) -> str:
-        """Stilens namn, och skapar den om mallen inte har den (R05.7).
+        """Stilens namn, och skapar den om mallen inte har den (R05.7, 5.14).
 
         `Quote` finns i Words standardmall, en kodstil gör det inte. Att skapa
         den i stället för att formatera stycket direkt är hela poängen: en
@@ -444,6 +447,25 @@ class DocumentManager:
             return stil
         ny = doc.styles.add_style(stil, WD_STYLE_TYPE.PARAGRAPH)
         ny.font.name = DOCX_CODE_FONT
+        # De typografiska textelementen har var sin form (5.14): en scenbrytning
+        # är centrerad, versen indragen utan första radens indrag, meddelandet en
+        # smalare spalt i fast bredd. Utan det blir de tre stilarna lika tomma.
+        if stil == "Scene Break":
+            ny.font.name = None
+            ny.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            ny.paragraph_format.space_before = Pt(10)
+            ny.paragraph_format.space_after = Pt(10)
+        elif stil == "Verse":
+            ny.font.name = None
+            ny.font.italic = True
+            ny.paragraph_format.left_indent = Cm(1.6)
+            ny.paragraph_format.first_line_indent = Cm(0)
+            ny.paragraph_format.space_after = Pt(10)
+        elif stil == "Message":
+            ny.paragraph_format.left_indent = Cm(1.2)
+            ny.paragraph_format.right_indent = Cm(2.4)
+            ny.paragraph_format.space_after = Pt(4)
+            ny.font.size = Pt(9.5)
         return stil
 
     @staticmethod
@@ -511,6 +533,7 @@ class DocumentManager:
                 heading_level = fmt.headingLevel()
                 alignment = fmt.alignment()
                 text_list = block.textList()
+                roll = richtext.block_role(block)
                 
                 if heading_level == 1:
                     p = doc.add_heading(level=1)
@@ -525,7 +548,6 @@ class DocumentManager:
                     # direkt formatering: redaktören ska kunna restyla hela
                     # boken med ett klick, och stilnamnen är språkoberoende i
                     # filen — Word visar dem på svenska ändå.
-                    roll = richtext.block_role(block)
                     stil = DOCX_ROLE_STYLES.get(roll)
                     p = doc.add_paragraph(
                         style=DocumentManager._docx_style(doc, stil)) if stil else doc.add_paragraph()
@@ -547,7 +569,16 @@ class DocumentManager:
                         txt = raw_txt.replace('\ufffc', '')
                         if txt:
                             char_fmt = frag.charFormat()
-                            run = p.add_run(txt)
+                            # I en vers och ett meddelande betyder radbrytningen
+                            # något: den blir ett riktigt radbrott i Word, inte
+                            # ett mellanslag (5.14).
+                            bitar = (txt.split("\u2028")
+                                     if roll in (richtext.ROLE_VERSE, richtext.ROLE_MESSAGE)
+                                     else [txt])
+                            run = p.add_run(bitar[0])
+                            for bit in bitar[1:]:
+                                run.add_break()
+                                run.add_text(bit)
                             
                             if char_fmt.fontWeight() >= 600 or char_fmt.font().bold():
                                 run.bold = True
@@ -651,9 +682,18 @@ class DocumentManager:
                     txt = frag.text().replace('\ufffc', '')
                     if txt:
                         cf = frag.charFormat()
+                        # Versens och meddelandets radbrytningar är innehåll, inte
+                        # radbrytning: i markdown blir de en hård radbrytning med
+                        # två avslutande blanksteg (5.14).
+                        if role in (richtext.ROLE_VERSE, richtext.ROLE_MESSAGE):
+                            txt = txt.replace("\u2028", "  \n")
                         is_bold = (cf.fontWeight() >= 600 or cf.font().bold()) \
                             and heading_level not in (1, 2, 3)
-                        is_italic = cf.fontItalic() and role != richtext.ROLE_QUOTE
+                        # Kursiven i versen och citatet bärs av *stilen* (CSS,
+                        # Word-stilen, teckenformen) — markdown skall inte
+                        # dessutom sätta stjärnor runt varje rad (5.14).
+                        is_italic = cf.fontItalic() and role not in (
+                            richtext.ROLE_QUOTE, richtext.ROLE_VERSE)
                         is_strike = cf.fontStrikeOut()
                         is_underline = cf.fontUnderline()
                         

@@ -47,8 +47,16 @@ def _render_block(block, doc, images, language="sv"):
     fmt = block.blockFormat()
     level = fmt.headingLevel()
     role = richtext.block_role(block)
-    tag = f"h{min(level, 6)}" if level else ("blockquote" if role == richtext.ROLE_QUOTE else "pre" if role == richtext.ROLE_CODE else "p")
-    node = etree.Element(_tag(tag))
+    # Rollerna ur core/richtext.py: samma betydelse i alla kanaler (5.14).
+    klass = {richtext.ROLE_BREAK: "scene-break", richtext.ROLE_VERSE: "verse",
+             richtext.ROLE_MESSAGE: "message"}.get(role)
+    if klass:
+        tag = "p"
+        node = etree.Element(_tag(tag))
+        node.set("class", klass)
+    else:
+        tag = f"h{min(level, 6)}" if level else ("blockquote" if role == richtext.ROLE_QUOTE else "pre" if role == richtext.ROLE_CODE else "p")
+        node = etree.Element(_tag(tag))
     if role == richtext.ROLE_CODE:
         lang = richtext.lang_of(fmt)
         if lang:
@@ -63,7 +71,22 @@ def _render_block(block, doc, images, language="sv"):
         text = fragment.text()
         # Mjuka bindestreck i löptext: svenskans långord är det som ger glapp i
         # en justerad spalt, och ett mjukt bindestreck syns bara om raden bryts
-        # där. Aldrig i kod (pre) — den ska vara exakt som den skrevs. (R05.11)
+        # där. Aldrig i kod (pre) — den ska vara exakt som den skrevs. Och
+        # aldrig i vers: där ÄR radbrytningarna innehållet. (R05.11, 5.14)
+        if role in (richtext.ROLE_VERSE, richtext.ROLE_MESSAGE):
+            # Versens och meddelandets radbrytningar (Qts mjuka radbrytning) blir
+            # riktiga <br/> — annars blir dikten en enda lång rad i läsaren. Och
+            # ingen avstavning: där ÄR radbrytningarna innehållet (5.14).
+            for i, del_text in enumerate(text.split("\u2028")):
+                if i:
+                    etree.SubElement(node, _tag("br"))
+                if not del_text:
+                    continue
+                if node.text is None and len(node) == 0:
+                    node.text = del_text
+                else:
+                    etree.SubElement(node, _tag("span")).text = del_text
+            continue
         if tag in ("p", "blockquote"):
             text = soft_hyphenate(text, language)
         if f.isImageFormat():
@@ -306,7 +329,17 @@ def export_epub(path: str, document: QTextDocument, metadata: dict, page_setting
                 " pre { white-space: pre-wrap; font-family: monospace;"
                 " background: #f4f4f4; padding: .5em; border-left: 3px solid #ccc; }"
                 " p.author { text-align: center; font-style: italic; margin-top: 2em; }"
-                " p.colophon { font-size: .9em; }", compress_type=zipfile.ZIP_DEFLATED)
+                " p.colophon { font-size: .9em; }"
+                # De typografiska textelementen (5.14): scenbrytningen som en
+                # egen centrerad rad, versen med radbrytningarna kvar, och
+                # meddelandet som en smalare spalt.
+                " p.scene-break { text-align: center; margin: 1.4em 0;"
+                " letter-spacing: .35em; }"
+                " p.verse { margin: 0.6em 0 1em 1.6em; font-style: italic;"
+                " white-space: normal; }"
+                " p.message { margin: 0.4em 2.4em; font-family: monospace;"
+                " font-size: .92em; background: #f4f4f4; padding: .4em .6em;"
+                " border-left: 3px solid #ccc; }", compress_type=zipfile.ZIP_DEFLATED)
             for filename, chapter_title, nodes in chapter_nodes:
                 archive.writestr("OEBPS/" + filename,
                                  _serialize_xhtml(chapter_title, nodes, language),

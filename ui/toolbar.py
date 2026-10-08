@@ -8,7 +8,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import (
     QAction, QIcon, QFont, QTextCharFormat, QTextBlockFormat,
     QTextListFormat, QTextCursor, QTextTableFormat, QTextTableCellFormat,
-    QTextLength, QTextFrameFormat, QBrush, QColor
+    QTextLength, QTextFrameFormat, QBrush, QColor, QKeySequence, QShortcut
 )
 from core.i18n import _, i18n
 from core import richtext, directives, print_style
@@ -97,6 +97,24 @@ class FormattingToolBar(QToolBar):
         self.btn_style_code.clicked.connect(lambda: self._apply_heading_level(5))
         self.style_group.addButton(self.btn_style_code, 5)
         self.addWidget(self.btn_style_code)
+
+        # Typografiska textelement (5.14). Nivå 6-8 är roller, precis som citat
+        # och kod: nivånumret är bara knappens plats i gruppen.
+        for nivå, namn in ((6, "break"), (7, "verse"), (8, "message")):
+            knapp = QToolButton(self)
+            knapp.setCheckable(True)
+            knapp.setProperty("stylePill", "true")
+            knapp.clicked.connect(lambda _=False, n=nivå: self._apply_heading_level(n))
+            self.style_group.addButton(knapp, nivå)
+            self.addWidget(knapp)
+            setattr(self, f"btn_style_{namn}", knapp)
+
+        # Genvägarna som knapparnas verktygstips utlovar. De fanns bara som text
+        # i tipset — nu gör de något också (Ctrl+Alt+0 till 8 = nivå 0-8, där
+        # 4-8 är rollerna citat, kod, scenbrytning, vers och meddelande).
+        for nivå in range(9):
+            genväg = QShortcut(QKeySequence(f"Ctrl+Alt+{nivå}"), self)
+            genväg.activated.connect(lambda n=nivå: self._apply_heading_level(n))
 
         self.addSeparator()
 
@@ -361,6 +379,12 @@ class FormattingToolBar(QToolBar):
         
         self.btn_style_code.setText(_("tb_style_code"))
         self.btn_style_code.setToolTip(_("tb_style_code_tooltip"))
+        self.btn_style_break.setText(_("tb_style_break"))
+        self.btn_style_break.setToolTip(_("tb_style_break_tooltip"))
+        self.btn_style_verse.setText(_("tb_style_verse"))
+        self.btn_style_verse.setToolTip(_("tb_style_verse_tooltip"))
+        self.btn_style_message.setText(_("tb_style_message"))
+        self.btn_style_message.setToolTip(_("tb_style_message_tooltip"))
 
         self.act_gfonts.setToolTip(_("menu_format_google_fonts"))
         self.act_bold.setToolTip(_("tb_bold"))
@@ -443,16 +467,27 @@ class FormattingToolBar(QToolBar):
         # Block heading & style sync
         block_fmt = cursor.blockFormat()
         level = block_fmt.headingLevel()
-        
+        roll = richtext.block_role(cursor.block())
+
         self.style_group.blockSignals(True)
-        if level == 1:
+        # Rollen är sanningen, nivån bara utseendet: ett citat skall visa
+        # citatknappen även om dess nivå satts på annat håll.
+        if roll == richtext.ROLE_QUOTE:
+            self.btn_style_quote.setChecked(True)
+        elif roll == richtext.ROLE_CODE:
+            self.btn_style_code.setChecked(True)
+        elif roll == richtext.ROLE_BREAK:
+            self.btn_style_break.setChecked(True)
+        elif roll == richtext.ROLE_VERSE:
+            self.btn_style_verse.setChecked(True)
+        elif roll == richtext.ROLE_MESSAGE:
+            self.btn_style_message.setChecked(True)
+        elif level == 1:
             self.btn_style_h1.setChecked(True)
         elif level == 2:
             self.btn_style_h2.setChecked(True)
         elif level == 3:
             self.btn_style_h3.setChecked(True)
-        elif block_fmt.leftMargin() > 16:
-            self.btn_style_quote.setChecked(True)
         else:
             self.btn_style_normal.setChecked(True)
         self.style_group.blockSignals(False)
@@ -466,15 +501,16 @@ class FormattingToolBar(QToolBar):
         # Kod och citat får riktiga blockroller i stället för enbart utseende.
         # Det är rollen som gör att blocket överlever export till markdown och
         # kan plockas ut igen av AI-analysen.
-        if level in (4, 5) and self.theme_mgr is not None:
-            role = richtext.ROLE_QUOTE if level == 4 else richtext.ROLE_CODE
+        if level in (4, 5, 6, 7, 8) and self.theme_mgr is not None:
+            roll = {4: richtext.ROLE_QUOTE, 5: richtext.ROLE_CODE, 6: richtext.ROLE_BREAK,
+                    7: richtext.ROLE_VERSE, 8: richtext.ROLE_MESSAGE}[level]
             lang = ""
-            if role == richtext.ROLE_CODE:
+            if roll == richtext.ROLE_CODE:
                 sample = cursor.selectedText().replace("\u2029", "\n")
                 if not sample.strip():
                     sample = cursor.block().text()
                 lang = directives.detect_language(sample)
-            richtext.apply_role(cursor, role, self.theme_mgr.current, lang)
+            richtext.apply_role(cursor, roll, self.theme_mgr.current, lang)
             return
 
         # Normal ska också ta bort en tidigare blockroll. Utan det blir

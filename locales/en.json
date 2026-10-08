@@ -1005,5 +1005,11 @@
   "events_attach": "Link scene",
   "events_detach": "Unlink scene",
   "grid_btn_events": "Events",
-  "grid_events_tooltip": "The story's events, linked to scenes"
+  "grid_events_tooltip": "The story's events, linked to scenes",
+  "tb_style_break": "⁂ Scene break",
+  "tb_style_break_tooltip": "Scene break (Ctrl+Alt+6)",
+  "tb_style_verse": "❦ Verse",
+  "tb_style_verse_tooltip": "Verse block — line breaks are kept (Ctrl+Alt+7)",
+  "tb_style_message": "✉ Message",
+  "tb_style_message_tooltip": "Text message or chat — narrower column, fixed pitch (Ctrl+Alt+8)"
 }

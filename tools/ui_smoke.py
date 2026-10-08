@@ -2000,7 +2000,22 @@ def main() -> int:
     markor46.insertText("Ett citat ur en annan bok.")
     markor46.insertBlock()
     markor46.insertText("print('kod')")
-    for nummer, roll in ((2, _rt46.ROLE_QUOTE), (3, _rt46.ROLE_CODE)):
+    # De typografiska textelementen (5.14): scenbrytning, vers och meddelande.
+    # Versen och meddelandet byggs med Qts mjuka radbrytning, det är så editorn
+    # lagrar en radbrytning inuti ett stycke.
+    markor46.insertBlock()
+    markor46.insertText("⁂")
+    markor46.insertBlock()
+    markor46.insertText("rad ett i dikten")
+    markor46.insertText("\u2028")
+    markor46.insertText("rad två i dikten")
+    markor46.insertBlock()
+    markor46.insertText("Anna: hej")
+    markor46.insertText("\u2028")
+    markor46.insertText("Bo: hej själv")
+    for nummer, roll in ((2, _rt46.ROLE_QUOTE), (3, _rt46.ROLE_CODE),
+                         (4, _rt46.ROLE_BREAK), (5, _rt46.ROLE_VERSE),
+                         (6, _rt46.ROLE_MESSAGE)):
         block = doc46.findBlockByNumber(nummer)
         val = QTextCursor(doc46)
         val.setPosition(block.position())
@@ -2023,6 +2038,18 @@ def main() -> int:
           f"citatet bär Words *namngivna* stil i stället för direkt formatering ({stilar46})")
     check("Code Block" in stilar46, f"och koden sin — skapad i filen, för Words mall har ingen ({stilar46})")
     check("Normal" in stilar46, "medan det vanliga stycket förblir vanligt")
+    for stil46, vad46 in (("Scene Break", "scenbrytningen"), ("Verse", "versen"),
+                          ("Message", "meddelandet")):
+        check(stil46 in stilar46,
+              f"och {vad46} sin egen namngivna stil ({stil46}) i Word-filen")
+    vers46 = next((s for s in word46.paragraphs if s.style.name == "Verse"), None)
+    check(vers46 is not None and len(vers46.runs) >= 1
+          and any("<w:br" in r._element.xml for r in vers46.runs),
+          "och versens radbrytning blir ett riktigt radbrott i Word, inte ett mellanslag")
+    meddelande46 = next((s for s in word46.paragraphs if s.style.name == "Message"), None)
+    check(meddelande46 is not None
+          and any("<w:br" in r._element.xml for r in meddelande46.runs),
+          "och meddelandets rader står kvar som egna rader")
 
     from core.epub import export_epub as export_epub46
 
@@ -2036,6 +2063,21 @@ def main() -> int:
           "och EPUB:ens CSS stilar samma roller")
     check("<blockquote>" in kropp46 and "<pre>" in kropp46,
           "och texten blir blockquote och pre, inte div:ar")
+    check('class="scene-break"' in kropp46,
+          "scenbrytningen blir ett eget centrerat stycke i EPUB:en")
+    check('class="verse"' in kropp46 and kropp46.count("<br/>") >= 2,
+          "och versen behåller sina rader som riktiga radbrott")
+    check('class="message"' in kropp46,
+          "och en sms-växling blir ett meddelandeblock")
+    check("\u2028" not in kropp46,
+          "utan en enda mjuk radbrytning kvar i filen")
+    for regel46 in ("p.scene-break", "p.verse", "p.message"):
+        check(regel46 in css46, f"och CSS:en har sin regel för {regel46}")
+
+    md46 = _dm46.document_to_markdown(doc46)
+    check("rad ett i dikten  \nrad två i dikten" in md46,
+          "och markdown-exporten behåller versens rader som hårda radbrott")
+    check("\u2028" not in md46, "utan att lämna en mjuk radbrytning i texten")
 
     # Avstavningen (5.10): mjuka bindestreck i löptext, aldrig i kod
     löptext46 = kropp46.split("<p>", 1)[-1].split("</p>")[0] if "<p>" in kropp46 else ""

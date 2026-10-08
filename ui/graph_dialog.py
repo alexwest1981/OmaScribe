@@ -17,6 +17,41 @@ from PyQt6.QtGui import QPainter, QPen, QColor, QFont, QFontMetrics, QBrush
 from core.i18n import _, i18n
 
 
+def circle_layout(labels, edges, width: float, height: float):
+    """Nodpositioner på en cirkel, med radien efter antal kopplingar.
+
+    Delas av valvets graf (anteckningar och wikilänkar) och codexets
+    relationsgraf (entiteter och relationer): samma matematik, olika data.
+    Returnerar (noder, kanter) där kanterna är index in i nodlistan.
+    """
+    degree = {label: 0 for label in labels}
+    for a, b in edges:
+        degree[a] = degree.get(a, 0) + 1
+        degree[b] = degree.get(b, 0) + 1
+
+    cx, cy = width / 2.0, height / 2.0
+    radius = max(90.0, min(width, height) / 2.0 - 74.0)
+
+    nodes = []
+    index_of = {}
+    total = len(labels)
+    for i, label in enumerate(labels):
+        angle = (2 * math.pi * i / max(1, total)) - math.pi / 2
+        deg = degree.get(label, 0)
+        nodes.append({
+            "title": label,
+            "path": "",
+            "pos": QPointF(cx + radius * math.cos(angle), cy + radius * math.sin(angle)),
+            "radius": 6.0 + min(deg, 8) * 1.9,
+            "resolved": True,
+            "degree": deg,
+        })
+        index_of[label] = i
+
+    kanter = [(index_of[a], index_of[b]) for a, b in edges if a in index_of and b in index_of]
+    return nodes, kanter
+
+
 class GraphCanvas(QWidget):
     """Ritar noder och kanter. Klick på en nod öppnar anteckningen."""
 
@@ -43,40 +78,20 @@ class GraphCanvas(QWidget):
         """Beräknar nodpositioner på en cirkel, med hänsyn till kopplingar."""
         self.nodes = []
         self.edges = []
+        if self.vault is None:
+            return          # en underklass fyller ytan med sin egen data
 
         notes = self.vault.notes
         titles, raw_edges = self.vault.graph()
-
-        # Grad per titel (in + ut), för att styra nodstorlek
-        degree = {t: 0 for t in titles}
-        for src, dst in raw_edges:
-            degree[src] = degree.get(src, 0) + 1
-            degree[dst] = degree.get(dst, 0) + 1
+        self.nodes, self.edges = circle_layout(titles, raw_edges, self.width(), self.height())
+        path_of = {note.title: note.path for note in notes}
+        for node in self.nodes:
+            node["path"] = path_of.get(node["title"], "")
 
         unresolved = self.vault.unresolved_targets()
 
         cx, cy = self.width() / 2.0, self.height() / 2.0
         radius = max(90.0, min(self.width(), self.height()) / 2.0 - 74.0)
-
-        total = len(notes)
-        index_of = {}
-        for i, note in enumerate(notes):
-            angle = (2 * math.pi * i / max(1, total)) - math.pi / 2
-            deg = degree.get(note.title, 0)
-            r = 6.0 + min(deg, 8) * 1.9
-            self.nodes.append({
-                "title": note.title,
-                "path": note.path,
-                "pos": QPointF(cx + radius * math.cos(angle), cy + radius * math.sin(angle)),
-                "radius": r,
-                "resolved": True,
-                "degree": deg,
-            })
-            index_of[note.title] = i
-
-        for src, dst in raw_edges:
-            if src in index_of and dst in index_of:
-                self.edges.append((index_of[src], index_of[dst]))
 
         # Olösta länkmål: yttre ring
         outer = radius + 46.0

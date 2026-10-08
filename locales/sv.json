@@ -986,5 +986,13 @@
   "element_time": "Tid",
   "element_senses": "Sinnen",
   "element_weather": "Väder",
-  "element_emotion": "Emotion"
+  "element_emotion": "Emotion",
+  "codex_graph_title": "Codexets relationer",
+  "codex_graph_hint": "Varje nod är en post i codexet och varje kant en relation. Ett klick på en nod väljer posten i panelen.",
+  "codex_graph_count": "{nodes} poster · {edges} relationer",
+  "codex_graph_button": "Relationer",
+  "codex_graph_tooltip": "Rita codexet som en graf",
+  "codex_attributes": "Fria attribut",
+  "codex_attribute_add": "Lägg till ett attribut",
+  "codex_attribute_del": "Ta bort det valda attributet"
 }

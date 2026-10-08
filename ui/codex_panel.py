@@ -18,9 +18,9 @@ import re
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
-    QComboBox, QDialog, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
-    QListWidgetItem, QMenu, QMessageBox, QPlainTextEdit, QPushButton, QScrollArea,
-    QVBoxLayout, QWidget,
+    QComboBox, QDialog, QHBoxLayout, QHeaderView, QInputDialog, QLabel, QLineEdit,
+    QListWidget, QListWidgetItem, QMenu, QMessageBox, QPlainTextEdit, QPushButton,
+    QScrollArea, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 from core.i18n import _, i18n
@@ -58,6 +58,7 @@ class CodexPanel(QWidget):
         self.current = None
         self._relation_of_row = []
         self._scene_of_row = []
+        self._loading = False            # hindrar att ifyllning ser ut som en ändring
 
         self._save_timer = QTimer(self)
         self._save_timer.setSingleShot(True)
@@ -142,6 +143,28 @@ class CodexPanel(QWidget):
         self.input_summary.textChanged.connect(self._schedule_save)
         kolumn.addWidget(self.input_summary)
 
+        # Fria attribut (6.1): "Ålder", "Ögonfärg", "Hemvist" — namn och värde,
+        # för det ett karaktärsblad behöver men som inte är samma för alla.
+        self.lbl_attributes = QLabel()
+        kolumn.addWidget(self.lbl_attributes)
+        self.table_attributes = QTableWidget(0, 2)
+        self.table_attributes.setFixedHeight(90)
+        self.table_attributes.verticalHeader().setVisible(False)
+        self.table_attributes.horizontalHeader().setVisible(False)
+        self.table_attributes.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Stretch)
+        self.table_attributes.itemChanged.connect(self._save_attributes)
+        kolumn.addWidget(self.table_attributes)
+        attrrad = QHBoxLayout()
+        attrrad.setSpacing(4)
+        self.btn_attr_add = QPushButton("+")
+        self.btn_attr_add.clicked.connect(self.add_attribute)
+        attrrad.addWidget(self.btn_attr_add)
+        self.btn_attr_del = QPushButton("−")
+        self.btn_attr_del.clicked.connect(self.remove_attribute)
+        attrrad.addWidget(self.btn_attr_del)
+        kolumn.addLayout(attrrad)
+
         self.lbl_relations = QLabel()
         kolumn.addWidget(self.lbl_relations)
         self.list_relations = QListWidget()
@@ -159,6 +182,13 @@ class CodexPanel(QWidget):
         self.btn_relation_del = QPushButton()
         self.btn_relation_del.clicked.connect(self.remove_selected_relation)
         relrad.addWidget(self.btn_relation_del)
+        # Relationsgraf (2.22): samma data ritad, så mönstret syns — vem hänger
+        # ihop med vem, och vem står ensam.
+        self.btn_graph = QPushButton("🕸")
+        self.btn_graph.setToolTip(_("codex_graph_tooltip"))
+        self.btn_graph.setFixedWidth(32)
+        self.btn_graph.clicked.connect(self.show_graph)
+        relrad.addWidget(self.btn_graph)
         kolumn.addLayout(relrad)
 
         self.lbl_scenes = QLabel()
@@ -194,6 +224,16 @@ class CodexPanel(QWidget):
             return
         valt = self.current.id if self.current is not None else None
         self._fill_list(valt)
+
+    def show_graph(self) -> None:
+        """Ritar codexet som en graf. Ett klick i grafen väljer posten här."""
+        if self.codex is None:
+            return
+        from ui.codex_graph_dialog import CodexGraphDialog
+
+        dialog = CodexGraphDialog(self.codex, self.theme_mgr, parent=self)
+        dialog.entity_activated.connect(self.select)
+        dialog.exec()
 
     def _visible_entities(self) -> list:
         if self.codex is None:
@@ -243,7 +283,8 @@ class CodexPanel(QWidget):
 
         for w in (self.input_aliases, self.input_summary, self.list_relations,
                   self.btn_relation_add, self.btn_relation_del, self.list_scenes,
-                  self.btn_scene_unlink, self.btn_edit, self.btn_delete):
+                  self.btn_scene_unlink, self.btn_edit, self.btn_delete,
+                  self.table_attributes, self.btn_attr_add, self.btn_attr_del):
             w.setEnabled(har)
         self.lbl_name.setVisible(har)
         self.chip_type.setVisible(har)
@@ -251,6 +292,10 @@ class CodexPanel(QWidget):
         self.input_aliases.setVisible(har)
         self.lbl_summary.setVisible(har)
         self.input_summary.setVisible(har)
+        self.lbl_attributes.setVisible(har)
+        self.table_attributes.setVisible(har)
+        self.btn_attr_add.setVisible(har)
+        self.btn_attr_del.setVisible(har)
         self.lbl_relations.setVisible(har)
         self.list_relations.setVisible(har)
         self.lbl_scenes.setVisible(har)
@@ -268,6 +313,7 @@ class CodexPanel(QWidget):
         self.input_summary.blockSignals(True)
         self.input_summary.setPlainText(entity.summary)
         self.input_summary.blockSignals(False)
+        self._fill_attributes(entity)
         self._fill_relations(entity)
         self._fill_scenes(entity)
         self._fill_mentions(entity)
@@ -328,6 +374,61 @@ class CodexPanel(QWidget):
     def _schedule_save(self) -> None:
         if self.current is not None:
             self._save_timer.start()
+
+    def _fill_attributes(self, entity) -> None:
+        """Fria attribut: namn och värde i en tabell, tomma rader sparas inte."""
+        self._loading = True
+        try:
+            self.table_attributes.setRowCount(0)
+            for key, value in (entity.fields or {}).items():
+                self._append_attribute_row(key, value)
+        finally:
+            self._loading = False
+
+    def _append_attribute_row(self, key: str, value: str) -> None:
+        rad = self.table_attributes.rowCount()
+        self.table_attributes.insertRow(rad)
+        self.table_attributes.setItem(rad, 0, QTableWidgetItem(str(key)))
+        self.table_attributes.setItem(rad, 1, QTableWidgetItem(str(value)))
+
+    def attributes(self) -> dict:
+        """Tabellens par, utan tomma namn — en ny rad är inte ett attribut."""
+        ut = {}
+        for rad in range(self.table_attributes.rowCount()):
+            namn = self.table_attributes.item(rad, 0)
+            varde = self.table_attributes.item(rad, 1)
+            nyckel = (namn.text() if namn else "").strip()
+            if nyckel:
+                ut[nyckel] = (varde.text() if varde else "").strip()
+        return ut
+
+    def add_attribute(self) -> None:
+        if self.current is None:
+            return
+        self._append_attribute_row("", "")
+        sista = self.table_attributes.rowCount() - 1
+        self.table_attributes.setCurrentCell(sista, 0)
+        objekt = self.table_attributes.item(sista, 0)
+        if objekt is not None:
+            self.table_attributes.editItem(objekt)
+
+    def remove_attribute(self) -> None:
+        rad = self.table_attributes.currentRow()
+        if rad < 0:
+            return
+        self.table_attributes.removeRow(rad)
+        self._save_attributes()
+
+    def _save_attributes(self, *_args) -> None:
+        if self.current is None or self.codex is None or self._loading:
+            return
+        par = self.attributes()
+        if par == (self.current.fields or {}):
+            return
+        try:
+            self.current = self.codex.update_entity(self.current.id, fields=par)
+        except (KeyError, TypeError, ValueError) as exc:
+            self.status_message.emit(_("codex_save_failed", error=exc))
 
     def _save_fields(self) -> None:
         """Alias och sammanfattning skrivs till codex någon sekund efter tangenten."""
@@ -463,6 +564,9 @@ class CodexPanel(QWidget):
         self.lbl_aliases.setText(_("codex_aliases"))
         self.lbl_summary.setText(_("codex_summary"))
         self.lbl_relations.setText(_("codex_relations"))
+        self.lbl_attributes.setText(_("codex_attributes"))
+        self.btn_attr_add.setToolTip(_("codex_attribute_add"))
+        self.btn_attr_del.setToolTip(_("codex_attribute_del"))
         self.lbl_scenes.setText(_("codex_scenes", n=0))
         valt = self.combo_type.currentData()
         self.combo_type.blockSignals(True)

@@ -1220,6 +1220,52 @@ def main() -> int:
     check(panel.list_entities.count() == 1, "och sökningen hittar ett alias")
     panel.input_search.setText("")
 
+    # Relationsgrafen (2.22): samma data ritad, och ett klick i grafen väljer
+    # posten i panelen. Dialogen fångas genom att exec byts ut (husregeln: kör
+    # den riktiga vägen, inte dialogens kropp direkt).
+    from ui.codex_graph_dialog import CodexGraphDialog
+    fångad = []
+    ursprunglig_exec = CodexGraphDialog.exec
+    CodexGraphDialog.exec = lambda self: (fångad.append(self), 0)[1]
+    try:
+        panel.show_graph()
+    finally:
+        CodexGraphDialog.exec = ursprunglig_exec
+    check(len(fångad) == 1, "grafknappen öppnar relationsgrafen")
+    if fångad:
+        graf = fångad[0]
+        namn = sorted(n["title"] for n in graf.canvas.nodes)
+        check(namn == ["Anna", "Hamnstaden"], f"med codexets entiteter som noder ({namn})")
+        check(len(graf.canvas.edges) == 1, f"och relationen som kant ({len(graf.canvas.edges)})")
+        panel.select(hamn.id)
+        graf.entity_activated.emit(anna.id)
+        check(panel.current is not None and panel.current.id == anna.id,
+              f"och ett klick i grafen väljer posten ({panel.lbl_name.text()})")
+        panel.select(anna.id)
+
+    # Fria attribut (6.1): namn och värde per post, för det ett karaktärsblad
+    # behöver men som inte är samma för alla.
+    panel.select(anna.id)
+    panel.add_attribute()
+    rad_attr = panel.table_attributes.rowCount() - 1
+    panel.table_attributes.item(rad_attr, 0).setText("Ögonfärg")
+    panel.table_attributes.item(rad_attr, 1).setText("grå")
+    check(codex.entity(anna.id).fields.get("Ögonfärg") == "grå",
+          f"ett fritt attribut sparas i codexet ({codex.entity(anna.id).fields})")
+    panel.select(hamn.id)
+    panel.select(anna.id)
+    check(panel.attributes().get("Ögonfärg") == "grå",
+          f"och fylls i igen när posten öppnas ({panel.attributes()})")
+    panel.add_attribute()
+    sista_attr = panel.table_attributes.rowCount() - 1
+    panel.table_attributes.item(sista_attr, 1).setText("utan namn")
+    check("" not in panel.attributes(),
+          "en rad utan namn blir inget attribut")
+    panel.table_attributes.setCurrentCell(sista_attr, 0)
+    panel.remove_attribute()
+    check(panel.table_attributes.rowCount() == 1,
+          f"och en borttagen rad försvinner ({panel.table_attributes.rowCount()})")
+
     panel.select(anna.id)
     öppnade = []
     panel.open_scene.connect(öppnade.append)

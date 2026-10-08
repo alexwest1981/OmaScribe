@@ -168,9 +168,14 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
       sig. R07 (Plottr har 20+, Campfire fler)
 - [ ] **2.21** Karaktärsintervjun: en frågesvit per codexpost som fyller posten, genom den
       befintliga AI-klienten. R07 (bibisco)
-- [ ] **2.22** Relationsgraf i codexet: entiteter och relationer ritade som noder och kanter.
-      `ui/graph_dialog.py` ritar redan valvets graf — skalet finns, datan finns i codex.sqlite.
-      R07 (Campfire, World Anvil)
+- [x] **2.22** Relationsgraf i codexet: `ui/codex_graph_dialog.py` ritar entiteterna som noder och
+      relationerna som kanter, med radien efter antal kopplingar, och **ett klick på en nod väljer
+      posten i codexpanelen** — grafen är en väg tillbaka till karaktärsbladet, inte en bild vid
+      sidan av. Den är en tunn underklass till valvets rityta: matematiken flyttades till
+      `circle_layout()` i `ui/graph_dialog.py` och delas av båda, så ritningen, hover och
+      klickträffen finns på ett ställe. Knappen (🕸) står vid relationerna i codexpanelen.
+      9 egna kontroller plus 4 i `ui_smoke`, som fångar dialogen genom att byta ut `exec` och
+      prövar att en borttagen relation försvinner ur grafen. R07 (Campfire, World Anvil)
 - [ ] **2.23** Händelsetabell kopplad till scen: en händelse har tid, beskrivning och scen-id, och
       kan återanvändas på flera ställen. Detta är *data*-halvan av tidslinjen, utan ritad vy — se
       beslutet i luckor.md (planen avstod från den ritade vyn i 2.9). R07 (bibisco, World Anvil,
@@ -462,8 +467,16 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
 
 ### Fas 6: AI som författarverktyg
 
-- [ ] **6.1** Story bible / Codex: entiteter, typer, attribut, alias, relationer i SQLite. R04.1
-- [ ] **6.2** Kontinuitet och aktiverat berättelseminne: scenkopplade poster + visad AI-kontext. R04.13
+- [x] **6.1** Story bible / Codex: entiteter, typer, alias, sammanfattning, **fria attribut**,
+      relationer och scenkopplingar i SQLite (`core/storybible.py` + `ui/codex_panel.py`).
+      Attributen var det som fattades: modellen och API:t har burit `fields` hela tiden, men
+      panelen hade ingen väg till dem. Nu finns en namn/värde-tabell på karaktärsbladet
+      ("Ögonfärg: grå"), en tom rad blir inget attribut, och en borttagen rad försvinner ur
+      codexet — provat i `ui_smoke`. Relationsgraf: se 2.22. R04.1
+- [~] **6.2** Kontinuitet och aktiverat berättelseminne: de **scenkopplade posterna finns** —
+      codexpanelen visar vilka entiteter scenen är kopplad till, vilka som nämns i texten
+      (även via alias) och räknar omnämnandena. **Kvar:** att visa vilken kontext som faktiskt
+      skickas till AI:n är 6.16, och den är inte byggd. R04.13
 - [ ] **6.3** Manusfrågor och RAG: chunka per scen/stycke, svara med källhänvisning. R04.3
 - [ ] **6.4** Chatta med helt manus eller valt kapitel, med kontextchip och historik. R04.4
 - [ ] **6.5** Recap per scen och kapitel, redigerbar, aldrig automatisk kanon. R04.5

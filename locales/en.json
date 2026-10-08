@@ -986,5 +986,13 @@
   "element_time": "Time",
   "element_senses": "Senses",
   "element_weather": "Weather",
-  "element_emotion": "Emotion"
+  "element_emotion": "Emotion",
+  "codex_graph_title": "Codex relations",
+  "codex_graph_hint": "Every node is a codex entry and every edge a relation. Clicking a node selects the entry in the panel.",
+  "codex_graph_count": "{nodes} entries · {edges} relations",
+  "codex_graph_button": "Relations",
+  "codex_graph_tooltip": "Draw the codex as a graph",
+  "codex_attributes": "Free attributes",
+  "codex_attribute_add": "Add an attribute",
+  "codex_attribute_del": "Remove the selected attribute"
 }

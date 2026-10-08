@@ -1816,6 +1816,62 @@ def main() -> int:
     win.editor.document.setModified(False)
     win.is_modified = False
 
+    print("\n46. Rollerna blir namngivna stilar i varje kanal (fas 5.3, 5.7)")
+
+    from PyQt6.QtGui import QTextBlockFormat
+
+    from core import richtext as _rt46
+    from core.doc_manager import DocumentManager as _dm46
+
+    # Rollen sätts på exakta block: en markör mitt i ett block vidgar rollen
+    # till hela det sammanhängande stycket — rätt i editorn, fel i ett prov.
+    doc46 = QTextDocument()
+    markor46 = QTextCursor(doc46)
+    markor46.insertHtml("<h1>Ett kapitel</h1>")
+    markor46.movePosition(QTextCursor.MoveOperation.End)
+    markor46.insertBlock(QTextBlockFormat())
+    markor46.insertText("Ett vanligt stycke.")
+    markor46.insertBlock()
+    markor46.insertText("Ett citat ur en annan bok.")
+    markor46.insertBlock()
+    markor46.insertText("print('kod')")
+    for nummer, roll in ((2, _rt46.ROLE_QUOTE), (3, _rt46.ROLE_CODE)):
+        block = doc46.findBlockByNumber(nummer)
+        val = QTextCursor(doc46)
+        val.setPosition(block.position())
+        val.setPosition(block.position() + block.length() - 1,
+                        QTextCursor.MoveMode.KeepAnchor)
+        _rt46.apply_role(val, roll, {})
+    check(_rt46.block_role(doc46.findBlockByNumber(2)) == _rt46.ROLE_QUOTE,
+          "citatet har fått sin roll")
+    check(_rt46.block_role(doc46.findBlockByNumber(3)) == _rt46.ROLE_CODE,
+          "och kodblocket sin")
+
+    docx46 = os.path.join(tempfile.mkdtemp(prefix="docx46-"), "boken.docx")
+    _dm46.save_file(docx46, doc46, {}, {"clean_print": True, "page_size": "A4"})
+    check(os.path.exists(docx46), "och boken kan sparas som Word-fil")
+    import docx as _docx46
+
+    word46 = _docx46.Document(docx46)
+    stilar46 = [stycke.style.name for stycke in word46.paragraphs]
+    check("Quote" in stilar46,
+          f"citatet bär Words *namngivna* stil i stället för direkt formatering ({stilar46})")
+    check("Code Block" in stilar46, f"och koden sin — skapad i filen, för Words mall har ingen ({stilar46})")
+    check("Normal" in stilar46, "medan det vanliga stycket förblir vanligt")
+
+    from core.epub import export_epub as export_epub46
+
+    epub46 = os.path.join(tempfile.mkdtemp(prefix="epub46-"), "boken.epub")
+    export_epub46(epub46, doc46, win.book_metadata())
+    with zipfile.ZipFile(epub46) as bok46:
+        css46 = bok46.read("OEBPS/styles/book.css").decode("utf-8")
+        kropp46 = bok46.read(next(n for n in bok46.namelist()
+                                  if n.endswith(".xhtml") and "chapter" in n)).decode("utf-8")
+    check("blockquote" in css46 and "pre {" in css46,
+          "och EPUB:ens CSS stilar samma roller")
+    check("<blockquote>" in kropp46 and "<pre>" in kropp46,
+          "och texten blir blockquote och pre, inte div:ar")
+
     print("\n45. Släpp boken: paketet med checksummor (fas 5.9)")
 
     import hashlib as _hashlib45

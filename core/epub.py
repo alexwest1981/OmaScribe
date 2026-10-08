@@ -291,7 +291,16 @@ def export_epub(path: str, document: QTextDocument, metadata: dict, page_setting
             archive.writestr("META-INF/container.xml", container_bytes, compress_type=zipfile.ZIP_DEFLATED)
             archive.writestr("OEBPS/content.opf", opf_bytes, compress_type=zipfile.ZIP_DEFLATED)
             archive.writestr("OEBPS/nav.xhtml", nav_bytes, compress_type=zipfile.ZIP_DEFLATED)
-            archive.writestr("OEBPS/styles/book.css", "body { font-family: serif; line-height: 1.45; } img { max-width: 100%; } pre { white-space: pre-wrap; } table { border-collapse: collapse; } td, th { border: 1px solid; padding: .25em; }", compress_type=zipfile.ZIP_DEFLATED)
+            archive.writestr("OEBPS/styles/book.css", "body { font-family: serif; line-height: 1.45; }"
+                " img { max-width: 100%; } table { border-collapse: collapse; }"
+                " td, th { border: 1px solid; padding: .25em; }"
+                # Rollerna ur core/richtext.py: samma innehåll, samma betydelse,
+                # samma utseende i varje kanal (R05.3)
+                " blockquote { margin: 0 0 0 1.5em; font-style: italic; }"
+                " pre { white-space: pre-wrap; font-family: monospace;"
+                " background: #f4f4f4; padding: .5em; border-left: 3px solid #ccc; }"
+                " p.author { text-align: center; font-style: italic; margin-top: 2em; }"
+                " p.colophon { font-size: .9em; }", compress_type=zipfile.ZIP_DEFLATED)
             for filename, chapter_title, nodes in chapter_nodes:
                 archive.writestr("OEBPS/" + filename,
                                  _serialize_xhtml(chapter_title, nodes, language),

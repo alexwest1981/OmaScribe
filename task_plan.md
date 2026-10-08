@@ -262,7 +262,12 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       med alt-text och en navigation document. Provat ända in i filen: EPUB:en packas upp, OPF:en läses,
       och titel, författare, språk, ISBN, tillgänglighetsmärkning, nav och båda kapitelfilerna
       kontrolleras. R05.2
-- [ ] **5.3** Namngiven typografi och bokstilar, samma roller till EPUB-CSS, PDF och DOCX. R05.3
+- [x] **5.3** Rollerna (citat, kod) bär nu i **alla tre kanaler**: EPUB:en får `blockquote` och
+      `pre` som *taggar* och en CSS som ger dem utseende (citatet indraget och kursivt, koden
+      monospace med bakgrund och kant), Word får **namngivna stilar**, och utskriften får rollernas
+      formatering genom dokumentet — rollen sätter både semantik och utseende när den läggs på, så
+      papperet visar samma sak som skärmen. Provat i alla tre: stiltypen läst ur den skrivna
+      .docx-filen, CSS:en och taggarna ur den skrivna EPUB:en. R05.3
 - [~] **5.4** Metadata och ISBN: författare, förlag och ISBN är nu **projektfält** (i
       projektöversikten, där baksidestexten bor) och går rakt in i EPUB:ens metadata — `dc:creator`,
       `dc:publisher`, `dc:identifier` och baksidestexten som `dc:description`. Provat att de överlever
@@ -289,7 +294,7 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       står det **"använd kanalens mall"** i stället för ett påhittat tal: forskningen kunde inte
       belägga en gemensam formel, och en felaktig ryggbredd syns först i tryck. **Kvar:** rita själva
       omslagsarket med ryggtext och streckkodszon. R05.6
-- [ ] **5.7** DOCX med redaktörsvänliga Word-stilar (namngivna stilar). R05.7
+- [x] **5.7** DOCX med namngivna Word-stilar: citat blir `Quote` (finns i Words standardmall), kod blir `Code Block` — stilen **skapas i filen** när mallen inte har den, vilket är hela poängen: en redaktör ska kunna restyla bokens kodblock i ett svep i stället för att jaga direkt formatering. Rubrikerna använder redan `Heading 1–3`. Stilnamnen är språkoberoende i filen och visas på svenska i svenskt Word. Provat: `['Heading 1', 'Normal', 'Quote', 'Code Block']` läst ur den skrivna filen. R05.7
 - [~] **5.8** Tillgänglighetsmetadata finns: `accessMode`, `accessibilityFeature` och
       `accessibilityHazard` skrivs i OPF:en (EPUB Accessibility 1.1:s MUST-krav) och provas i
       rökprovet. **Kvar:** EPUBCheck-validering — den kräver Java och ett EPUBCheck-paket på datorn,

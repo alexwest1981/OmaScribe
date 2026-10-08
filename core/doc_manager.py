@@ -11,8 +11,10 @@ try:
     import docx
     from docx.shared import Pt, Inches, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.style import WD_STYLE_TYPE
 except ImportError:
     docx = None
+    WD_STYLE_TYPE = None
 
 try:
     import markdown
@@ -52,6 +54,15 @@ DEFAULT_PAGE_SETTINGS = {
     "clean_print": True,                 # Rena svartvita exporter (papper, inte tema)
     "grayscale_images": False,           # Gör inbäddade bilder gråskaliga vid export
 }
+
+
+# Rollerna ur core/richtext.py -> Word-stilarnas namn. Namnen är de inbyggda i
+# Words standardmall och är desamma i varje språkversion av Word.
+DOCX_ROLE_STYLES = {
+    richtext.ROLE_QUOTE: "Quote",          # finns i Words standardmall
+    richtext.ROLE_CODE: "Code Block",      # skapas om den inte finns
+}
+DOCX_CODE_FONT = "Consolas"
 
 
 class DocumentManager:
@@ -392,6 +403,20 @@ class DocumentManager:
             painter.end()
 
     @staticmethod
+    def _docx_style(doc, stil: str) -> str:
+        """Stilens namn, och skapar den om mallen inte har den (R05.7).
+
+        `Quote` finns i Words standardmall, en kodstil gör det inte. Att skapa
+        den i stället för att formatera stycket direkt är hela poängen: en
+        redaktör ska kunna restyla bokens kodblock i ett svep.
+        """
+        if stil in {s.name for s in doc.styles}:
+            return stil
+        ny = doc.styles.add_style(stil, WD_STYLE_TYPE.PARAGRAPH)
+        ny.font.name = DOCX_CODE_FONT
+        return stil
+
+    @staticmethod
     def _force_black_styles(doc) -> int:
         """Sätter svart på samtliga stilar i Word-mallen.
 
@@ -466,7 +491,14 @@ class DocumentManager:
                 elif text_list is not None:
                     p = doc.add_paragraph(style="List Bullet")
                 else:
-                    p = doc.add_paragraph()
+                    # Rollen (citat, kod) blir en *namngiven* Word-stil, inte
+                    # direkt formatering: redaktören ska kunna restyla hela
+                    # boken med ett klick, och stilnamnen är språkoberoende i
+                    # filen — Word visar dem på svenska ändå.
+                    roll = richtext.block_role(block)
+                    stil = DOCX_ROLE_STYLES.get(roll)
+                    p = doc.add_paragraph(
+                        style=DocumentManager._docx_style(doc, stil)) if stil else doc.add_paragraph()
                     
                 if alignment & Qt.AlignmentFlag.AlignHCenter:
                     p.alignment = WD_ALIGN_PARAGRAPH.CENTER

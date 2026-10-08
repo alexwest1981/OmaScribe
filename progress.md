@@ -587,3 +587,22 @@
   jämförd, rapporten bär titeln **ur projektet** (inte ur filnamnet), och menyposten finns.
 - **Kvar:** uppladdningen till distributören (KDP:s API — kräver kontouppgifter, eget beslut) och
   "öppna exportmappen" (`xdg-open`, en rad, låg prioritet).
+
+### Fas 5: rollerna når alla tre kanaler (5.3, 5.7)
+
+- **Vad som blev gjort:** rollerna (citat, kod) ur `core/richtext.py` — som editorn sätter och Markdown
+  redan följde — når nu **Word** (namngivna stilar) och **EPUB-CSS:en** (citatet ser ut som ett citat).
+  Utskriften får rollernas formatering genom dokumentet: rollen sätter både semantik *och* utseende när
+  den läggs på, så papperet visar samma sak som skärmen.
+- **Word:** citat → `Quote` (finns i Words standardmall), kod → `Code Block`, och stilen **skapas i
+  filen** när mallen inte har den. Det är hela poängen med 5.7: en redaktör ska kunna restyla bokens
+  kodblock i ett svep i stället för att jaga direkt formatering. Stilnamnen är språkoberoende i filen.
+- **EPUB:** `blockquote` och `pre` stajlas i `book.css` i stället för att ärva allt från läsarens app.
+- **Mätningarna tog tre varv, och två av dem var mina egna fel:**
+  1. `HTML Preformatted` finns **inte** i python-docx standardmall — antagandet föll direkt, och
+     lösningen blev att *skapa* stilen. (Hade jag inte läst tillbaka filen hade det sett ut att funka.)
+  2. `apply_role` med en markör *mitt* i ett block vidgar rollen till hela det sammanhängande stycket —
+     rätt i editorn (där man markerar det man menar) men fel i ett prov, som i stället markerar blocket
+     och använder samma väg som användaren.
+- **En tredje gång samma familj:** `export_epub46` fanns inte — avsnitt 43 importerar sin EPUB-export
+  *inuti* `main()`, så namnet var inte synligt i avsnitt 46. Funktionslokal bindning, igen.

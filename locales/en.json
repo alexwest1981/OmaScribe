@@ -913,5 +913,15 @@
   "epubcheck_counts": "{errors} errors and {warnings} warnings:",
   "epubcheck_run_failed": "The check could not run: {error}",
   "release_unchecked": "EPUBCheck could not run ({reason}) — the book is not checked.",
-  "release_check_errors": "EPUBCheck found {errors} errors in the book."
+  "release_check_errors": "EPUBCheck found {errors} errors in the book.",
+  "menu_file_cover": "Draw the cover sheet…",
+  "menu_file_open_release": "Open the release folder",
+  "cover_title": "Cover sheet",
+  "cover_no_trim_title": "No print profile chosen",
+  "cover_no_trim_text": "Choose channel and format in File → Publishing… first — the cover size belongs to the channel, not to the book.",
+  "cover_no_sizes": "The channel or format gives no cover size to compute.",
+  "cover_done_text": "The sheet is in {path}.\n\nSize: {width} × {height} mm\nSpine: {spine} mm\n\nThe fold marks are drawn and the book's details are in place. Lay the design on top — the base is ready.",
+  "cover_footer": "Cover sheet {width} × {height} mm · spine {spine} mm · {channel} · fold marks drawn",
+  "release_cover_failed": "The cover sheet could not be drawn: {error}",
+  "release_no_folder": "No release folder yet — run File → Release the book… first."
 }

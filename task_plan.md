@@ -288,12 +288,14 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       växlingen mellan udda och jämn sida kräver en paginerad målare (sidindex → inner/ytter) — tills
       någon ska trycka är den symmetriska marginalen aldrig fel, bara frikostig — samt kapitelstart på
       höger sida och blanka fyllnadssidor. R05.5 (+ 0.2)
-- [~] **5.6** Ryggbredd och omslagsmått **räknas** enligt kanalens formel (KDP: sidantal × 0,0572 mm
-      för vitt papper, 0,0635 för crème, 0,0596 för premiumfärg) och omslaget blir bleed + baksida +
-      rygg + framsida + bleed — 328,36 × 235 mm för en 300-sidig 6×9-bok. För IngramSpark och Lulu
-      står det **"använd kanalens mall"** i stället för ett påhittat tal: forskningen kunde inte
-      belägga en gemensam formel, och en felaktig ryggbredd syns först i tryck. **Kvar:** rita själva
-      omslagsarket med ryggtext och streckkodszon. R05.6
+- [x] **5.6** Omslagsarket ritas: Arkiv → **Rita omslagsarket…** ger en PDF i kanalens exakta mått
+      (baksida + rygg + framsida + blöd), med vikstrecken utmärkta, bokens uppgifter på plats och
+      ryggbredden räknad ur sidantal och papper — och med titeln och författaren även på ryggen när
+      den är bred nog (≥ 6 mm). Är ingen tryckprofil vald blir det **inget ark**: ett omslag i
+      fel mått är värre än inget. Geometrin ligger som en ren funktion (`cover_layout`, millimeter
+      utan Qt) och provas för sig; ritandet är ett tunt skal. **Mätt på filen:** MediaBox i den
+      skrivna PDF:en är 311,1 × 234,9 mm mot uträknade 311,2 × 235,0 — alltså kanalens mått och
+      liggande ark, inte A4. Omslaget följer också med i släppet när profilen är vald. R05.6
 - [x] **5.7** DOCX med namngivna Word-stilar: citat blir `Quote` (finns i Words standardmall), kod blir `Code Block` — stilen **skapas i filen** när mallen inte har den, vilket är hela poängen: en redaktör ska kunna restyla bokens kodblock i ett svep i stället för att jaga direkt formatering. Rubrikerna använder redan `Heading 1–3`. Stilnamnen är språkoberoende i filen och visas på svenska i svenskt Word. Provat: `['Heading 1', 'Normal', 'Quote', 'Code Block']` läst ur den skrivna filen. R05.7
 - [x] **5.8** Tillgänglighetsmetadata (`accessMode`, `accessibilityFeature`, `accessibilityHazard`)
       skrivs i OPF:en och provas i rökprovet. **Och EPUBCheck som val:** Arkiv → Kontrollera EPUB
@@ -322,9 +324,10 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
       (i löptexten, inte i koden, och ordet intakt utan bindestrecken) och på den tryckta kopian.
       **Qt 6 har ingen avstavning** — `QTextOption.setHyphenationFactor` finns inte i PyQt6, mätt i
       den här miljön; därför pyphen. R05.11
-- [~] **5.11** Efterbearbetning i Sigil/Calibre: **checksumman finns** (i rapporten, per fil), och
-      mappen är den man öppnar i Sigil eller Calibre. **Kvar:** "öppna exportmappen" direkt ur
-      programmet (`xdg-open`) — en rad, men *låg* prioritet precis som planen säger. R05.9
+- [x] **5.11** Efterbearbetning i Sigil/Calibre: **checksumman finns** (i rapporten, per fil),
+      **mappen öppnas** ur Arkiv → Öppna utgivningsmappen (datorns filhanterare, via Qt:s egen väg
+      så att det fungerar på fler skrivbord än ett), och paketet är den mapp man sedan arbetar i.
+      R05.9
 - [x] **5.12** Siffertabellen ur R05 in som **data med källa**: varje kanal bär sin käll-URL i
       `SOURCES`, kanalerna delar inte varandras koefficienter (bara KDP har en publicerad formel), och
       en kanal utan belagt tal säger det i stället för att låna ett. Provat: trappans gränser steg för

@@ -1816,6 +1816,66 @@ def main() -> int:
     win.editor.document.setModified(False)
     win.is_modified = False
 
+    print("\n48. Omslagsarket i kanalens mått (fas 5.6, 5.11)")
+
+    from ui import main_window as _mw48
+
+    from core.cover import cover_layout as _layout48
+    from core.i18n import _ as tr48          # `_` är en slingvariabel i main()
+
+    check(win.act_cover is not None and win.act_open_release is not None,
+          f"menyposterna finns ({win.act_cover.text()!r}, {win.act_open_release.text()!r})")
+    check(_layout48("", 300) is None, "utan tryckprofil blir det inget ark, inte ett påhittat")
+
+    klass48 = _mw48.QMessageBox
+    fångat48 = []
+    _mw48.QMessageBox = type("TystRuta", (), {
+        "information": staticmethod(lambda *a, **k: fångat48.append(a)),
+        "critical": staticmethod(lambda *a, **k: fångat48.append(a)),
+        "warning": staticmethod(lambda *a, **k: fångat48.append(a))})
+    sparat48 = dict(win.page_settings)
+    try:
+        win.page_settings = {k: v for k, v in sparat48.items() if k != "trim"}
+        win.draw_cover_sheet(path=os.path.join(tempfile.mkdtemp(prefix="oms48-"), "x.pdf"))
+        check(len(fångat48) == 1 and fångat48[0][1] == tr48("cover_no_trim_title"),
+              "och utan tryckprofil säger den det i stället för att rita fel ark")
+
+        win.page_settings = {**sparat48, "trim": "6x9", "paper": "white", "bleed": True,
+                             "channel": "kdp"}
+        mapp48 = tempfile.mkdtemp(prefix="oms48-")
+        ark48 = os.path.join(mapp48, "boken-omslag.pdf")
+        fångat48.clear()
+        win.draw_cover_sheet(path=ark48)
+    finally:
+        _mw48.QMessageBox = klass48
+        win.page_settings = sparat48
+
+    check(len(fångat48) == 1, "arket ritas och beskedet kommer")
+    check(os.path.exists(ark48) and os.path.getsize(ark48) > 2000,
+          f"och filen finns ({os.path.getsize(ark48) if os.path.exists(ark48) else 0} byte)")
+    with open(ark48, "rb") as fil:
+        rå48 = fil.read(4000)
+    check(rå48.startswith(b"%PDF"), "och är en riktig PDF")
+    # Arkets storlek står i filens MediaBox: kontrollera att den är kanalens mått
+    import re as _re48
+
+    # Samma sidantal som fönstret ritar med — annars mäter provet en annan bok
+    mått48 = _layout48("6x9", win._page_count(), "white", True, "kdp")["sheet"]
+    träff48 = _re48.search(rb"/MediaBox\s*\[([^\]]+)\]", rå48)
+    check(träff48 is not None, "med en MediaBox att läsa")
+    if träff48:
+        tal48 = [float(t) for t in träff48.group(1).split()]
+        # PDF:ens punkter (1/72 tum) -> millimeter
+        bredd_mm48 = round((tal48[2] - tal48[0]) * 25.4 / 72, 1)
+        höjd_mm48 = round((tal48[3] - tal48[1]) * 25.4 / 72, 1)
+        check(abs(bredd_mm48 - mått48[0]) < 1.0 and abs(höjd_mm48 - mått48[1]) < 1.0,
+              f"och arket är kanalens mått, inte A4 ({bredd_mm48} × {höjd_mm48} mm mot "
+              f"{mått48[0]} × {mått48[1]})")
+        check(bredd_mm48 > höjd_mm48, "alltså bredare än högt — baksida + rygg + framsida")
+
+    check(win.act_open_release is not None and callable(win.open_release_folder),
+          "och mappen från släppet går att öppna ur menyn")
+
     print("\n47. EPUBCheck som val, med besked när den saknas (fas 5.8)")
 
     from ui import main_window as _mw47
@@ -1985,14 +2045,19 @@ def main() -> int:
     finally:
         _mw45.QMessageBox = klass45
     filer45 = sorted(os.listdir(mapp45))
-    check(len(filer45) == 4, f"paketet har bokens filer och rapporten ({filer45})")
+    check(len(filer45) == 5,
+          f"paketet har bokens filer, omslaget och rapporten ({filer45})")
+    check(any(n.endswith("-omslag.pdf") for n in filer45),
+          "och omslagsarket följer med när en tryckprofil är vald")
+    check(win.last_release_folder == mapp45,
+          "och fönstret minns mappen för Öppna utgivningsmappen")
     from core.release import rapport_text
     rapport_json45 = os.path.join(mapp45, "release.json")
     import json as _json45
     rapport45 = _json45.load(open(rapport_json45, encoding="utf-8"))
     check(rapport45["book"] == win.book_metadata()["title"] == ovningsbok.title,
           f"rapporten bär bokens titel ur projektet, inte ur filnamnet ({rapport45['book']!r})")
-    check(len(rapport45["files"]) == 2, f"och bokens två filer ({[f['file'] for f in rapport45['files']]})")
+    check(len(rapport45["files"]) == 3, f"och bokens tre filer ({[f['file'] for f in rapport45['files']]})")
     epub_post45 = next((f for f in rapport45["files"] if f["file"].endswith(".epub")), None)
     check(epub_post45 is not None and len(epub_post45["sha256"]) == 64,
           "med en checksumma per fil")

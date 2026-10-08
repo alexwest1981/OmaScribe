@@ -913,5 +913,15 @@
   "epubcheck_counts": "{errors} fel och {warnings} varningar:",
   "epubcheck_run_failed": "Kontrollen kunde inte köras: {error}",
   "release_unchecked": "EPUBCheck kunde inte köras ({reason}) — boken är inte kontrollerad.",
-  "release_check_errors": "EPUBCheck hittade {errors} fel i boken."
+  "release_check_errors": "EPUBCheck hittade {errors} fel i boken.",
+  "menu_file_cover": "Rita omslagsarket…",
+  "menu_file_open_release": "Öppna utgivningsmappen",
+  "cover_title": "Omslagsarket",
+  "cover_no_trim_title": "Ingen tryckprofil vald",
+  "cover_no_trim_text": "Välj kanal och format i Arkiv → Publicering… först — omslagets mått är kanalens, inte bokens.",
+  "cover_no_sizes": "Kanalen eller formatet går inte att räkna omslagsmått på.",
+  "cover_done_text": "Arket ligger i {path}.\n\nStorlek: {width} × {height} mm\nRygg: {spine} mm\n\nVikstrecken är utmärkta och bokens uppgifter står på plats. Lägg formgivningen ovanpå — underlaget är klart.",
+  "cover_footer": "Omslagsark {width} × {height} mm · rygg {spine} mm · {channel} · vikstreck utmärkta",
+  "release_cover_failed": "Omslagsarket kunde inte ritas: {error}",
+  "release_no_folder": "Ingen utgivningsmapp finns ännu — kör Arkiv → Släpp boken… först."
 }

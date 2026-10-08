@@ -409,6 +409,10 @@ class MainWindow(QMainWindow):
         self.act_release = self._add_action(self.menu_file, _("menu_file_release"), self.release_book)
         self.act_epubcheck = self._add_action(self.menu_file, _("menu_file_epubcheck"),
                                               self.check_epub_with_epubcheck)
+        self.act_cover = self._add_action(self.menu_file, _("menu_file_cover"), self.draw_cover_sheet)
+        self.act_open_release = self._add_action(self.menu_file, _("menu_file_open_release"),
+                                                self.open_release_folder)
+        self.last_release_folder = None
         self.menu_file.addSeparator()
         self.act_exit = self._add_action(self.menu_file, _("menu_file_exit"), self.close, "Ctrl+Q")
 
@@ -2070,6 +2074,57 @@ class MainWindow(QMainWindow):
         except Exception as e:                            # noqa: BLE001
             QMessageBox.critical(self, _("export_error_title"), str(e))
 
+    def draw_cover_sheet(self, path: str | None = None):
+        """Omslagsarket: hela arket i kanalens mått, med ryggen utmärkt (R05.6).
+
+        Det som behövs för ett omslag är inte en bild utan ett *ark* i rätt
+        storlek med rätt ryggbredd — den enda siffran som ändras varje gång
+        sidantalet eller pappret gör det. Formgivningen gör författaren; det här
+        är arket den läggs på.
+        """
+        from core.cover import cover_layout, draw_cover
+
+        layout = cover_layout(*self._cover_args())
+        if layout is None:
+            QMessageBox.information(
+                self, _("cover_no_trim_title"),
+                _("cover_no_trim_text") if not (self.page_settings or {}).get("trim")
+                else _("cover_no_sizes"))
+            return
+        if not path:
+            path, _valt = QFileDialog.getSaveFileName(
+                self, _("menu_file_cover"), "", "PDF (*.pdf)")
+        if not path:
+            return
+        path = self._ensure_extension(path, "*.pdf", ".pdf")
+        uppgifter = self.book_metadata()
+        svar = draw_cover(path, layout, title=uppgifter.get("title", ""),
+                          author=uppgifter.get("author", ""),
+                          blurb=uppgifter.get("description", ""),
+                          language=uppgifter.get("language", "sv"))
+        QMessageBox.information(
+            self, _("cover_title"),
+            _("cover_done_text", path=path,
+              width=f"{svar['sheet'][0]:g}".replace(".", ","),
+              height=f"{svar['sheet'][1]:g}".replace(".", ","),
+              spine=f"{svar['spine_mm']:g}".replace(".", ",")))
+
+    def _cover_args(self) -> tuple:
+        """Trimm, sidantal, papper, blöd och kanal — som omslaget räknas ur."""
+        inst = self.page_settings or {}
+        return (inst.get("trim") or "", self._page_count(), inst.get("paper", "white"),
+                bool(inst.get("bleed")), inst.get("channel", "kdp"))
+
+    def open_release_folder(self):
+        """Öppna mappen från det senaste släppet, i datorns filhanterare (R05.9)."""
+        from PyQt6.QtCore import QUrl
+        from PyQt6.QtGui import QDesktopServices
+
+        if not self.last_release_folder or not os.path.isdir(self.last_release_folder):
+            QMessageBox.information(self, _("release_done_title"), _("release_no_folder"))
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(self.last_release_folder))
+
     def check_epub_with_epubcheck(self, path: str | None = None):
         """EPUBCheck som val: kontrollen mitt i menyn, med besked om den saknas (R05.8).
 
@@ -2144,7 +2199,26 @@ class MainWindow(QMainWindow):
             varningar.append(_("release_check_errors", errors=str(kontroll["errors"])))
             varningar += kontroll["messages"]
 
-        rapport = build_release(folder, [epub_sökväg, pdf_sökväg], uppgifter, varningar)
+        # Omslagsarket hör till paketet när en tryckprofil är vald — det är arket
+        # formgivaren ska lägga omslaget på, i kanalens exakta mått.
+        omslag_sökväg = None
+        from core.cover import cover_layout, draw_cover
+
+        layout = cover_layout(*self._cover_args())
+        if layout is not None:
+            omslag_sökväg = os.path.join(folder, f"{namn}-omslag.pdf")
+            try:
+                draw_cover(omslag_sökväg, layout, title=uppgifter.get("title", ""),
+                           author=uppgifter.get("author", ""),
+                           blurb=uppgifter.get("description", ""),
+                           language=uppgifter.get("language", "sv"))
+            except Exception as e:                            # noqa: BLE001
+                omslag_sökväg = None
+                varningar.append(_("release_cover_failed", error=str(e)))
+
+        rapport = build_release(
+            folder, [epub_sökväg, pdf_sökväg, omslag_sökväg], uppgifter, varningar)
+        self.last_release_folder = folder
         text = _("release_done_text", folder=folder, count=str(len(rapport["files"])))
         if rapport["missing"]:
             text += "\n" + _("release_missing_text", files=", ".join(rapport["missing"]))

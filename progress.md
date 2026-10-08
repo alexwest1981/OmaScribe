@@ -648,3 +648,24 @@
   rökprovets `main()`. Rökprovsfilen hade redan svaret — `from core.i18n import _ as trNN` med en
   kommentar om varför — och nu följer avsnitt 47 samma mönster i stället för att hitta på ett eget.
   Skillen (Qt, punkt 30) har fått regeln: **varje avsnitt importerar och bygger sina egna namn.**
+
+### Fas 5: omslagsarket (5.6, 5.11)
+
+- **Vad som blev gjort:** Arkiv → **Rita omslagsarket…** ger en PDF i kanalens exakta mått — baksida +
+  rygg + framsida + blöd — med vikstrecken utmärkta, bokens uppgifter på plats (baksidestexten på
+  baksidan, titel och författare på framsidan, och på ryggen när den är bred nog), och en fotrad som
+  säger arkets mått och ryggbredd: precis vad ett tryckeri frågar efter. Omslaget följer också med i
+  släppet när en tryckprofil är vald.
+- **Poängen är arket, inte bilden.** Det som behövs är inte en färdig formgivning utan ett ark i rätt
+  storlek med rätt ryggbredd — den enda siffran som ändras varje gång sidantalet eller pappret gör det.
+  Formgivaren (eller författaren) lägger sin formgivning ovanpå.
+- **Fel mått är värre än inget:** utan vald tryckprofil blir det inget ark alls, med ett besked om varför.
+- **Mätt på filen, inte på koden:** `MediaBox` i den skrivna PDF:en är **311,1 × 234,9 mm** mot
+  uträknade 311,2 × 235,0 — kanalens mått, och liggande (baksida + rygg + framsida), inte A4.
+  Geometrin ligger som ren funktion (`cover_layout`, millimeter utan Qt) och har egna prov.
+- **5.11 stängd:** mappen öppnas ur Arkiv → Öppna utgivningsmappen, via Qt:s egen väg i stället för
+  `xdg-open` — samma rad fungerar på fler skrivbord än ett.
+- **En pinsam detalj:** jag skrev regeln "varje avsnitt importerar sina egna namn" i Qt-skillen, och
+  bröt den i nästa avsnitt jag skrev (avsnitt 48 anropade avsnitt 47:s namn, och avsnitten körs i en
+  annan ordning än de skrivs ut). Regeln gäller, men vanan kommer efter den — nu står den i filens
+  eget mönster också.

@@ -21,6 +21,7 @@ from PyQt6.QtCore import QThread, pyqtSignal
 
 from core.ai_client import chat_completion
 from core.config import DEFAULT_AI_ENDPOINT, DEFAULT_AI_MODEL
+from core.languages import ai_name
 
 USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -232,7 +233,7 @@ class ResearchWorker(QThread):
 
     def _synthesize(self, sources: list, warnings: list) -> str:
         """Låter modellen skriva texten utifrån källmaterialet."""
-        lang = "Swedish (svenska)" if str(self.lang).startswith("sv") else "English"
+        lang = ai_name(self.lang)
 
         endpoint = self.config.get("ai_endpoint", DEFAULT_AI_ENDPOINT)
         api_key = self.config.get("ai_key", "")

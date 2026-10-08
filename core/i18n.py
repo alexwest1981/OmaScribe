@@ -2,6 +2,8 @@ import os
 import json
 from PyQt6.QtCore import QObject, pyqtSignal
 
+from core.languages import native
+
 LOCALES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "locales")
 
 class LocalizationManager(QObject):
@@ -43,26 +45,57 @@ class LocalizationManager(QObject):
         return False
 
     def t(self, key, **kwargs):
-        """Translate a string key with optional formatting variables."""
+        """Translate a string key with optional formatting variables.
+
+        Flertal: en nyckel kan bära 'singular|plural' — 'en anteckning|{n} anteckningar'.
+        Formen väljs efter antalet i kwargs (count, n, num, antal, items, total).
+        Texten är orörd när nyckeln inte har något '|'.
+
+        ponytail: två former räcker för alla elva språken i tabellen. Polska och
+        ryska behöver tre (1 / 2-4 / 5+) — bygg ut _plural med en regel per språk
+        när de språken kommer in, inte förr.
+        """
         val = self.translations.get(key, self.fallback_translations.get(key, key))
-        if kwargs and isinstance(val, str):
+        if not isinstance(val, str):
+            return val
+        if "|" in val:
+            val = self._plural(val, kwargs)
+        if kwargs:
             try:
                 return val.format(**kwargs)
             except Exception:
                 pass
         return val
 
+    @staticmethod
+    def _plural(val, kwargs):
+        """Rätt form av 'singular|plural' för antalet i kwargs."""
+        former = val.split("|")
+        if len(former) == 1:
+            return val
+        for namn in ("count", "n", "num", "antal", "items", "total"):
+            if namn in kwargs:
+                try:
+                    return former[0] if float(kwargs[namn]) == 1 else former[1]
+                except (TypeError, ValueError):
+                    return former[1]
+        return former[1]
+
+    def n(self, key, count, **kwargs):
+        """Flertalsform av en nyckel: n_('notes_stat_notes', 3)."""
+        return self.t(key, count=count, **kwargs)
+
     def get_language(self):
         return self.current_lang
 
     def get_available_languages(self):
+        """(kod, namn på språket självt) för varje språkfil som finns."""
         langs = []
         if os.path.exists(LOCALES_DIR):
             for fname in os.listdir(LOCALES_DIR):
                 if fname.endswith(".json"):
                     code = os.path.splitext(fname)[0]
-                    name = "English" if code == "en" else "Svenska" if code == "sv" else code.upper()
-                    langs.append((code, name))
+                    langs.append((code, native(code)))
         return sorted(langs)
 
 # Global singleton instance

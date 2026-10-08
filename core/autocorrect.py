@@ -11,6 +11,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from core.languages import pyphen_code
+
 
 @dataclass
 class Rule:
@@ -140,19 +142,26 @@ class Autocorrect:
 
 
 # Appens språkkoder -> pyphens ordlistor (LibreOffice-mönstren).
-_HYPHEN_LANGS = {
-    "sv": "sv_SE", "en": "en_US", "de": "de_DE", "es": "es_ES", "fr": "fr_FR",
-}
-
-
-@lru_cache(maxsize=8)
+@lru_cache(maxsize=16)
 def _hyphenator(lang: str):
-    """Ordboken för språket, eller None om pyphen inte är installerat."""
+    """Ordboken för språket, eller None — pyphen saknas, eller ordboken med.
+
+    Finskan har ingen ordlista i pyphen (mätt mot pyphen.LANGUAGES), och då
+    avstavas texten inte i stället för att krascha på vägen till PDF:en. Ingen
+    engelsk eller svensk ordlista lånas in till ett annat språk: fel ordlista
+    ger fel delningar, och en felaktig delning är värre än ingen.
+    """
     try:
         import pyphen
     except ImportError:
         return None
-    return pyphen.Pyphen(lang=_HYPHEN_LANGS.get(lang, "sv_SE"))
+    kod = pyphen_code(lang)
+    if not kod:
+        return None
+    try:
+        return pyphen.Pyphen(lang=kod)
+    except (KeyError, LookupError, ValueError):
+        return None
 
 
 def soft_hyphenate(text: str, lang: str = "sv") -> str:

@@ -23,6 +23,8 @@ from PyQt6.QtCore import QThread, pyqtSignal
 
 from core.ai_client import chat_completion, parse_json_response
 from core.config import DEFAULT_AI_ENDPOINT, DEFAULT_AI_MODEL
+from core.i18n import _
+from core.languages import ai_name
 
 # Vanliga småord som inte säger något om stilen
 STOPWORDS = {
@@ -85,11 +87,11 @@ class StyleProfile:
         first_p = sum(1 for w in words if w in FIRST_PERSON[lk])
         second_p = sum(1 for w in words if w in SECOND_PERSON[lk])
         if first_p > n_words * 0.02 and first_p >= second_p:
-            person = "första person (jag/vi)" if lk == "sv" else "first person (I/we)"
+            person = _("ghost_person_first")
         elif second_p > n_words * 0.02:
-            person = "tilltal (du/ni)" if lk == "sv" else "second person (you)"
+            person = _("ghost_person_second")
         else:
-            person = "tredje person / opersonligt" if lk == "sv" else "third person / impersonal"
+            person = _("ghost_person_third")
 
         formal_hits = sum(raw.lower().count(m) for m in FORMAL_MARKERS[lk])
         casual_hits = sum(raw.lower().count(m) for m in CASUAL_MARKERS[lk])
@@ -215,7 +217,7 @@ class GhostwriterWorker(QThread):
 
     def _build_prompt(self, style_note: str) -> tuple:
         lk = "sv" if str(self.lang).lower().startswith("sv") else "en"
-        target_lang = "svenska" if lk == "sv" else "English"
+        target_lang = ai_name(self.lang)
 
         tail = self.document_text[-2500:] if self.document_text else ""
         ref = self.reference_text[:2500] if self.reference_text else ""
@@ -241,7 +243,16 @@ class GhostwriterWorker(QThread):
             "5. Avoid AI clichés such as \"in today's world\", \"it is important to note\", "
             "\"in conclusion\"."
         )
-        rules = rules_sv if lk == "sv" else rules_en
+        # Målspråket står i "Output language" nedan; språkraden i mallen byts för
+        # andra språk än svenska och engelska. Ordlistorna (FIRST_PERSON m.fl.)
+        # finns för sv och en — andra språk mäts med engelska markörer tills de
+        # får egna, och stilnoten blir då neutral i stället för felaktig.
+        if lk == "sv":
+            rules = rules_sv
+        else:
+            rules = rules_en.replace("Write in English", f"Write in {target_lang}")
+        # ponytail: promptmallen är svensk eller engelsk; modellen får målspråket
+        # utskrivet. Översätt mallen först om något språk visar sig lyda sämre.
 
         base = (
             f"You are a ghostwriter. You continue someone else's document in THEIR voice, "

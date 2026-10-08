@@ -9,6 +9,8 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 
 from core.project import Project, html_to_text
+from core.i18n import _, i18n
+from core.languages import stopwords
 
 
 @dataclass
@@ -48,8 +50,14 @@ TIGHT_REPEATS = 2      # minsta antal *täta* förekomster för ett fynd
 WINDOW = 20            # ord; en fras av n ord får n * WINDOW
 
 
+def _project_language(project) -> str:
+    """Språket manuset skrivs på: projektets inställning, annars appens."""
+    inställningar = getattr(project, "settings", None) or {}
+    return inställningar.get("language") or i18n.get_language()
+
+
 def repeats(scenes, min_count: int = TIGHT_REPEATS, max_words: int = 4, min_chars: int = 4,
-            window: int = WINDOW) -> list[Finding]:
+            window: int = WINDOW, lang: str = "") -> list[Finding]:
     """Ord och fraser som upprepas *tätt* — en författares tics.
 
     Ett fynd kräver `min_count` täta förekomster, inte att ordet står många
@@ -67,6 +75,10 @@ def repeats(scenes, min_count: int = TIGHT_REPEATS, max_words: int = 4, min_char
     Markören pekar på den tätaste förekomsten — det är den som är ticen.
     """
     scenes = list(scenes)
+    # Funktionsorden för manusets språk. De svenska och engelska listorna bodde
+    # här förut; nu kommer alla ur resources/stopwords.json. Saknas språket
+    # filtreras inga frasändar — hellre det än ett annat språks ord.
+    stop = stopwords(lang or i18n.get_language()) or _STOP
     tight: dict = Counter()        # täta förekomster per fynd
     totals: dict = Counter()       # förekomster i hela manuset
     closest: dict = {}
@@ -82,7 +94,7 @@ def repeats(scenes, min_count: int = TIGHT_REPEATS, max_words: int = 4, min_char
                 words = folded[i:i + n]
                 if sum(map(len, words)) < min_chars:
                     continue
-                if words[0] in _STOP or (n > 1 and words[-1] in _STOP):
+                if words[0] in stop or (n > 1 and words[-1] in stop):
                     continue
                 key = (n, tuple(words))
                 totals[key] += 1
@@ -105,8 +117,7 @@ def repeats(scenes, min_count: int = TIGHT_REPEATS, max_words: int = 4, min_char
             continue
         n = key[0]
         node_id, title, text, quote, start = place[key]
-        note = (f"{täta} gånger tätt, {totals[key]} i boken, "
-                f"tätast {closest[key]} ord isär")
+        note = _("analysis_note_repeat", n=täta, total=totals[key], gap=closest[key])
         out.append((closest[key], Finding(
             "repeat" if n == 1 else "phrase",
             " ".join(key[1]) if n > 1 else quote, quote,
@@ -154,13 +165,13 @@ def name_consistency(scenes, entities) -> list[Finding]:
                 corpus_names.add(name.casefold())
     for canon_key, canon in canonical.items():
         if counts[canon_key] == 0:
-            out.append(Finding("unused", canon, "", 0, "", "", 0, "Nämns inte i manuset"))
+            out.append(Finding("unused", canon, "", 0, "", "", 0, _("analysis_note_unmentioned")))
         for key, variants in forms.items():
             if key != canon_key and len(key) >= 4 and key[0] == canon_key[:1] and _edit_distance_one(key, canon_key) and sum(variants.values()) >= 2:
                 variant = max(variants, key=variants.get)
                 node_id, title, text, offset = first[(key, variant)]
                 out.append(Finding("name_variant", variant, variant, _occurrence(text, variant, offset), node_id, title,
-                                   sum(variants.values()), f"Variant av {canon}"))
+                                   sum(variants.values()), _("analysis_note_variant_of", canon=canon)))
     for key, variants in forms.items():
         upper = [v for v in variants if v[:1].isupper()]
         lower = [v for v in variants if v[:1].islower()]
@@ -168,15 +179,17 @@ def name_consistency(scenes, entities) -> list[Finding]:
             variant = min(upper + lower, key=lambda v: first[(key, v)][3])
             node_id, title, text, offset = first[(key, variant)]
             out.append(Finding("capitalisation", variant, variant, _occurrence(text, variant, offset), node_id, title,
-                               sum(variants.values()), "Både versal och gemen stavning förekommer"))
+                               sum(variants.values()), _("analysis_note_capitalisation")))
     return out
 
 
-def report(project, entities=None, min_count: int = TIGHT_REPEATS) -> dict:
+def report(project, entities=None, min_count: int = TIGHT_REPEATS, lang: str = "") -> dict:
     from core.style_rules import style_findings   # hit: annars blir det en cirkel
 
+    # Manusets språk: projektets eget om det är satt, annars appens.
+    lang = lang or _project_language(project)
     scenes = scenes_in_order(project)
-    findings = repeats(scenes, min_count=min_count)
+    findings = repeats(scenes, min_count=min_count, lang=lang)
     findings.extend(style_findings(scenes))
     if entities:
         findings.extend(name_consistency(scenes, entities))
@@ -191,6 +204,11 @@ def report(project, entities=None, min_count: int = TIGHT_REPEATS) -> dict:
 
 def _self_check() -> int:
     from types import SimpleNamespace
+
+    # Provets text är svensk prosa, så provet säger det: annars avgör
+    # körningens språkinställning vilka funktionsord som filtreras, och noten
+    # skrivs på engelska.
+    i18n.set_language("sv")
 
     checks = 0
     failures = 0

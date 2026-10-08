@@ -16,13 +16,14 @@ from PyQt6.QtWidgets import (
 )
 
 from core.i18n import _, i18n
+from core.languages import decimal_comma
 from core import publishing
 
 
 def _tal(värde) -> str:
-    """Ett mått som en svensk läsare skriver det: 12,7 och inte 12.7."""
+    """Ett mått som läsaren skriver det: 12,7 på svenska, 12.7 på engelska."""
     text = f"{float(värde):g}"
-    return text.replace(".", ",") if i18n.current_lang == "sv" else text
+    return text.replace(".", ",") if decimal_comma(i18n.current_lang) else text
 
 
 class PublishDialog(QDialog):

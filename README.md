@@ -195,6 +195,35 @@ Two things do leave the machine, and only when you ask for them:
   project but outside the manuscript, so the number you compare against a publisher's
   limit is the manuscript's own.
 
+### Languages
+
+Eleven languages ship as one file each: English, Svenska, Norsk bokmål, Dansk,
+Suomi, Íslenska, Deutsch, Français, Español, Português and Italiano. Pick one under
+**View → Language**, or with the button in the status bar; the choice is remembered.
+
+Adding another is one command, once the language has a row in `core/languages.py`:
+
+    .venv/bin/python tools/translate_locales.py <code>
+
+It translates from English in batches, checks every batch (same keys, same
+placeholders, plural forms kept) and writes the file as it goes — interrupt it and
+run it again, it continues where it stopped. `tools/i18n_keys_check.py` fails the
+test gate if any language file is incomplete, so a half-translated file cannot be
+committed quietly. The provider is the one you configured under Settings → AI;
+with an empty endpoint nothing is sent.
+
+What the languages do *not* all have, said plainly:
+
+- **Finnish and Icelandic have no spell or grammar check.** LanguageTool does not
+  support them. The menu item says so instead of quietly doing nothing.
+- **Finnish is not hyphenated.** pyphen has no Finnish dictionary, and Swedish or
+  English patterns would break Finnish words in the wrong places.
+- **The style lists are Swedish.** Fillers, clichés and dialogue tags are Swedish
+  editorial word lists, so in other languages the report finds repetition (with
+  that language's own stopwords) but no clichés yet. That is the next pass.
+- **The templates are Swedish and English.** Other languages inherit the English
+  ones rather than showing an empty page.
+
 ### Keyboard
 
 | | |
@@ -218,7 +247,8 @@ what is left, one line each. Before a change counts as finished:
 
 - `bash tools/test_all.sh` is green. It is the gate: purity checks, the i18n guard, the
   identifier guard, module self-tests and the offscreen smoke suite.
-- **Every string is an i18n key** in both `locales/en.json` and `locales/sv.json`.
+- **Every string is an i18n key** in every `locales/*.json`. A new file is added with
+  `python tools/translate_locales.py <code>`, and the gate's guard requires it to be complete.
 - **Python identifiers are ASCII.** PyQt6/sip segfaults without a Python traceback when a
   signal is connected to a method whose name contains `å`, `ä` or `ö`;
   `tools/identifier_check.py` refuses that shape. Comments, log lines and error text are
@@ -408,6 +438,36 @@ Två saker lämnar datorn, och bara när du själv ber om dem:
 - **Ordantal räknar aldrig in researchmaterial** — anteckningar och researchmappar ligger i
   projektet men utanför manuset, så talet du jämför mot ett förlags gräns är manusets eget.
 
+### Språk
+
+Elva språk följer med, ett som en fil var: svenska, engelska, norsk bokmål, danska,
+finska, isländska, tyska, franska, spanska, portugisiska och italienska. Välj under
+**Visa → Språk**, eller med knappen i statusfältet; valet kommer ihåg.
+
+Att lägga till ett till är ett kommando, när språket har en rad i `core/languages.py`:
+
+    .venv/bin/python tools/translate_locales.py <kod>
+
+Den översätter från engelskan i satser, kontrollerar varje sats (samma nycklar,
+samma platshållare, flertalsformerna kvar) och skriver filen efter varje sats —
+avbryt och kör igen, den fortsätter där den slutade. `tools/i18n_keys_check.py`
+fäller testgrinden om någon språkfil är ofullständig, så en halvöversatt fil kan
+inte committas i tysthet. Leverantören är den du valt under Inställningar → AI;
+är slutpunkten tom skickas ingenting.
+
+Vad språken inte alla har, sagt rakt ut:
+
+- **Finska och isländska har ingen stavnings- eller grammatikkontroll.**
+  LanguageTool stöder dem inte. Menyvalet säger det i stället för att tyst inte
+  göra något.
+- **Finskan avstavas inte.** pyphen har ingen finsk ordlista, och svenska eller
+  engelska mönster skulle dela finska ord på fel ställe.
+- **Stilordlistorna är svenska.** Fyllnadsord, klichéer och dialogtaggar är
+  svenska redaktionella ordlistor, så på andra språk hittar rapporten upprepningar
+  (med språkets egna funktionsord) men inga klichéer än. Det är nästa pass.
+- **Mallarna är svenska och engelska.** Andra språk ärver de engelska i stället för
+  att visa en tom sida.
+
 ### Tangentbord
 
 | | |
@@ -431,7 +491,8 @@ var. Innan en ändring räknas som färdig:
 
 - `bash tools/test_all.sh` är grön. Den är grinden: renhetsprov, i18n-vakt,
   identifierarvakt, modulernas självprov och rökprovet i huvudlöst läge.
-- **Varje sträng är en i18n-nyckel** i både `locales/sv.json` och `locales/en.json`.
+- **Varje sträng är en i18n-nyckel** i alla `locales/*.json`. En ny fil läggs till med
+  `python tools/translate_locales.py <kod>`, och vakten i grinden kräver att den är komplett.
 - **Python-identifierare är ASCII.** PyQt6/sip kraschar utan Python-spårning när en signal
   kopplas till en metod med `å`, `ä` eller `ö` i namnet; `tools/identifier_check.py`
   stoppar formen. Kommentarer, loggar och feltexter är engelska.
@@ -471,6 +532,20 @@ licensed as a whole under the same licence (§5c), and — since the app has an 
 interface — display its legal notices (§5d, which is what `Help → About` does).
 
 There is no warranty of any kind (§15–17).
+
+### Data and other people's work
+
+The word lists are not ours, and they carry their own licences:
+
+- **Stopwords for the eleven languages** come from
+  [stopwords-iso](https://github.com/stopwords-iso/stopwords-iso) (MIT), except Icelandic,
+  which comes from [atlijas/icelandic-stop-words](https://github.com/atlijas/icelandic-stop-words)
+  (CC BY-SA 4.0, compiled from BÍN at the Árni Magnússon Institute for Icelandic Studies).
+- **Hyphenation** uses [pyphen](https://github.com/Kozea/Pyphen) and its dictionaries
+  (GPLv2+ / LGPLv2+ / MPL 1.1), the same ones LibreOffice uses.
+- **Spell and grammar check** uses [LanguageTool](https://languagetool.org) over the
+  network, and only when you run it.
+- **Icons** are [Lucide](https://lucide.dev) (ISC).
 
 **The licence covers the code, not the name.** The copyright above grants you the source
 under the GPL; the product's name and mark are a separate thing. A fork is welcome to

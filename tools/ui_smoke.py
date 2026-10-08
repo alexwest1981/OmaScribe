@@ -28,6 +28,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from typing import cast  # noqa: E402
 
+from core.languages import ai_name as _ai_namn  # noqa: E402
+
 from PyQt6.QtWidgets import QApplication, QTextEdit  # noqa: E402
 from PyQt6.QtGui import QImage, QColor, QTextDocument, QTextCursor  # noqa: E402
 
@@ -62,6 +64,17 @@ def sparat_i_configen(nyckel):
         return json_mod.load(open(config_mod.CONFIG_PATH, encoding="utf-8")).get(nyckel)
     except (OSError, ValueError):
         return None
+
+
+def _locale55_text(kod: str, nyckel: str) -> str:
+    """Texten för en nyckel i en språkfil, läst rakt ur filen (för provet)."""
+    import json as _json55
+    try:
+        with open(Path(__file__).resolve().parent.parent / "locales" / f"{kod}.json",
+                  encoding="utf-8") as f:
+            return str(_json55.load(f).get(nyckel, ""))
+    except (OSError, ValueError):
+        return ""
 
 
 def main() -> int:
@@ -1502,7 +1515,7 @@ def main() -> int:
     check(fangat.get("kategori") == "dialogue", "vald fråga skickas vidare")
     check("nyckeln" in (fangat.get("scene_note") or ""),
           "scenens egen anteckning följer med som sammanhang")
-    check(fangat.get("lang") in ("svenska", "English"),
+    check(fangat.get("lang") == _ai_namn("sv"),
           f"och språket ({fangat.get('lang')!r})")
     check("dörren" in (fangat.get("selection") or ""),
           f"den rad markören står på blir texten som skickas "
@@ -3294,6 +3307,84 @@ def main() -> int:
     if ent54_obj is not None:
         win.codex.unlink(ent54_obj.id, win.active_scene_id)
         win.codex.delete_entity(ent54_obj.id)
+
+    print("\n55. Språken — fler än svenska och engelska")
+
+    import core.languages as _språk55
+    import core.analysis as _analys55
+    from core.i18n import i18n as _i18n55
+    from core.autocorrect import _hyphenator as _avstava55
+    from core.templates import get_template_html as _mall55
+
+    väljare55 = _i18n55.get_available_languages()
+    koder55 = [kod for kod, _namn in väljare55]
+    check("sv" in koder55 and "en" in koder55 and len(koder55) >= 2,
+          f"väljaren byggs ur språkfilerna ({len(koder55)}: {', '.join(koder55)})")
+    check(all(namn and namn != kod.upper() for kod, namn in väljare55),
+          "och namnen står på språket självt, inte som en versal kod")
+    check(all(_språk55.native(kod) == namn for kod, namn in väljare55),
+          "namnen kommer ur språktabellen")
+
+    # Varje fil skall gå att välja, och bära sin egen text — inte engelskan.
+    trasiga55 = []
+    for kod in koder55:
+        if not _i18n55.set_language(kod):
+            trasiga55.append(f"{kod} gick inte att läsa")
+            continue
+        for nyckel in ("menu_file", "settings_title", "app_name"):
+            text55 = _i18n55.t(nyckel)
+            if not text55 or text55 == nyckel:
+                trasiga55.append(f"{kod}:{nyckel}")
+    check(not trasiga55, f"alla {len(koder55)} språkfilerna laddar och har sin text"
+                         + (f" — {trasiga55[:4]}" if trasiga55 else ""))
+
+    # Flertalet: samma nyckel ger två olika texter när filen bär båda formerna.
+    flertal55 = [kod for kod in koder55
+                 if "|" in _locale55_text(kod, "style_note_scenes")]
+    if flertal55:
+        _i18n55.set_language(flertal55[0])
+        en55 = _i18n55.t("style_note_scenes", total=1, title="Kapitel 2")
+        fler55 = _i18n55.t("style_note_scenes", total=3, title="Kapitel 2")
+        check(en55 != fler55, f"ental och flertal skiljer sig på {flertal55[0]} "
+                              f"(\"{en55}\" mot \"{fler55}\")")
+        check("{total}" not in en55 and "{total}" not in fler55,
+              "och siffran är ifylld, inte kvar som platshållare")
+
+    # Analysen filtrerar med språkets egna funktionsord.
+    check(len(_språk55.stopwords("de")) > 100 and "der" in _språk55.stopwords("de"),
+          f"tyskan har sin egen stoppordslista ({len(_språk55.stopwords('de'))} ord)")
+    check(len(_språk55.stopwords("fi")) > 100 and len(_språk55.stopwords("is")) > 100,
+          "och finskan och isländskan sina")
+
+    tysk55 = _avstava55("de")
+    check(tysk55 is not None and "\u00ad" in tysk55.inserted("Silbentrennung", hyphen="\u00ad"),
+          "tyskan avstavas med tysk ordlista")
+    check(_avstava55("fi") is None,
+          "och finskan, som saknar ordlista i pyphen, avstavas inte alls")
+
+    # Mallarna är svenska eller engelska; ett annat språk ärver engelskan.
+    check(_mall55("report", lang="de").strip() != "" and _mall55("report", lang="de") == _mall55("report", lang="en"),
+          "en tysk rapportmall faller tillbaka på engelskan i stället för att bli tom")
+    check(_mall55("report", lang="sv") != _mall55("report", lang="en"),
+          "medan svenskan har sin egen")
+
+    # Menyknappen går laget runt och kommer tillbaka.
+    runda55, nuv55 = [], _i18n55.get_language()
+    for _steg in range(len(koder55) + 1):
+        nuv55 = _språk55.next_language(nuv55)
+        runda55.append(nuv55)
+    check(runda55[0] == runda55[len(koder55)] and len(set(runda55)) == len(koder55),
+          f"språkvalet går laget runt alla {len(koder55)} ({' → '.join(runda55)})")
+
+    _i18n55.set_language("sv")
+    win._update_lang_toggle_btn()
+    win._update_lang_menu_actions()
+    check(win.btn_lang_toggle.text() == _språk55.native("sv"),
+          "statusfältets knapp visar språket det står på")
+    check(len(win.act_lang) == len(koder55),
+          f"och språkmenyn har ett val per fil ({len(win.act_lang)})")
+    check(win.act_lang["en"].isCheckable() and not win.act_lang["en"].isChecked(),
+          "med bara det aktiva språket förkryssat")
 
     print("\n" + "=" * 66)
     if failures:

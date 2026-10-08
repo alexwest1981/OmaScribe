@@ -22,6 +22,8 @@ from core.config import DEFAULT_AI_ENDPOINT, DEFAULT_AI_MODEL
 
 from core.ai_client import chat_completion, parse_json_response
 from core import directives
+from core.i18n import i18n
+from core.languages import ai_name
 
 MAX_CODE_CHARS = 24000      # tak innan koden kapas
 SEVERITIES = ("error", "warning", "style")
@@ -30,8 +32,9 @@ SEVERITIES = ("error", "warning", "style")
 def build_prompt(code: str, lang: str = "", lang_ui: str = "sv",
                  format_only: bool = False, doc_context: str = "") -> tuple:
     """Bygger (system, användare) för kodanalysen."""
-    sv = str(lang_ui or "").lower().startswith("sv")
-    target = "svenska" if sv else "English"
+    svarsspråk = lang_ui or i18n.get_language()
+    sv = str(svarsspråk).lower().startswith("sv")
+    target = "svenska" if sv else ai_name(svarsspråk)
     detected = lang or directives.detect_language(code) or "okänt"
 
     if sv:

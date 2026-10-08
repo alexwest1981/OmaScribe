@@ -30,6 +30,7 @@ import shutil
 from collections import defaultdict
 
 from core.analysis import Finding, scenes_in_order, _tokens   # samma tokenisering som upprepningarna
+from core.i18n import _
 
 # Ord som sällan gör något för meningen. Listan är stramad efter en mätning på
 # tre riktiga svenska romaner (Dan Andersson, Almqvist, "Noveller och skizzer"):
@@ -158,9 +159,9 @@ def style_findings(scenes, min_count: int = _STYLE_MIN_COUNT) -> list[Finding]:
             kind = "dialogue_tag"
         else:
             kind = "adverb"
-        note = f"{total} gånger i {len(per_scene)} scener, tätast i {titles[densest]}"
+        note = _("style_note_scenes", total=total, scenes=len(per_scene), title=titles[densest])
         if kind == "dialogue_tag":
-            note += " — överväg 'sade'"
+            note += _("style_note_consider_said")
         findings.append(Finding(kind=kind, label=quote, quote=quote, occurrence=occurrence,
                                 node_id=densest, node_title=titles[densest], count=total,
                                 note=note))

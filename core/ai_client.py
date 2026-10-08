@@ -3,6 +3,8 @@ import httpx
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 from core.config import DEFAULT_AI_ENDPOINT, DEFAULT_AI_MODEL, DEFAULT_CONFIG
+from core.i18n import i18n
+from core.languages import ai_name
 
 
 def chat_completion(endpoint, api_key, model, system_prompt, user_prompt,
@@ -164,8 +166,9 @@ class AIClient(QObject):
 
         self.ai_status_changed.emit("analyzing")
 
-        lang_desc = "Swedish (Svenska)" if lang in ("sv", "svenska", "swedish") else "English"
-        lang_note = "Respond in Swedish for the summary, tone, and suggestions' explanations." if lang in ("sv", "svenska", "swedish") else "Respond in English for the summary, tone, and suggestions' explanations."
+        svarsspråk = lang or i18n.get_language()
+        lang_desc = ai_name(svarsspråk)
+        lang_note = f"Respond in {lang_desc} for the summary, tone, and suggestions' explanations."
 
         sys_prompt = self._system_prompt(f"""You are an elite, professional editor and writing coach.
 Analyze the following document written in {lang_desc}. {lang_note}

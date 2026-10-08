@@ -12,6 +12,7 @@ from PyQt6.QtGui import (QAction, QKeySequence, QPalette, QTextCursor, QTextDocu
 from PyQt6.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
 
 from core.i18n import _, i18n
+from core.languages import ai_name, native, next_language
 from core.doc_manager import DocumentManager
 from core.vault import Vault, VAULT_DEFAULT_DIR
 from ui.editor_view import EditorView
@@ -492,17 +493,15 @@ class MainWindow(QMainWindow):
         self.act_zoom_reset = self._add_action(self.menu_view, _("menu_view_zoom_reset"), self._zoom_reset, "Ctrl+0")
         self.menu_view.addSeparator()
         
-        # Language submenu
+        # Språkmenyn: ett val per språkfil, med språkets namn på sig självt.
         self.menu_language = self.menu_view.addMenu("🌐 " + _("menu_view_language"))
-        self.act_lang_sv = QAction(_("lang_sv"), self)
-        self.act_lang_sv.setCheckable(True)
-        self.act_lang_sv.triggered.connect(lambda: self._set_language("sv"))
-        self.menu_language.addAction(self.act_lang_sv)
-
-        self.act_lang_en = QAction(_("lang_en"), self)
-        self.act_lang_en.setCheckable(True)
-        self.act_lang_en.triggered.connect(lambda: self._set_language("en"))
-        self.menu_language.addAction(self.act_lang_en)
+        self.act_lang = {}
+        for kod, namn in i18n.get_available_languages():
+            act = QAction(namn, self)
+            act.setCheckable(True)
+            act.triggered.connect(lambda _checked=False, k=kod: self._set_language(k))
+            self.menu_language.addAction(act)
+            self.act_lang[kod] = act
         self._update_lang_menu_actions()
 
         # Insert Menu
@@ -649,29 +648,24 @@ class MainWindow(QMainWindow):
         self.editor.canvas.setFocus()
 
     def _toggle_language(self):
-        curr = i18n.get_language()
-        new_lang = "sv" if curr == "en" else "en"
-        self._set_language(new_lang)
+        """Statusfältets knapp går till nästa språk — inte bara mellan två."""
+        self._set_language(next_language(i18n.get_language()))
 
     def _set_language(self, lang_code):
         if lang_code != i18n.get_language():
             i18n.set_language(lang_code)
             self.config.set("language", lang_code)
+            self._update_lang_menu_actions()
 
     def _update_lang_toggle_btn(self):
-        curr = i18n.get_language()
-        if curr == "sv":
-            self.btn_lang_toggle.setText("🇸🇪 SV")
-        else:
-            self.btn_lang_toggle.setText("🇬🇧 EN")
+        """Knappen visar språket det står på, inte en tvåspråkig flagga."""
+        self.btn_lang_toggle.setText(native(i18n.get_language()))
         self.btn_lang_toggle.setToolTip(_("status_lang_switch_tooltip"))
 
     def _update_lang_menu_actions(self):
         curr = i18n.get_language()
-        if hasattr(self, "act_lang_sv"):
-            self.act_lang_sv.setChecked(curr == "sv")
-        if hasattr(self, "act_lang_en"):
-            self.act_lang_en.setChecked(curr == "en")
+        for kod, act in getattr(self, "act_lang", {}).items():
+            act.setChecked(kod == curr)
 
     def _zoom_in(self):
         self.active_canvas.zoomIn(1)
@@ -1292,7 +1286,7 @@ class MainWindow(QMainWindow):
             selection=markerat,
             scene_note=(node.note if node else ""),
             chapter=(node.title if node else ""),
-            lang="svenska" if i18n.current_lang == "sv" else "English",
+            lang=ai_name(i18n.get_language()),
         )
 
     def _insert_exercise(self, suggestion: str) -> None:
@@ -2237,7 +2231,7 @@ class MainWindow(QMainWindow):
             "title": titel or _("untitled_document"),
             "author": inst.get("author", ""),
             "publisher": inst.get("publisher", ""),
-            "language": "sv" if i18n.current_lang == "sv" else "en",
+            "language": (inst.get("language") or i18n.get_language()),
             "identifier": inst.get("isbn", ""),
             "description": inst.get("blurb", ""),
         }
@@ -3061,8 +3055,16 @@ class MainWindow(QMainWindow):
         self.act_zoom_out.setText(_("menu_view_zoom_out"))
         self.act_zoom_reset.setText(_("menu_view_zoom_reset"))
         self.menu_language.setTitle("🌐 " + _("menu_view_language"))
-        self.act_lang_sv.setText(_("lang_sv"))
-        self.act_lang_en.setText(_("lang_en"))
+        # Språknamnen är språkets eget namn och översätts inte — menyn byggs om
+        # när filerna ändras, så raden fyller på nya språk också.
+        for kod, _namn in i18n.get_available_languages():
+            if kod not in getattr(self, "act_lang", {}):
+                act = QAction(native(kod), self)
+                act.setCheckable(True)
+                act.triggered.connect(lambda _checked=False, k=kod: self._set_language(k))
+                self.menu_language.addAction(act)
+                self.act_lang[kod] = act
+            self.act_lang[kod].setText(native(kod))
 
         self.menu_insert.setTitle(_("menu_insert"))
         self.act_ins_table.setText("📊 " + _("menu_insert_table"))

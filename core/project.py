@@ -29,6 +29,7 @@ from pathlib import Path
 
 from core.collections import Collection
 from core import collections as collections_mod
+from core.i18n import i18n
 
 MANIFEST = "project.json"
 MANUSCRIPT_DIR = "manuscript"
@@ -304,7 +305,7 @@ class Project:
     def __init__(self, root: str | os.PathLike) -> None:
         self.root = Path(root).expanduser().resolve()
         self.title = ""
-        self.settings: dict = dict(DEFAULT_SETTINGS)
+        self.settings: dict = {**DEFAULT_SETTINGS, "language": i18n.get_language()}
         self.nodes: list[ProjectNode] = []
         self.collections: list[Collection] = []
         self.variants: list[dict] = []      # namngivna ordningar av scener (R01.14)

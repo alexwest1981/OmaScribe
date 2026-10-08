@@ -109,6 +109,8 @@ run "kontextlagret" "$PY" -m core.context
 run "frågepanelen" "$PY" -m ui.ask_panel
 run "kompilera-fönstret" "$PY" -m ui.compile_dialog
 run "i18n-nycklarna" "$PY" tools/i18n_keys_check.py
+run "språktabellen" "$PY" -m core.languages
+run "översättningen" "$PY" tools/translate_locales.py --self-check
 run "identifierarna" "$PY" tools/identifier_check.py
 run "ui_smoke" "$PY" tools/ui_smoke.py
 run "print_purity" "$PY" tools/print_purity_check.py

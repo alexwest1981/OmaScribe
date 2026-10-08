@@ -9,6 +9,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QPixmap, QFont, QIcon, QCursor
 
 from core.i18n import _, i18n
+from core.languages import native, next_language
 from ui.widgets import ClickableCard
 
 
@@ -314,17 +315,14 @@ class StartScreen(QWidget):
         return btn
 
     def _toggle_language(self):
-        curr = i18n.get_language()
-        new_lang = "sv" if curr == "en" else "en"
-        i18n.set_language(new_lang)
-        self.config.set("language", new_lang)
+        """Nästa språk i listan — alla språkfilerna, inte bara två."""
+        i18n.set_language(next_language(i18n.get_language()))
+        self.config.set("language", i18n.get_language())
 
     def _update_lang_btn(self):
+        """Knappen visar språket det står på, och vad nästa tryck ger."""
         curr = i18n.get_language()
-        if curr == "sv":
-            self.btn_lang.setText("🌐 🇸🇪 Svenska (Byt till EN)")
-        else:
-            self.btn_lang.setText("🌐 🇬🇧 English (Switch to SV)")
+        self.btn_lang.setText(f"🌐 {native(curr)} → {native(next_language(curr))}")
 
     def _clear_recents(self):
         self.config.clear_recent_files()

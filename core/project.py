@@ -101,6 +101,7 @@ class ProjectNode:
     labels: list[str] = field(default_factory=list)
     target_words: int = 0
     pov: str = ""
+    elements: dict = field(default_factory=dict)   # story-element per scen (R06, 2.19)
     file: str | None = None            # relativ sökväg, bara för SCENE/NOTE
     revision: int = 1                  # utkast 1, 2, 3 (R03.13)
     when: str = ""                     # när i berättelsen scenen händer (tidslinjen)
@@ -119,6 +120,7 @@ class ProjectNode:
             "labels": list(self.labels),
             "target_words": self.target_words,
             "pov": self.pov,
+            "elements": dict(self.elements),
             "revision": self.revision,
             "when": self.when,
         }
@@ -150,6 +152,7 @@ class ProjectNode:
             labels=list(d.get("labels") or []),
             target_words=int(d.get("target_words", 0)),
             pov=d.get("pov", ""),
+            elements=dict(d.get("elements") or {}),
             file=d.get("file"),
             revision=int(d.get("revision", 1)),
             when=d.get("when", ""),

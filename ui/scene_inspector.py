@@ -8,12 +8,13 @@ from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QPalette
 from PyQt6.QtWidgets import (
     QComboBox, QDialog, QFormLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget,
-    QListWidgetItem, QMenu, QPlainTextEdit, QSpinBox, QToolButton, QVBoxLayout,
-    QWidget,
+    QListWidgetItem, QMenu, QPlainTextEdit, QPushButton, QSpinBox, QToolButton,
+    QVBoxLayout, QWidget,
 )
 
 from core.i18n import _, i18n
 from core.project import html_to_text
+from core import story_elements
 
 
 class SceneInspector(QWidget):
@@ -96,6 +97,12 @@ class SceneInspector(QWidget):
         self.spin_revision.setRange(1, 9)
         self.spin_revision.valueChanged.connect(self._apply_revision)
         form.addRow(_("scene_revision"), self.spin_revision)
+
+        # Story-elementen (2.19): Fictionarys frågor per scen, i en egen dialog —
+        # tjugo fält i en formkolumn skulle göra inspektören till en blankett.
+        self.btn_elements = QPushButton("")
+        self.btn_elements.clicked.connect(self._open_elements)
+        form.addRow(_("elements_button"), self.btn_elements)
 
         self.lbl_words = QLabel("")
         self.lbl_words.setWordWrap(True)
@@ -222,6 +229,7 @@ class SceneInspector(QWidget):
                 self.input_labels.clear()
                 self.input_pov.clear()
                 self.lbl_words.setText("")
+                self.btn_elements.setText("")
                 self.lst_material.clear()
                 self.lst_entities.clear()
                 self.lbl_entities.setText("")
@@ -241,6 +249,7 @@ class SceneInspector(QWidget):
             self.input_pov.setText(node.pov)
             self.spin_target.setValue(int(node.target_words or 0))
             self.spin_revision.setValue(int(node.revision or 1))
+            self._refresh_elements_button()
             self._update_words()
             self._refresh_material()
             self._refresh_entities()
@@ -554,6 +563,27 @@ class SceneInspector(QWidget):
             self.node.labels = labels
             self.meta_changed.emit()
 
+    def _open_elements(self) -> None:
+        """Fyller scenens story-element. Panelen skriver, fönstret sparar."""
+        if self.project is None or self.node is None:
+            return
+        from ui.elements_dialog import ElementsDialog
+
+        dialog = ElementsDialog(self.node, parent=self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        self.node.elements = dialog.values()
+        self.meta_changed.emit()
+        self._refresh_elements_button()
+
+    def _refresh_elements_button(self) -> None:
+        if self.node is None:
+            self.btn_elements.setText("")
+            return
+        rad = story_elements.scene_row(self.node)
+        self.btn_elements.setText(_("elements_button_count", filled=rad["filled"],
+                                    total=rad["total"]))
+
     def _apply_pov(self) -> None:
         if self._loading or self.node is None:
             return
@@ -585,4 +615,5 @@ class SceneInspector(QWidget):
         self.input_note.setPlaceholderText(_("scene_note_hint"))
         self.input_labels.setPlaceholderText(_("scene_labels_hint"))
         self.spin_target.setSpecialValueText(_("scene_target_none"))
+        self._refresh_elements_button()
         self._update_words()

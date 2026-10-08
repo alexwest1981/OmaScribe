@@ -147,10 +147,19 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
       plot-tavlan (2.9). **Kvar:** karaktärstabellen (scener, ord, första/sista scen, nämnd vs
       kopplad) nås inte i gränssnittet — den är byggd och provad men har ingen egen vy. R06
       (Fictionary, bibisco)
-- [ ] **2.19** Scenens story-element-checklista och Story Map: Fictionarys 38 element per scen
-      (POV-karaktär och mål, scenfunktion, hook, tension, revelation, action/sequel, läsarens
-      vetande, plats/tid, sinnen, emotion) som en checklista på scenen, samlad i en Story Map.
-      Scenmodellen finns; elementen är data. R06
+- [x] **2.19** Scenens story-element-checklista och Story Map: `core/story_elements.py` bär de
+      **tjugo** element som researchrapporten belägger, grupperade i Fictionarys tre familjer
+      (karaktär, handling, miljö) — POV-karaktär och mål, hinder, andra på plats, förändring,
+      scenfunktion, öppning, hook, tension, avslöjande, bakgrund, action/sequel, läsarens vetande,
+      utfall, avslutning, plats, tid, sinnen, väder, emotion. **Inte 38:** rapporten belägger
+      familjerna och de namngivna elementen, inte deras fulla lista, och att fylla ut de återstående
+      arton vore att hitta på en konkurrents taxonomi (står i modulens docstring).
+      `ui/elements_dialog.py` (7 kontroller) frågar per familj och sparar bara besvarade element;
+      sceninspektören har knappen med räknaren ("2 av 20"), plot-tavlan har en elementkolumn och en
+      **Story Map-sortering med luckorna först**, och elementen följer med i `project.json`
+      (verifierat av `ui_smoke` avsnitt 50, som också provar sorteringen och omläsningen från disk).
+      Provet läser dessutom **båda språkfilerna** och kräver en etikett per element — en ny nyckel
+      utan etikett visar en rå nyckel i gränssnittet. R06 (Fictionary StoryTeller)
 - [x] **2.20** Beat sheet-mallar som data: fyra nya projektmallar i `PROJECT_TEMPLATES` — Save the
       Cat (15 beat), Tre akter, Hjältens resa (12 steg) och Mysteriet (9 beat) — där varje beat blir
       ett kapitel med en scen, så beatens namn står i trädet och kortet bär scenens synopsis. Namnen

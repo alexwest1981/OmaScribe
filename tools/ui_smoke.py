@@ -1240,6 +1240,7 @@ def main() -> int:
 
     import json as _json
     from core.project import SCENE
+    from ui.plot_grid import COL_REVISION as KOL_UTKAST, COLUMNS as GRID_KOLUMNER
     tavlan_mapp = out / "tavlan"
     tavlan_mapp.mkdir()
     tavlabok = Bok.create(tavlan_mapp, "Tavlan", template="roman")
@@ -1254,8 +1255,8 @@ def main() -> int:
     tavla = win.plot_grid
     check(win.stack.currentIndex() == win._plot_grid_index,
           "plot-tavlan är en egen sida i stacken, inte en flik i sidopanelen")
-    check(tavla.table.rowCount() == 3 and tavla.table.columnCount() == 9,
-          f"en rad per scen och nio kolumner "
+    check(tavla.table.rowCount() == 3 and tavla.table.columnCount() == len(GRID_KOLUMNER),
+          f"en rad per scen och en kolumn per fält "
           f"({tavla.table.rowCount()} × {tavla.table.columnCount()})")
     check(win.toolbar.isHidden(),
           "och formateringsraden hör till manuset, inte till tabellen")
@@ -1277,10 +1278,10 @@ def main() -> int:
           f"och räknar dem mot hela manuset ({tavla.lbl_count.text()})")
     tavla.combo_draft.setCurrentIndex(0)
     check(tavla.table.rowCount() == 3, "alla utkast visar dem igen")
-    tavla.table.item(0, 8).setText("3")
+    tavla.table.item(0, KOL_UTKAST).setText("3")
     check(int(tavlabok.by_id(rader[0].id).revision) == 3,
           "och utkastnumret i tabellen skrivs till modellen")
-    tavla.table.item(0, 8).setText("99")
+    tavla.table.item(0, KOL_UTKAST).setText("99")
     check(int(tavlabok.by_id(rader[0].id).revision) <= 9,
           "utkastet hålls inom 1–9, som i sceninspektören")
 
@@ -2814,6 +2815,60 @@ def main() -> int:
               for i in range(win.insight.tree.topLevelItemCount())),
           "och varje rubrik har sina fynd under sig")
     win.insight.check_chapters.setChecked(False)
+
+    print("\n50. Story-elementen och Story Map (fas 2.19)")
+
+    from core import story_elements as se50
+    from ui.plot_grid import COL_ELEMENTS as KOL_ELEMENT
+
+    win.binder.select_node(ovningsscen.id)
+    app.processEvents()
+    insp50 = win.scene_inspector
+    nod50 = insp50.node
+    check(nod50 is not None and nod50.id == ovningsscen.id,
+          "sceninspektören står på scenen")
+    check(f"0 av {se50.TOTAL}" in insp50.btn_elements.text(),
+          f"knappen visar hur många element som är ifyllda ({insp50.btn_elements.text()!r})")
+
+    # Fyll i två element på scenen och spara — samma väg som dialogen, utan modal.
+    nod50.elements = {"pov_character": "Anna", "place": "Köket"}
+    insp50.meta_changed.emit()
+    insp50._refresh_elements_button()
+    check(f"2 av {se50.TOTAL}" in insp50.btn_elements.text(),
+          f"knappen räknar om efter ett svar ({insp50.btn_elements.text()!r})")
+
+    win.plot_grid.set_project(ovningsbok)
+    win.plot_grid.refresh()
+    app.processEvents()
+    rader50 = {win.plot_grid.table.item(r, 0).text(): r
+               for r in range(win.plot_grid.table.rowCount())}
+    check(ovningsscen.title in rader50, f"scenen står i plot-tavlan ({list(rader50)[:3]})")
+    cell50 = win.plot_grid.table.item(rader50[ovningsscen.title], KOL_ELEMENT).text()
+    check(cell50 == f"2/{se50.TOTAL}", f"och elementkolumnen visar {cell50!r}")
+
+    # Story Map-sorteringen: luckorna först. En tom scen till, så raderna blir
+    # fler än en och ordningen faktiskt prövas.
+    tom50 = ovningsbok.add_node("scene", "Ofylld scen")
+    win.plot_grid.set_project(ovningsbok)
+    win.plot_grid.combo_sort.setCurrentIndex(win.plot_grid.combo_sort.findData("elements"))
+    app.processEvents()
+    sista50 = win.plot_grid.table.rowCount() - 1
+    check(win.plot_grid.table.rowCount() == len(ovningsbok.manuscript()),
+          f"och sorteringen visar alla scener ({win.plot_grid.table.rowCount()})")
+    check(win.plot_grid.table.item(0, KOL_ELEMENT).text() == f"0/{se50.TOTAL}"
+          and win.plot_grid.table.item(sista50, KOL_ELEMENT).text() == f"2/{se50.TOTAL}",
+          "med den mest ofyllda först och den ifyllda sist "
+          f"({win.plot_grid.table.item(0, 0).text()} "
+          f"{win.plot_grid.table.item(0, KOL_ELEMENT).text()} → "
+          f"{win.plot_grid.table.item(sista50, KOL_ELEMENT).text()})")
+    check(win.plot_grid.table.item(0, 0).text() == tom50.title,
+          f"och den ofyllda scenen står först ({win.plot_grid.table.item(0, 0).text()})")
+
+    # Projektet på disk skall bära elementen — inte bara minnet.
+    ovningsbok.save()
+    omlast50 = type(ovningsbok).load(ovningsbok.root)
+    check(omlast50.by_id(ovningsscen.id).elements.get("pov_character") == "Anna",
+          "och elementen finns kvar i projektfilen efter en sparning")
 
     print("\n" + "=" * 66)
     if failures:

@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from core import story_elements
 from core.i18n import _, i18n
 
 # (nyckel, fält på noden, redigerbar, bredd)
@@ -34,14 +35,15 @@ COLUMNS = (
     ("grid_col_pov", "pov", True, 96),
     ("grid_col_status", "status", True, 110),
     ("grid_col_when", "when", True, 110),
+    ("grid_col_elements", None, False, 60),
     ("grid_col_words", None, False, 62),
     ("grid_col_target", "target_words", True, 62),
     ("grid_col_revision", "revision", True, 70),
 )
-(COL_TITLE, COL_PART, COL_THREAD, COL_POV, COL_STATUS, COL_WHEN, COL_WORDS, COL_TARGET,
- COL_REVISION) = range(len(COLUMNS))
+(COL_TITLE, COL_PART, COL_THREAD, COL_POV, COL_STATUS, COL_WHEN, COL_ELEMENTS, COL_WORDS,
+ COL_TARGET, COL_REVISION) = range(len(COLUMNS))
 
-SORTS = ("manuscript", "timeline", "pov", "status")
+SORTS = ("manuscript", "timeline", "pov", "status", "elements")
 DRAFTS = (1, 2, 3, 4, 5, 6, 7, 8, 9)             # utkast 1–9, som i sceninspektören
 RANGE_DRAFTS = (0,) + DRAFTS                     # 0 = alla utkast
 
@@ -160,6 +162,8 @@ class PlotGrid(QWidget):
             COL_POV: node.pov,
             COL_STATUS: node.status,
             COL_WHEN: node.when,
+            COL_ELEMENTS: "%d/%d" % (story_elements.scene_row(node)["filled"],
+                                     story_elements.TOTAL),
             COL_WORDS: str(self.project.words(node.id) if self.project else 0),
             COL_TARGET: str(node.target_words or ""),
             COL_REVISION: str(node.revision or 1),
@@ -173,7 +177,7 @@ class PlotGrid(QWidget):
                 item.setData(Qt.ItemDataRole.UserRole, node.id)
                 if node.synopsis:
                     item.setToolTip(node.synopsis)
-            if kol in (COL_WORDS, COL_TARGET, COL_REVISION):
+            if kol in (COL_ELEMENTS, COL_WORDS, COL_TARGET, COL_REVISION):
                 item.setTextAlignment(Qt.AlignmentFlag.AlignRight
                                       | Qt.AlignmentFlag.AlignVCenter)
             self.table.setItem(rad, kol, item)
@@ -197,6 +201,10 @@ class PlotGrid(QWidget):
             scener.sort(key=lambda p: (p[0].pov.casefold(), p[1]))
         elif nyckel == "status":
             scener.sort(key=lambda p: (p[0].status.casefold(), p[1]))
+        elif nyckel == "elements":
+            # Story Map med luckorna först: den scen som saknar flest svar är
+            # den författaren har något att göra i.
+            scener.sort(key=lambda p: (story_elements.scene_row(p[0])["filled"], p[1]))
         return scener
 
     def _part_title(self, node) -> str:

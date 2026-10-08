@@ -2751,7 +2751,8 @@ def main() -> int:
     from ui.insight_panel import OCCURRENCE_ROLE as OCC49, QUOTE_ROLE as QUOTE49
 
     text49 = ("<p>Skogen var tyst. Skogen var tyst igen.</p>"
-              "<p>Anna gick in i skogen. Annna följde efter, och skogen teg. Skogen var tyst.</p>")
+              "<p>Anna gick in i skogen. Annna följde efter, och skogen teg. Skogen var tyst.</p>"
+              "<p>Liksom, liksom, liksom gick hon.</p>")
     ovningsbok.write(ovningsscen.id, text49)
     win._show_scene_html(ovningsscen.id, text49)
 
@@ -2775,7 +2776,8 @@ def main() -> int:
     rader49 = [win.insight.tree.topLevelItem(i)
                for i in range(win.insight.tree.topLevelItemCount())]
     rad49 = next(r for r in rader49 if (r.data(0, QUOTE49) or "").casefold() == "skogen")
-    check(rad49.data(0, OCC49) == 0, "första förekomsten av ordet pekas ut")
+    check(rad49.data(0, OCC49) == 2,
+          f"fyndet pekar på den tätaste förekomsten, inte den första ({rad49.data(0, OCC49)})")
     win.insight._activate(rad49)
     for _steg in range(2):
         app.processEvents()
@@ -2788,6 +2790,18 @@ def main() -> int:
     check(win.goto_quote(ovningsscen.id, "finns-inte-alls", 0) is False,
           "ett citat som inte längre finns ger ett nej, inte en felmarkering")
     check(gammal49 is not None, "och resten av listan står kvar")
+
+    # Stilvarningarna (4.19) går samma väg: lista -> klick -> markör i texten.
+    fyll49 = [f for f in rapport49["findings"] if f.kind == "filler"]
+    check(any((f.label or "").casefold() == "liksom" for f in fyll49),
+          f"stilvarningen når rapporten ({[(f.label, f.note) for f in fyll49[:2]]})")
+    rad49b = next(r for r in rader49 if (r.data(0, QUOTE49) or "").casefold() == "liksom")
+    win.insight._activate(rad49b)
+    for _steg in range(2):
+        app.processEvents()
+    check(win.editor.textCursor().selectedText().casefold() == "liksom",
+          f"och klicket markerar fyllnadsordet i texten "
+          f"({win.editor.textCursor().selectedText()!r})")
 
     print("\n" + "=" * 66)
     if failures:

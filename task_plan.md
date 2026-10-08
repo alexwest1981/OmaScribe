@@ -47,9 +47,15 @@ pappret delas i riktiga A4-ark (radbunden paginering, `core/pagination.py`).
 **Senaste passet (2026-10-08, efter det andra researchpasset):** de billiga och
 avgörande luckorna mot de betalda verktygen byggdes först — **4.17** (repetitions-
 och konsistensanalys över hela boken med en panel där klicket markerar textstället,
-`core/analysis.py` + `ui/insight_panel.py`), **2.20** (fyra beat sheet-mallar som
-data) och **5.13** (normalsidan, modulen klar). `core/story_stats.py` (2.18) är
-byggd och grindad. Grinden GRÖNT med 659 kontroller i rökprovet.
+`core/analysis.py` + `ui/insight_panel.py`), **4.19** (stilvarningar ur ordlistor,
+`core/style_rules.py`), **2.20** (fyra beat sheet-mallar som data) och **5.13**
+(normalsidan, modulen klar). `core/story_stats.py` (2.18) är byggd och grindad.
+
+Analysen mättes mot **tre riktiga svenska romaner** hämtade från Project Gutenberg
+(Dan Andersson, Almqvist, en novellsamling) och reglerna ändrades efter mätningen,
+inte efter tycke: 552–892 fynd per bok blev **82–154**, och 80 stilfynd på 140 000
+ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökprovet,
+54 i renhetsprovet och modulernas egna.
 
 ## Arbetsregler
 
@@ -296,22 +302,35 @@ byggd och grindad. Grinden GRÖNT med 659 kontroller i rökprovet.
       `project.json` på disk. *Flyttad från fas 2 (2.13).* R03.15
 - **Status:** complete (556 rökprov + 54 renhetsprov + modulernas egna, GRÖNT)
 - [x] **4.17** Repetitions- och konsistensanalys över **hela boken**, med klickbar rapport:
-      `core/analysis.py` (13 egna kontroller) hittar upprepade ord och fraser, namnvarianter ett
+      `core/analysis.py` (15 egna kontroller) hittar upprepade ord och fraser, namnvarianter ett
       tecken från ett codexnamn, versal/gemen som glider och codexnamn som aldrig nämns — och
       `ui/insight_panel.py` (11 egna kontroller) visar dem som en lista där ett klick öppnar scenen
       och **markerar textstället** (citat + förekomst), med filtret per fyndtyp och
       POV/siffror i sammanfattningsraden. `ui_smoke` avsnitt 49 kör hela kedjan och kräver att
       markören står på ordet efter klicket.
-      **Mätt, och det ändrade konstruktionen:** ren förekomst-räkning gav **10 336 fynd** på
-      120 000 ord (7 429 av dem tvåordsfraser som "ord0000 ord0001" — vanliga ordföljder som råkar
-      stå tre gånger i en hel bok). Det går inte att visa en författare. Rapporten mäter därför
-      **närhet**, som ProWritingAids "Echoes": ett fynd måste återkomma inom ett fönster (30 ord,
-      `window * n` för en fras av n ord). Efter det: **723 fynd** på samma text, och 376 enskilda
-      ord. Analysen tar 1,8 s på 120 000 ord, alltså körs den när författaren ber om den.
+      **Mätt, och det ändrade konstruktionen två gånger.** Först: ren förekomst-räkning gav
+      **10 336 fynd** på 120 000 ord. Sedan mättes modulen mot **tre riktiga svenska romaner**
+      (Dan Andersson, Almqvist och en novellsamling, 37 000–54 000 ord var) och då föll två saker:
+      (a) romanerna gav 552–892 fynd och **toppen var "bara (189 gånger)"** — vanligt språk som råkar
+      ha ett närbeläget par någonstans, inte en tic; (b) fraslistan dominerades av "att gå (21)",
+      "att bli (15)" — grammatik, inte stil. Reglerna är därför: ett fynd kräver **två täta**
+      förekomster inom 20 ord, och en fras som börjar eller slutar i ett funktionsord räknas inte.
+      Efter det: **82–154 fynd per bok**, med namn och tics i toppen ("david", "nilenius", "älskar"),
+      och 316 fraser blev 31. Analysen tar 0,1–1,8 s, alltså körs den när författaren ber om den.
       R06 (ProWritingAid, AutoCrit)
-- [ ] **4.19** Ordklasser och stilvarningar i texten: fyllnadsord, adverb, passiv form, klichéer
-      och dialogtaggar. Listbaserat och lokal körning; LanguageTool (4.10) täcker grammatiken men
-      inte stilklasserna. R06 (ProWritingAid, AutoCrit, Papyrus)
+- [x] **4.19** Stilvarningar ur ordlistor: `core/style_rules.py` (12 egna kontroller) fångar
+      fyllnadsord, klichéer, färgade dialogtaggar och adverb — de klasser som går att **lista**.
+      Passiv form och ordklasser kräver taggning och lämnas åt LanguageTool (4.10): en gissning som
+      pekar fel i författarens text är värre än ingen varning. Adverben täcker bara de entydiga
+      ändelserna (-ligen, -ly), eftersom svenska -t-adverb (snabbt, gärna) inte går att skilja från
+      adjektiv utan taggning. Båda språkens listor körs alltid — ingen språkdetektering behövs.
+      **Mätt på de tre romanerna och det stramade listan:** med vanliga räkningsord och förbehåll
+      (mycket 104, nästan 87, kanske 53) i fyllnadslistan toppades rapporten av dem, och en varning
+      som pekar på vanligt språk lär författaren att strunta i rapporten. Efter stramningen: **80
+      stilfynd på 140 000 ord** (17–34 per bok), topp "liksom", "alltså", "ganska", "riktigt" —
+      och de färgade dialogtaggarna ("skrek", "mumlade", "utbrast") syns som en egen klass.
+      Fyndet hamnar i den scen där ordet är tätast, och klicket markerar ordet i texten
+      (`ui_smoke` avsnitt 49). R06 (ProWritingAid, AutoCrit, Papyrus)
 - [ ] **4.20** Uppläsning för korrekturläsning: läs upp stycket, kapitlet eller scenen med
       TTS — örat hittar det ögat hoppar över. Dabble, AutoCrit och NovelAI har det; vår diktering
       (Whisper) är bara tal→text. R06, R09
@@ -493,6 +512,13 @@ kontrollistan när faserna är klara.
 
 ## Att åtgärda senare (rapporterat av Alex, ej gjort)
 
+- [ ] **Analysens notiser är svenska i båda gränssnitten.** `core/analysis.py` och
+      `core/style_rules.py` bygger notistexten ("4 gånger tätt, 5 i boken, tätast 1 ord isär") som
+      färdig svensk text, och panelen visar den rakt av. Med engelskt gränssnitt blir listan
+      halvsvensk. Texten skall bli i18n-nycklar med tal som parametrar, precis som resten av
+      gränssnittet — men det rör `Finding`-modellen och panelens kolumn, så det görs som en egen
+      vända och inte inuti en funktionsvända.
+
 - [ ] **Flikraden och etiketterna i sidopanelen klipps vid ~390 px bredd.** Sett i skärmdumpar
       2026-10-07 (samma familj som flikklippningen): de fyra flikarna i panelen ("Anteckningar",
       "Scen", "Skrivlogg", "Story bib") ryms inte, och etiketten för antalet öppna kommentarer
@@ -588,7 +614,8 @@ frågan inte behöver ställas igen:
 | Fyra nya rapporter per PRODUKT, inte per tema | Det första passet var tematiskt och missade de betalda specialistverktygen (ProWritingAid, AutoCrit, Fictionary, Plottr, Campfire, bibisco, Papyrus). Funktionslista per produkt gav 29 mätta luckor som de fem första rapporterna inte hade, varav 17 blev nya planposter (`luckor.md`) |
 | Ritad tidslinje fortfarande inte byggd, men händelsetabellen är en post (2.23) | Tre betalda verktyg har tidslinjen och Fictionary rankar scenkopplade händelser högt. Datadelen är billig och vyn är ett eget steg — beslutet väntar på Alex |
 | Inget externt typsättningsprogram (Pandoc, Typst, Calibre) som backend | R10 föreslår det och kallar det billigt. Kedjan finns redan och grinden läser tillbaka EPUB/DOCX/PDF; ett externt program är dessutom ett nytt krav på användarens maskin. Kvar som *val* för PDF/X-1a (5.16) om det visar sig kräva en riktig typsättningsmotor |
-| Analysen mäter **närhet**, inte totalsumma | Mätt: ren förekomst-räkning gav 10 336 fynd på 120 000 ord, de flesta vanliga ordföljder som råkar stå tre gånger i en bok. Ett fönster på 30 ord (`window * n` för fraser) gav 723 — och det är samma sak som ProWritingAids "Echoes" mäter. En lista en författare kan arbeta igenom slår en fullständig lista |
+| Analysen mäter **närhet**, inte totalsumma | Mätt två gånger. På syntetisk text: ren förekomst-räkning gav 10 336 fynd på 120 000 ord; ett avståndskrav gav 723. På **tre riktiga svenska romaner** höll inte engångskravet: 552–892 fynd, med "bara (189 gånger)" i toppen — vanligt språk som råkar ha ett närbeläget par. Ett fynd kräver nu **två täta** förekomster inom 20 ord → 82–154 per bok, namn och tics i toppen. En fras som börjar eller slutar i ett funktionsord räknas inte ("att gå", "såg han" står tätt i varenda bok: 316 fraser blev 31). En lista en författare kan arbeta igenom slår en fullständig lista |
+| Stilvarningarna är ordlistor, inte taggning | Passiv form och ordklasser kräver en taggare; LanguageTool (4.10) äger grammatiken. Vi listar de fyra klasser som går att lista (fyllnadsord, klichéer, färgade dialogtaggar, adverb på -ligen/-ly) och säger det i modulen. Adverben är medvetet bara de entydiga ändelserna: svenska -t-adverb går inte att skilja från adjektiv utan taggning, och falska träffar i författarens text kostar mer än uteblivna |
 
 ## Errors Encountered
 

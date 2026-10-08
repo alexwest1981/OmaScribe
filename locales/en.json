@@ -948,5 +948,9 @@
   "insight_kind_capitalisation": "Capitalisation",
   "insight_kind_unused": "Names never mentioned",
   "insight_no_place": "This finding points at no place in the text.",
-  "insight_quote_gone": "The passage is gone — the scene has changed since the analysis."
+  "insight_quote_gone": "The passage is gone — the scene has changed since the analysis.",
+  "insight_kind_filler": "Filler words",
+  "insight_kind_cliche": "Clichés",
+  "insight_kind_adverb": "Adverbs",
+  "insight_kind_dialogue_tag": "Coloured dialogue tags"
 }

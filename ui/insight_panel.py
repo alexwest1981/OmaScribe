@@ -26,7 +26,8 @@ QUOTE_ROLE = Qt.ItemDataRole.UserRole + 1
 OCCURRENCE_ROLE = Qt.ItemDataRole.UserRole + 2
 
 # Ordningen är rapportens: upprepningarna först, de är det läsaren åtgärdar.
-KINDS = ("repeat", "phrase", "name_variant", "capitalisation", "unused")
+KINDS = ("repeat", "phrase", "filler", "cliche", "adverb", "dialogue_tag",
+         "name_variant", "capitalisation", "unused")
 
 
 class InsightPanel(QWidget):
@@ -183,7 +184,7 @@ def _self_check() -> int:
         project = Project.create(root + "/bok", "Analysprov", template="enkel")
         sida = project.manuscript()[0]
         project.write(sida.id, "<p>tyst tyst tyst blorpt blorpt blorpt "
-                              "han sade han sade han sade.</p>")
+                              "skogen teg skogen teg skogen teg.</p>")
         andra = project.add_node("scene", "Andra")
         project.write(andra.id, "<p>blorpt igen</p>")
 
@@ -211,8 +212,8 @@ def _self_check() -> int:
         rader = [panel.tree.topLevelItem(i) for i in range(panel.tree.topLevelItemCount())]
         rad = next(r for r in rader if r.data(0, QUOTE_ROLE) == "tyst")
         panel._activate(rad)
-        kolla(tagen.get("node") == sida.id and tagen.get("quote") == "tyst" and tagen.get("occ") == 0,
-              f"klicket bär scen, citat och förekomst ({tagen})")
+        kolla(tagen.get("node") == sida.id and tagen.get("quote") == "tyst" and tagen.get("occ") == 2,
+              f"klicket bär scen, citat och förekomst — den tätaste träffen ({tagen})")
 
         # Codexet: en post som aldrig nämns skall ge ett fynd, inte en krasch
         with StoryBible(root + "/bok/codex.sqlite") as bible:

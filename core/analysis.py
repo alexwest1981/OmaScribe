@@ -44,86 +44,76 @@ def _occurrence(text: str, quote: str, offset: int) -> int:
     return text.count(quote, 0, offset)
 
 
-def repeats(scenes, min_count: int = 3, max_words: int = 4, min_chars: int = 4,
-            window: int = 30) -> list[Finding]:
-    """Ord och fraser som upprepas.
+TIGHT_REPEATS = 2      # minsta antal *täta* förekomster för ett fynd
+WINDOW = 20            # ord; en fras av n ord får n * WINDOW
 
-    `window` är avståndet i ord inom vilket ett fynd måste återkomma för att
-    räknas som en upprepning (för en fras av `n` ord: `window * n`). Utan det
-    blir rapporten oanvändbar: mätt på 120 000 ord gav ren förekomst-räkning
-    **10 336 fynd**, varav 7 429 fraser som "ord0000 ord0001" — vanliga
-    ordföljder som råkar stå tre gånger i en hel bok. Det är *ticsen* — samma
-    ord eller fras två gånger inom samma stycke — en författare vill se, och
-    det är vad ProWritingAids "Echoes" mäter: närhet, inte totalsumma. Efter
-    avståndskravet: 376 enskilda ord. Fraser behåller räkningen som sekundär
-    information i `note`.
+
+def repeats(scenes, min_count: int = TIGHT_REPEATS, max_words: int = 4, min_chars: int = 4,
+            window: int = WINDOW) -> list[Finding]:
+    """Ord och fraser som upprepas *tätt* — en författares tics.
+
+    Ett fynd kräver `min_count` täta förekomster, inte att ordet står många
+    gånger i boken. Mätt på tre riktiga svenska romaner (37 000–54 000 ord):
+
+    * ren förekomst-räkning över hela boken gav 10 336 fynd på 120 000 ord, och
+      på en riktig roman **552–892** — toppen var "bara (189 gånger)": vanligt
+      språk som råkar ha ett närbeläget par någonstans i boken;
+    * krav på två täta förekomster inom `window` ord gav **82–154 fynd per bok**,
+      och toppen är namn och ord som faktiskt klumpar sig ("david", "nilenius",
+      "älskar", "aldrig"), alltså precis det en författare vill se.
+
+    En fras som börjar eller slutar i ett funktionsord räknas inte: "att gå" och
+    "såg han" står tätt i varenda bok. Mätt: 316 fraser blev 31 på en roman.
+    Markören pekar på den tätaste förekomsten — det är den som är ticen.
     """
     scenes = list(scenes)
-    totals: dict = Counter()      # keys are (n, words) tuples; a Counter for the +=
-    first = {}
+    tight: dict = Counter()        # täta förekomster per fynd
+    totals: dict = Counter()       # förekomster i hela manuset
     closest: dict = {}
     last_at: dict = {}
-    scene_counts: dict[str, set[str]] = defaultdict(set)
+    scene_counts: dict = defaultdict(set)
+    place: dict = {}               # tätaste träffen: (node_id, title, text, quote, start)
     at = 0
     for node_id, title, text in scenes:
         toks = _tokens(text)
-        folded = [t.casefold() for t, _, _ in toks]
-        for i, (word, start, end) in enumerate(toks):
-            key = folded[i]
-            if len(key) >= min_chars and key not in _STOP:
-                totals[(1, key)] += 1
-                scene_counts[(1, key)].add(node_id)
-                # Avståndet mäts mellan *grannar* i texten: två förekomster
-                # långt ifrån varandra är två vanliga ord, inte en upprepning.
-                previous = last_at.get((1, key))
-                if previous is not None:
-                    distance = at - previous
-                    if distance < closest.get((1, key), 1 << 30):
-                        closest[(1, key)] = distance
-                last_at[(1, key)] = at
-                first.setdefault((1, key), (node_id, title, text, word, start))
-            at += 1
-        # Ponytail: max_words is the caller-supplied bound; extend by changing
-        # this rolling window if longer repeated phrases become a requirement.
-        for n in range(2, max(1, max_words) + 1):
-            if len(toks) < n:
-                continue
+        folded = [t.casefold() for t, _start, _end in toks]
+        for n in range(1, max(1, max_words) + 1):
             for i in range(len(toks) - n + 1):
                 words = folded[i:i + n]
-                if sum(map(len, words)) < min_chars or all(w in _STOP for w in words):
+                if sum(map(len, words)) < min_chars:
+                    continue
+                if words[0] in _STOP or (n > 1 and words[-1] in _STOP):
                     continue
                 key = (n, tuple(words))
                 totals[key] += 1
                 scene_counts[key].add(node_id)
                 previous = last_at.get(key)
                 if previous is not None:
-                    distance = at + i - previous
-                    if distance < closest.get(key, 1 << 30):
-                        closest[key] = distance
+                    gap = at + i - previous
+                    if gap <= window * n:
+                        tight[key] += 1
+                        if gap <= closest.get(key, 1 << 30):
+                            closest[key] = gap
+                            place[key] = (node_id, title, text,
+                                          " ".join(t[0] for t in toks[i:i + n]), toks[i][1])
                 last_at[key] = at + i
-                if key not in first:
-                    # Punctuation is normalized to a single space in phrase quotes.
-                    quote = " ".join(t[0] for t in toks[i:i + n])
-                    first[key] = (node_id, title, text, quote, toks[i][1])
+        at += len(toks)
+
     out = []
-    for item, count in totals.items():
-        n, key = item
-        if count < min_count:
+    for key, täta in tight.items():
+        if täta < min_count:
             continue
-        distance = closest.get(item)
-        if distance is None or distance > window * n:
-            continue
-        node_id, title, text, quote, start = first[item]
-        note = f"{count} gånger i {len(scene_counts[item])} scener"
-        if distance is not None:
-            note += f", tätast {distance} ord isär"
-        out.append(Finding("repeat" if n == 1 else "phrase",
-                           quote if n == 1 else " ".join(key), quote,
-                           _occurrence(text, quote, start), node_id, title, count, note))
+        n = key[0]
+        node_id, title, text, quote, start = place[key]
+        note = (f"{täta} gånger tätt, {totals[key]} i boken, "
+                f"tätast {closest[key]} ord isär")
+        out.append((closest[key], Finding(
+            "repeat" if n == 1 else "phrase",
+            " ".join(key[1]) if n > 1 else quote, quote,
+            _occurrence(text, quote, start), node_id, title, täta, note)))
     # Tätaste upprepningen först — det är den författaren skall åtgärda.
-    return sorted(out, key=lambda f: (
-        closest.get((1, f.label.casefold()), 1 << 30) if f.kind == "repeat" else 0,
-        f.label.casefold()))
+    out.sort(key=lambda par: (par[0], par[1].label.casefold()))
+    return [finding for _gap, finding in out]
 
 
 def _edit_distance_one(a: str, b: str) -> bool:
@@ -182,13 +172,17 @@ def name_consistency(scenes, entities) -> list[Finding]:
     return out
 
 
-def report(project, entities=None, min_count: int = 3) -> dict:
+def report(project, entities=None, min_count: int = TIGHT_REPEATS) -> dict:
+    from core.style_rules import style_findings   # hit: annars blir det en cirkel
+
     scenes = scenes_in_order(project)
     findings = repeats(scenes, min_count=min_count)
+    findings.extend(style_findings(scenes))
     if entities:
         findings.extend(name_consistency(scenes, entities))
     counts = {kind: sum(f.kind == kind for f in findings)
-              for kind in ("repeat", "phrase", "name_variant", "capitalisation", "unused")}
+              for kind in ("repeat", "phrase", "name_variant", "capitalisation", "unused",
+                           "filler", "cliche", "adverb", "dialogue_tag")}
     # Word count comes from the project model, never from a token count here:
     # every word figure in the app has to be the same figure.
     return {"scenes": len(scenes), "words": project.total_words(),
@@ -197,50 +191,83 @@ def report(project, entities=None, min_count: int = 3) -> dict:
 
 def _self_check() -> int:
     from types import SimpleNamespace
+
     checks = 0
     failures = 0
+
+    def kolla(ok, text):
+        nonlocal checks, failures
+        checks += 1
+        print(f"  {'OK  ' if ok else 'FEL '} {text}")
+        if not ok:
+            failures += 1
+
     root = tempfile.mkdtemp(prefix="analysis-check-")
     try:
         project = Project.create(root, "Analysis check", template="enkel")
         scene = project.manuscript()[0]
-        project.write(scene.id, "<p>Anna såg å ä ö 😀. Anna såg. En gång såg. han sade, han sade! %</p>")
+        project.write(scene.id, "<p>Anna såg å ä ö 😀. Anna såg. En gång såg. %</p>")
         s2 = project.add_node("scene", "Second")
-        project.write(s2.id, "<p>han sade och blorpt blorpt</p>")
+        project.write(s2.id, "<p>blorpt blorpt</p>")
         s3 = project.add_node("scene", "Third")
-        project.write(s3.id, "<p>blorpt blorpt blorpt</p>")
+        project.write(s3.id, "<p>blorpt blorpt blorpt. skogen teg skogen teg skogen teg. "
+                             "att gå att gå att gå.</p>")
         scenes = scenes_in_order(project)
-        findings = repeats(scenes, min_count=3)
-        checks += 1; failures += not any(f.label.casefold() == "blorpt" and f.count == 5 for f in findings)
-        checks += 1; failures += any(f.label.casefold() == "anna" for f in findings)
-        checks += 1; failures += not any(f.kind == "phrase" and f.label == "han sade" for f in findings)
-        checks += 1; failures += not all(ch in scenes[0][2] for ch in ("å", "ä", "ö", "😀", "%"))
-        checks += 1; failures += not any(f.kind == "phrase" and f.label == "han sade" for f in findings)
-        # Two repeated misspellings against the codex name.
-        project.write(scene.id, "<p>Anna Anna Annna Annna han sade, han sade!</p>")
+        findings = repeats(scenes)
+        blorpt = next((f for f in findings if f.label.casefold() == "blorpt"), None)
+        kolla(blorpt is not None and blorpt.count == 4,
+              "täta förekomster av samma ord blir ett fynd — två i tredje scenen, ett i "
+              f"andra och ett över scenbytet ({blorpt.count if blorpt else None})")
+        kolla(blorpt is not None and "gånger tätt" in blorpt.note,
+              f"och noten skiljer tätt från totalt ({blorpt.note if blorpt else None})")
+        kolla(blorpt is not None and blorpt.quote in scenes[1][2] + scenes[2][2],
+              "och citatet står i texten")
+        fras = next((f for f in findings if f.kind == "phrase" and f.label == "skogen teg"), None)
+        kolla(fras is not None and fras.count == 2,
+              f"en fras med innehållsord i båda ändar blir ett fynd ({fras.count if fras else None})")
+        kolla(fras is not None and "2 ord isär" in fras.note,
+              f"och noten säger hur tätt ({fras.note if fras else None})")
+        kolla(not any(f.label == "att gå" for f in findings),
+              "medan 'att gå' lämnas i fred — grammatik, inte en tic")
+        kolla(not any(f.label.casefold() == "anna" for f in findings),
+              "ett namn två gånger i samma mening är inget fynd vid tröskeln")
+        kolla(all(ch in scenes[0][2] for ch in ("å", "ä", "ö", "😀", "%")),
+              "texten behåller å, ä, ö, emoji och procenttecken")
+
+        # Två felstavningar av ett codexnamn, och ett namn som aldrig nämns.
+        project.write(scene.id, "<p>Anna Anna Anna Annna Annna</p>")
         scenes = scenes_in_order(project)
-        names = name_consistency(scenes, [SimpleNamespace(name="Anna", aliases=[], type="character"), SimpleNamespace(name="Unused", aliases=[], type="character")])
-        checks += 1; failures += not any(f.kind == "name_variant" and f.label == "Annna" for f in names)
-        checks += 1; failures += not any(f.kind == "unused" and f.label == "Unused" for f in names)
-        checks += 1; failures += not any(f.kind == "phrase" and f.label == "han sade" for f in repeats(scenes, 2))
-        repeat = next((f for f in repeats(scenes, 2) if f.label.casefold() == "anna"), None)
-        checks += 1; failures += not (repeat and repeat.occurrence == 0 and repeat.quote in scenes[0][2])
+        names = name_consistency(scenes, [
+            SimpleNamespace(name="Anna", aliases=[], type="character"),
+            SimpleNamespace(name="Unused", aliases=[], type="character")])
+        kolla(any(f.kind == "name_variant" and f.label == "Annna" for f in names),
+              "felstavningen av codexnamnet hittas")
+        kolla(any(f.kind == "unused" and f.label == "Unused" for f in names),
+              "och codexnamnet som aldrig nämns")
+        anna = next((f for f in repeats(scenes) if f.label.casefold() == "anna"), None)
+        kolla(anna is not None and anna.occurrence == 2 and anna.quote in scenes[0][2],
+              "namnet får en plats markören kan stå på — den tätaste träffen, inte den "
+              f"första ({anna.occurrence if anna else None})")
+
         empty_root = tempfile.mkdtemp(prefix="analysis-empty-")
         try:
             empty_project = Project.create(empty_root, "Empty", template="enkel")
-            checks += 1; failures += report(empty_project)["findings"] != []
+            kolla(report(empty_project)["findings"] == [], "ett tomt projekt ger en tom rapport")
         finally:
             shutil.rmtree(empty_root, ignore_errors=True)
 
-        # Avståndet är det som gör rapporten användbar: samma ord fyra gånger
-        # med 50 ord emellan är två vanliga ord, två gånger direkt efter
-        # varandra är en tic. (Mätt: utan avstånd gav en bok på 120 000 ord
-        # 21 227 fynd.)
+        # Närheten är det som gör rapporten användbar: samma ord fyra gånger
+        # med 50 ord emellan är fyra vanliga ord, tre gånger direkt efter
+        # varandra är en tic. Utan kravet gav en riktig roman 552–892 fynd,
+        # med det 82–154.
         fyll = " ".join(f"fyll{i}" for i in range(50))
-        project.write(scene.id, f"<p>häst {fyll} häst {fyll} häst {fyll} häst tyst tyst</p>")
-        nära = {f.label.casefold(): f for f in repeats(scenes_in_order(project), min_count=2)}
-        checks += 1; failures += "häst" in nära
-        checks += 1; failures += not ("tyst" in nära and "1 ord isär" in nära["tyst"].note)
-        checks += 1; failures += report(project)["words"] != project.total_words()
+        project.write(scene.id, f"<p>häst {fyll} häst {fyll} häst {fyll} häst tyst tyst tyst</p>")
+        nära = {f.label.casefold(): f for f in repeats(scenes_in_order(project))}
+        kolla("häst" not in nära, "fyra förekomster med 50 ord emellan är inget fynd")
+        kolla("tyst" in nära and "1 ord isär" in nära["tyst"].note,
+              f"tre på rad är ett fynd ({nära['tyst'].note if 'tyst' in nära else None})")
+        kolla(report(project)["words"] == project.total_words(),
+              "och ordtalet i rapporten är projektets eget")
     finally:
         shutil.rmtree(root, ignore_errors=True)
     print(f"analysis: {checks - failures} av {checks} kontroller gröna")

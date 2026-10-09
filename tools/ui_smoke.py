@@ -8,6 +8,7 @@ aldrig, så provet kan köras utan skärm.
 Kör:  QT_QPA_PLATFORM=offscreen .venv/bin/python tools/ui_smoke.py
 """
 
+import json  # noqa: E402
 import os
 import sys
 import tempfile
@@ -31,7 +32,8 @@ from typing import cast  # noqa: E402
 from core.languages import ai_name as _ai_namn  # noqa: E402
 
 from PyQt6.QtWidgets import QApplication, QTextEdit  # noqa: E402
-from PyQt6.QtGui import QImage, QColor, QTextDocument, QTextCursor, QFont  # noqa: E402
+from PyQt6.QtGui import (QImage, QColor, QTextDocument, QTextCursor, QFont,  # noqa: E402
+                         QTextCharFormat)
 
 from core import templates, print_style, richtext  # noqa: E402
 from core.charts import ChartRenderer, PALETTES  # noqa: E402
@@ -3584,6 +3586,87 @@ def main() -> int:
     win.is_modified = False
     for _i in range(2):
         app.processEvents()
+
+    print("\n58. Varje teckenformat via sin egen väg")
+    # Alex: "så vi vet att inget är en död knapp, icke fungerande formatering". Frågan
+    # ställs till menyvalet (samma handler som knappen och genvägen), och den är tvådelad:
+    # syns formatet i teckenformatet, och går det att ta bort igen med samma val? Ett
+    # format som bara går att sätta på är lika trasigt som ett som inte gör något.
+    fmt58 = (("fet", win.act_fmt_bold, "fontWeight", QFont.Weight.Bold.value, None),
+             ("kursiv", win.act_fmt_italic, "fontItalic", True, False),
+             ("understruken", win.act_fmt_underline, "fontUnderline", True, False),
+             ("genomstruken", win.act_fmt_strike, "fontStrikeOut", True, False),
+             ("nedsänkt", win.act_fmt_sub, "verticalAlignment",
+              QTextCharFormat.VerticalAlignment.AlignSubScript, None),
+             ("upphöjd", win.act_fmt_super, "verticalAlignment",
+              QTextCharFormat.VerticalAlignment.AlignSuperScript, None))
+    for namn58, handling58, metod58, på58, av58 in fmt58:
+        ovningsbok.write(ovningsscen.id, stiltext57)
+        win._show_scene_html(ovningsscen.id, stiltext57)
+        for _i in range(3):
+            app.processEvents()
+        doc58 = win.editor.document
+        mark58 = QTextCursor(doc58)
+        mark58.setPosition(doc58.find("Beta").selectionStart())
+        mark58.setPosition(doc58.find("Beta").selectionEnd(), QTextCursor.MoveMode.KeepAnchor)
+        win.editor.setTextCursor(mark58)
+        app.processEvents()
+        inne58 = QTextCursor(doc58)
+        inne58.setPosition(doc58.find("Beta").selectionStart() + 2)
+        före58 = getattr(inne58.charFormat(), metod58)()
+
+        handling58.trigger()
+        for _i in range(3):
+            app.processEvents()
+        inne58 = QTextCursor(win.editor.document)
+        inne58.setPosition(win.editor.document.find("Beta").selectionStart() + 2)
+        efter58 = getattr(inne58.charFormat(), metod58)()
+        check(efter58 == på58 and efter58 != före58,
+              f"{namn58} sätter sitt teckenformat ({metod58}: {före58} -> {efter58})")
+
+        handling58.trigger()
+        for _i in range(3):
+            app.processEvents()
+        inne58 = QTextCursor(win.editor.document)
+        inne58.setPosition(win.editor.document.find("Beta").selectionStart() + 2)
+        tillbaka58 = getattr(inne58.charFormat(), metod58)()
+        check(tillbaka58 == (av58 if av58 is not None else före58),
+              f"och samma val tar bort det igen ({metod58}: {efter58} -> {tillbaka58})")
+
+    print("\n59. Förteckningen över alla menyer, menyval och knappar")
+    # Grinden har en fälla som kostat tid förut: en modul vars självprov inte står i
+    # listan körs aldrig, och grinden är ändå grön. Samma sak gäller kontroller — en
+    # knapp vars väg inget prov rör syns ingenstans. Hela förteckningen är därför fryst
+    # i tools/ui_controls.json: lägger man till eller tar bort en kontroll ändras filen,
+    # provet faller, och någon får ta ställning till om den nya vägen skall prövas —
+    # i stället för att Alex hittar den som död.
+    #   Uppdatera medvetet:  SCRIBENTIA_UPDATE_INVENTORY=1 … ui_smoke.py
+    from PyQt6.QtGui import QAction
+    from PyQt6.QtWidgets import QAbstractButton
+
+    def kontroll_id59(objekt):
+        text = ""
+        if hasattr(objekt, "text"):
+            text = objekt.text() or ""
+        text = text.replace("&", "").strip()
+        if not text:
+            text = (getattr(objekt, "toolTip", lambda: "")() or "").split("\n")[0].strip()
+        return f"{objekt.__class__.__name__}:{text or objekt.objectName() or '<utan text>'}"
+
+    förteckning59 = sorted(
+        [kontroll_id59(a) for a in win.findChildren(QAction) if not a.isSeparator()]
+        + [kontroll_id59(b) for b in win.findChildren(QAbstractButton)])
+    fil59 = Path(__file__).resolve().parent / "ui_controls.json"
+    if os.environ.get("SCRIBENTIA_UPDATE_INVENTORY") == "1":
+        fil59.write_text(json.dumps(förteckning59, ensure_ascii=False, indent=1) + "\n",
+                         encoding="utf-8")
+        print(f"  förteckningen skriven: {fil59.name} ({len(förteckning59)} kontroller)")
+    känd59 = json.loads(fil59.read_text(encoding="utf-8")) if fil59.exists() else []
+    nya59 = [k for k in förteckning59 if k not in känd59]
+    borta59 = [k for k in känd59 if k not in förteckning59]
+    check(bool(känd59) and not nya59 and not borta59,
+          f"förteckningen är oförändrad ({len(förteckning59)} kontroller; "
+          f"nya: {nya59[:3]}, borta: {borta59[:3]})")
 
     print("\n" + "=" * 66)
     if failures:

@@ -38,6 +38,35 @@ TAG_LINE_RE = re.compile(r"^(?:#[^\W_][\w\-/]*\s*)+$")
 # stor i ena hörnet i stället för en full sida.
 LAYOUT_DPI = 96.0
 
+def release_wrapping(dokument) -> int:
+    """Tar bort Qts nonBreakableLines från varje block. Antalet rättade.
+
+    Den flaggan stänger av **radbrytningen**, inte bara sidbrytningen: en rad i en
+    inläst `<pre>` blev mätt 1355 px i ett 646 px ark och gick utanför pappret.
+    Alex regel är att text alltid bryts vid ordet före kanten — "det får inte ens
+    vara under diskussion" — så ingen väg in i editorn får lämna flaggan på.
+    """
+    from PyQt6.QtGui import QTextCursor
+    if dokument is None:
+        return 0
+    rättade = 0
+    markor = QTextCursor(dokument)
+    markor.beginEditBlock()
+    try:
+        block = dokument.begin()
+        while block.isValid():
+            if block.blockFormat().nonBreakableLines():
+                fmt = block.blockFormat()
+                fmt.setNonBreakableLines(False)
+                markor.setPosition(block.position())
+                markor.mergeBlockFormat(fmt)
+                rättade += 1
+            block = block.next()
+    finally:
+        markor.endEditBlock()
+    return rättade
+
+
 DEFAULT_PAGE_SETTINGS = {
     "page_size": "A4",                   # "A4", "Letter"
     "orientation": "portrait",           # "portrait", "landscape"
@@ -196,6 +225,7 @@ class DocumentManager:
                 html_content = f"<pre>{stashed_md}</pre>"
 
             text_document.setHtml(html_content)
+            release_wrapping(text_document)
 
             if fences:
                 doc = text_document

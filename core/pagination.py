@@ -18,6 +18,24 @@ from bisect import bisect_right
 
 from PyQt6.QtGui import QTextFormat
 
+# "Håll ihop stycket": en egen blockegenskap, aldrig Qts setNonBreakableLines.
+# Den flaggan stänger nämligen av **radbrytningen** också (mätt: en rad blev 1120 px
+# i ett 646 px ark och gick utanför pappret), och Alex regel är att text alltid
+# bryts vid ordet före kanten: "det får inte ens vara under diskussion". Här
+# betyder märket i stället: hamnar en sidbrytning inne i stycket flyttas hela
+# stycket till nästa ark — det Qt-flaggan var tänkt att göra, utan dess pris.
+KEEP_TOGETHER = QTextFormat.Property.UserProperty
+
+
+def mark_keep_together(block_fmt) -> None:
+    """Märker ett blockformat som 'håll ihop'. Ingen radbrytning rörs."""
+    block_fmt.setProperty(KEEP_TOGETHER, True)
+
+
+def keeps_together(block) -> bool:
+    """Är blocket märkt att hållas ihop över sidbrytningen?"""
+    return bool(block.blockFormat().property(KEEP_TOGETHER))
+
 
 def page_offsets(document, content_height: float) -> list:
     """Dokumentets y för första raden på varje ark. Ett ark för ett tomt dokument."""
@@ -33,6 +51,7 @@ def page_offsets(document, content_height: float) -> list:
         rect = layout.blockBoundingRect(block)
         textlayout = block.layout()
         rader = textlayout.lineCount() if textlayout is not None else 0
+        håll_i = keeps_together(block)
 
         # En sidbrytning som användaren själv lagt in börjar ett nytt ark
         brytning = block.blockFormat().pageBreakPolicy()
@@ -46,6 +65,10 @@ def page_offsets(document, content_height: float) -> list:
                     and rect.top() + rect.height() > sida_topp + content_height):
                 sida_topp = rect.top()
                 starts.append(sida_topp)
+        elif håll_i and rect.top() > sida_topp and rect.top() + rect.height() > sida_topp + content_height:
+            # Märkt stycke som inte får plats: hela stycket börjar nästa ark.
+            sida_topp = rect.top()
+            starts.append(sida_topp)
         else:
             for i in range(rader):
                 rad = textlayout.lineAt(i)

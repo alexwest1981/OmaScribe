@@ -182,6 +182,9 @@ class MainWindow(QMainWindow):
         # Skrivmaskinsläget är ett val användaren gjort förut, inte ett påhitt
         self.editor.set_typewriter_mode(bool(self.config.get("typewriter_mode", False)))
         self.editor.set_readability_marks(bool(self.config.get("readability_marks", False)))
+        # Graden och papprets skala (9/10): autoläget fyller bredden tills
+        # skrivaren själv zoomar, och en sparad zoom överlever nu en omstart.
+        self._apply_start_zoom()
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
         self.splitter.addWidget(self.editor)
 
@@ -669,16 +672,46 @@ class MainWindow(QMainWindow):
             act.setChecked(kod == curr)
 
     def _zoom_in(self):
-        self.active_canvas.zoomIn(1)
+        self._set_zoom_pt(self.editor.text_point_size() + 1)
 
     def _zoom_out(self):
-        self.active_canvas.zoomOut(1)
+        self._set_zoom_pt(self.editor.text_point_size() - 1)
 
     def _zoom_reset(self):
-        # Typsnittet är dokumentets standard, inte vyens: därför editorn.
-        font = self.editor.canvas.font()
-        font.setPointSize(self.config.get("default_font_size", 12))
-        self.editor.canvas.setFont(font)
+        # 100 %: den grad skrivaren har valt i inställningarna.
+        self._set_zoom_pt(float(self.config.get("default_font_size", 12)))
+
+    def _set_zoom_pt(self, pt: float) -> None:
+        """Sätter graden, minns den och lämnar autoläget.
+
+        Graden går genom dokumentet (se EditorView.set_text_point_size), för
+        widgetens grad styr temats stilmall över — mätt: Ctrl++ gav 13,0 pt före
+        och efter, alltså en död knapp. zoom_level skrevs i configen men lästes
+        aldrig, så en zoom överlevde inte en omstart.
+        """
+        self.editor.zoom_auto = False
+        self.editor.set_text_point_size(pt)
+        self.config.set("zoom_auto", False)
+        self.config.set("zoom_level",
+                        int(round(self.editor.text_point_size()
+                                  / self.editor.BASE_TEXT_PT * 100)))
+
+    def _apply_start_zoom(self) -> None:
+        """Vid start: autoläget fyller bredden, annars den sparade graden.
+
+        Autoläget är på tills skrivaren själv zoomar. En A4 i verklig storlek
+        (750 px) är en liten lapp på en bred skärm, och det var hela känslan av
+        A5 — i autoläget ritas pappret så stort att det fyller bredden, och
+        texten med det. Ctrl+0 ger verklig storlek och stänger autoläget.
+        """
+        if self.config.get("zoom_auto", True):
+            self.editor.zoom_auto = True
+            self.editor.set_text_point_size(
+                self.editor.BASE_TEXT_PT * self.editor.fit_scale())
+        else:
+            self.editor.zoom_auto = False
+            self.editor.set_text_point_size(
+                self.editor.BASE_TEXT_PT * float(self.config.get("zoom_level", 100)) / 100.0)
 
     def _insert_welcome_sample(self):
         lang = i18n.get_language()
@@ -1265,6 +1298,12 @@ class MainWindow(QMainWindow):
         node = self.project.by_id(node_id)
         self.active_scene_id = node_id
         self.editor.document.setHtml(html)
+        # Radbrytningen får aldrig vara avstängd i editorn. En <pre> i en sparad
+        # scen gör Qt obrytbar, och då går raden utanför pappret (mätt: 1355 px i
+        # ett 646 px ark). Alex regel (9/10): text bryts alltid vid ordet före
+        # kanten — "det får inte ens vara under diskussion".
+        from core.doc_manager import release_wrapping
+        release_wrapping(self.editor.document)
         path = self.project.path_of(node)
         self.current_filepath = str(path) if path else None
         self.is_modified = False
@@ -2112,7 +2151,11 @@ class MainWindow(QMainWindow):
                 if i in nummer:
                     markor.setPosition(block.position())
                     fmt = block.blockFormat()
-                    fmt.setNonBreakableLines(True)
+                    # Märket är vårt eget (se core/pagination): Qts
+                    # setNonBreakableLines stänger av radbrytningen också, och då
+                    # blev ett långt stycke en enda rad utanför pappret.
+                    from core import pagination
+                    pagination.mark_keep_together(fmt)
                     markor.mergeBlockFormat(fmt)
                 block = block.next()
                 i += 1

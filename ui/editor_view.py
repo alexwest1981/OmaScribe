@@ -759,6 +759,59 @@ class EditorView(QWidget):
         self.apply_theme()
         self.theme_mgr.theme_changed.connect(self.apply_theme)
 
+    # ---------------------------------------------------------------- graden
+
+    BASE_TEXT_PT = 13.0     # basmåtten i paged_paper hör till denna grad
+
+    def text_point_size(self) -> float:
+        """Textens grad. Vyn äger den — dukens stilmall skriver den."""
+        return float(getattr(self, "_text_pt", self.BASE_TEXT_PT))
+
+    def set_text_point_size(self, pt: float) -> None:
+        """Sätter textens grad och skalar pappret med samma grad.
+
+        Graden bor i dukens stilmall (apply_theme), för det är temats regel för
+        QTextEdit som sätter den: den hade 13 pt hårdkodat, och därför var både
+        skrivarens egen inställning och Ctrl++/Ctrl+- utan verkan — mätt gav
+        canvas.setFont(20) 13,0 pt och radhöjd 19 px. Pappret följer samma grad,
+        annars rymmer en zoomad sida färre tecken än en sida och arket ser mindre
+        ut än det är.
+        """
+        pt = max(6.0, min(48.0, float(pt)))
+        if abs(self.text_point_size() - pt) < 0.01:
+            return
+        self._text_pt = pt
+        self.apply_theme()                 # enda stället som skriver dukens grad
+        self.page_frame.set_scale(pt / self.BASE_TEXT_PT)
+
+    def fit_scale(self, viewport_bredd: int = 0) -> float:
+        """Skalan som får en A4 att fylla bredden — aldrig under verklig storlek.
+
+        En A4 i verklig storlek är 750 px bred, och på en bred skärm blir den en
+        liten lapp: "det känns inte som att det får plats med tillräckligt med
+        tecken på en sida, som om det vore ett a5 istället för ett a4" (Alex
+        9/10). Texten följer med, så sidan rymmer fortfarande en sidas text.
+        """
+        if not viewport_bredd and self.scroll_area is not None:
+            viewport_bredd = self.scroll_area.viewport().width()
+        if viewport_bredd <= 0:
+            return 1.0
+        return max(1.0, min(2.5, (viewport_bredd - 40) / float(PAGE_WIDTH_PX)))
+
+    def resizeEvent(self, event) -> None:
+        """I autoläget ritas pappret om när fönstret ändrar bredd."""
+        super().resizeEvent(event)
+        self._fit_if_auto()
+
+    def showEvent(self, event) -> None:
+        """Första gången vyn syns finns bredden: då får autoläget sätta skalan."""
+        super().showEvent(event)
+        self._fit_if_auto()
+
+    def _fit_if_auto(self) -> None:
+        if getattr(self, "zoom_auto", False):
+            self.set_text_point_size(self.BASE_TEXT_PT * self.fit_scale())
+
     def set_typewriter_mode(self, on: bool) -> None:
         """Slår skrivmaskinsläget på eller av. På: centrera markörens rad."""
         self.typewriter = bool(on)
@@ -817,7 +870,7 @@ class EditorView(QWidget):
             QTextEdit {{
                 selection-background-color: {c['accent']};
                 selection-color: #ffffff;
-                font-size: 13pt;
+                font-size: {self.text_point_size():g}pt;
                 line-height: 1.5;
             }}
         """)

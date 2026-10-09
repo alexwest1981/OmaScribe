@@ -13,6 +13,7 @@ import os
 import sys
 import tempfile
 import time
+from collections import Counter
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -3112,6 +3113,12 @@ def main() -> int:
 
     # Ensamma rader: ett långt stycke och en sida som bara rymmer några rader.
     sparat53 = dict(win.page_settings)
+    # Provet räknar rader och görs därför vid basgeometrin: autoläget (som fyller
+    # fönstret med pappret) ändrar graden, och därmed hur många rader som ryms.
+    win.editor.zoom_auto = False
+    win.editor.set_text_point_size(win.editor.BASE_TEXT_PT)
+    for _i in range(2):
+        app.processEvents()
     doc53 = win.editor.document
     markor53 = win.editor.textCursor()
     markor53.movePosition(QTextCursor.MoveOperation.End)
@@ -3124,7 +3131,8 @@ def main() -> int:
         antal53 = win.hold_together_bad_paragraphs()
         check(antal53 >= 1, f"och fönstret håller ihop dem ({antal53} stycken)")
         sista53 = doc53.lastBlock()
-        check(sista53.blockFormat().nonBreakableLines() is True,
+        from core import pagination as _pag53
+        check(_pag53.keeps_together(sista53),
               "mätt i blockformatet i manuset, inte bara i returvärdet")
         check(doc53.isUndoAvailable(), "och ändringen går att ångra")
     finally:
@@ -3653,20 +3661,128 @@ def main() -> int:
             text = (getattr(objekt, "toolTip", lambda: "")() or "").split("\n")[0].strip()
         return f"{objekt.__class__.__name__}:{text or objekt.objectName() or '<utan text>'}"
 
-    förteckning59 = sorted(
-        [kontroll_id59(a) for a in win.findChildren(QAction) if not a.isSeparator()]
-        + [kontroll_id59(b) for b in win.findChildren(QAbstractButton)])
+    ids59 = [kontroll_id59(a) for a in win.findChildren(QAction) if not a.isSeparator()]
+    ids59 += [kontroll_id59(b) for b in win.findChildren(QAbstractButton)]
+    # Qt:s egna interna knappar (tabellhörn, skrollpilar) heter qt_… och hör inte
+    # till appen. De skapas dessutom i olika takt, så de gjorde förteckningen
+    # ostadig — tre tabellhörn mer i ena körningen än i den andra.
+    förteckning59 = sorted(k for k in ids59 if not k.split(":", 1)[1].startswith("qt_"))
     fil59 = Path(__file__).resolve().parent / "ui_controls.json"
     if os.environ.get("SCRIBENTIA_UPDATE_INVENTORY") == "1":
         fil59.write_text(json.dumps(förteckning59, ensure_ascii=False, indent=1) + "\n",
                          encoding="utf-8")
         print(f"  förteckningen skriven: {fil59.name} ({len(förteckning59)} kontroller)")
     känd59 = json.loads(fil59.read_text(encoding="utf-8")) if fil59.exists() else []
-    nya59 = [k for k in förteckning59 if k not in känd59]
-    borta59 = [k for k in känd59 if k not in förteckning59]
+    # Jämför antal, inte bara namn: en kontroll som skapas två gånger är en
+    # förändring av appens yta och skall märkas.
+    räknat59, känt59r = Counter(förteckning59), Counter(känd59)
+    nya59 = sorted((räknat59 - känt59r).elements())
+    borta59 = sorted((känt59r - räknat59).elements())
     check(bool(känd59) and not nya59 and not borta59,
           f"förteckningen är oförändrad ({len(förteckning59)} kontroller; "
           f"nya: {nya59[:3]}, borta: {borta59[:3]})")
+
+    print("\n60. Graden, pappret och zoomen")
+    # Alex 9/10: "det känns inte som att det får plats med tillräckligt med tecken
+    # på en sida, som om det vore ett a5 istället för ett a4". Mätt var arket en
+    # riktig A4 (750x1060 px = 210x297 mm i 90 dpi) med 2994 tecken — men temats
+    # stilmall hade 13 pt hårdkodat på duken, så varken skrivarens egen grad eller
+    # Ctrl++/Ctrl+- hade någon verkan, och arket stod still medan texten kunde
+    # ändras. Tre saker prövas därför: att graden faktiskt ritas (radhöjden, inte
+    # stilmallen), att arket följer graden, och att ett ark alltid rymmer en sidas
+    # text — annars är zoomen en lögn.
+    win.editor.zoom_auto = False        # pröva det sparade läget, inte autoläget
+    bas60 = win.editor.BASE_TEXT_PT
+    win.editor.set_text_point_size(bas60)
+    for _i in range(4):
+        app.processEvents()
+    frame60 = win.editor.page_frame
+
+    def geometry60():
+        doc60 = win.editor.canvas.document()
+        b60 = doc60.findBlockByNumber(0)
+        rad60 = float(b60.layout().lineAt(0).height()) if b60.layout().lineCount() else 0.0
+        ark60 = len(frame60.pages)
+        return (rad60, frame60.width(), frame60.scale(),
+                len(doc60.toPlainText()) / max(1, ark60))
+
+    rad_a60, bredd_a60, skala_a60, per_ark_a60 = geometry60()
+    win.editor.set_text_point_size(bas60 * 1.25)
+    for _i in range(4):
+        app.processEvents()
+    rad_b60, bredd_b60, skala_b60, per_ark_b60 = geometry60()
+
+    check(rad_b60 > rad_a60 * 1.1,
+          f"graden ritas på riktigt (radhöjd {rad_a60:.0f} -> {rad_b60:.0f} px vid "
+          f"{bas60:.0f} -> {bas60 * 1.25:.1f} pt)")
+    check(bredd_b60 > bredd_a60 * 1.1 and skala_b60 > skala_a60,
+          f"och arket följer graden ({bredd_a60} -> {bredd_b60} px, "
+          f"skala {skala_a60:.2f} -> {skala_b60:.2f})")
+    check(abs(per_ark_b60 - per_ark_a60) / max(1.0, per_ark_a60) < 0.1,
+          f"och ett ark rymmer fortfarande en sidas text ({per_ark_a60:.0f} -> "
+          f"{per_ark_b60:.0f} tecken/ark)")
+
+    # Autoläget: pappret skall fylla bredden, aldrig bli mindre än verklig storlek.
+    vidd60 = win.editor.scroll_area.viewport().width()
+    check(win.editor.fit_scale() >= 1.0,
+          f"fitskalan går aldrig under verklig storlek ({win.editor.fit_scale():.2f} "
+          f"vid {vidd60} px bredd)")
+
+    win.editor.set_text_point_size(bas60)
+    win.editor.zoom_auto = True
+    win.is_modified = False
+    for _i in range(2):
+        app.processEvents()
+
+    print("\n61. Kodblocket radbryts vid ordet före kanten")
+    # Alex 9/10: "När man klickade på att göra något till ett kodblock, så tappades
+    # radbrytningen ... kommer man fram till kanten på arket, så måste den bryta vid
+    # ordet som kommer innan." Kodrollen satte Qts nonBreakableLines med tanken att
+    # koden skulle scrollas i sidled — men flaggan stänger av radbrytningen, och
+    # raden gick utanför pappret (mätt: 1120 px i ett 646 px ark).
+    lång61 = ("def huvudfunktion(namn, efternamn, adress, postnummer, ort, land): "
+              "return f'{namn} {efternamn}, {adress}, {postnummer} {ort}, {land}'")
+    ovningsbok.write(ovningsscen.id, f"<p>{lång61}</p>")
+    win._show_scene_html(ovningsscen.id, ovningsbok.read(ovningsscen.id))
+    for _i in range(4):
+        app.processEvents()
+    doc61 = win.editor.document
+    mark61 = QTextCursor(doc61)
+    mark61.setPosition(0)
+    mark61.setPosition(len(lång61), QTextCursor.MoveMode.KeepAnchor)
+    win.editor.setTextCursor(mark61)
+    win.toolbar.btn_style_code.click()
+    for _i in range(4):
+        app.processEvents()
+    block61 = doc61.findBlockByNumber(0)
+    lay61 = block61.layout()
+    rader61 = lay61.lineCount() if lay61 else 0
+    vidd61 = win.editor.page_frame.content_rect(0).width()
+    check(rader61 > 1, f"kodblocket bryts över flera rader ({rader61})")
+    if rader61:
+        bredast61 = max(lay61.lineAt(i).naturalTextWidth() for i in range(rader61))
+        check(bredast61 <= vidd61 + 1,
+              f"och ingen rad går utanför arket ({bredast61:.0f} px i {vidd61:.0f} px)")
+    check(not block61.blockFormat().nonBreakableLines(),
+          "och radbrytningen är inte avstängd")
+
+    # Samma sak från en sparad fil: en <pre> gör Qt obrytbar, och den vägen in
+    # måste också ge radbrytning kvar.
+    ovningsbok.write(ovningsscen.id, f"<pre>{lång61}</pre>")
+    win._show_scene_html(ovningsscen.id, ovningsbok.read(ovningsscen.id))
+    for _i in range(4):
+        app.processEvents()
+    block61b = win.editor.document.findBlockByNumber(0)
+    lay61b = block61b.layout()
+    rader61b = lay61b.lineCount() if lay61b else 0
+    check(rader61b > 1 and not block61b.blockFormat().nonBreakableLines(),
+          f"och en inläst <pre> bryts också ({rader61b} rader)")
+
+    ovningsbok.write(ovningsscen.id, stiltext57)
+    win._show_scene_html(ovningsscen.id, stiltext57)
+    win.is_modified = False
+    for _i in range(2):
+        app.processEvents()
 
     print("\n" + "=" * 66)
     if failures:

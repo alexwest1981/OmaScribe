@@ -285,6 +285,13 @@ ord efter att fyllnadslistan stramats. Grinden GRÖNT med 661 kontroller i rökp
       bär egna teckenformat, så nivån sattes medan texten stod kvar i 11 pt — "det händer inget när
       man har text markerad och klickar på h1, h2 eller h3" (Alex 8/10). Nu läggs formatet på texten
       genom `richtext.apply_block_formats`, mätt: 11 pt/vikt 400 blir 22 pt/700.
+      Arket var mätt en riktig A4 (750x1060 px = 210x297 mm i 90 dpi, 2994 tecken per ark), men temats
+      stilmall hade graden hårdkodad på duken, så varken `default_font_size` eller Ctrl++/Ctrl+- hade
+      någon verkan (mätt: 13,0 pt och radhöjd 19 px före och efter) — och pappret stod still medan
+      texten kunde ändras, så en zoomad sida rymde färre tecken än en sida. Nu äger vyn graden
+      (`EditorView.set_text_point_size`), arket följer samma grad (`PagedPaper.set_scale`), zoomen
+      minns sig i `zoom_level`, och autoläget ritar pappret så att en A4 fyller fönsterbredden —
+      verklig storlek är Ctrl+0.
       *Medvetet inte gjort:* en stilinspektör som listar dokumentets stilar med räknare — ingen
       författare har saknat den, och en förteckning över sina egna rubriker finns i navigatorn. R02.9
 - [~] **4.7** Avsnittsbrytningar med separata sidhuvuden/sidfötter — **flyttad till fas 5 (5.5)**.

@@ -106,16 +106,19 @@ def policy_fixes(doc, page_settings: dict | None = None,
                  slot: float | None = None) -> int:
     """Håller ihop de stycken rapporten pekar ut, så ingen rad blir ensam.
 
-    Verktyget Qt har för det är `setNonBreakableLines(True)`: styckets rader
-    följs åt till nästa sida i stället för att en rad lämnas kvar. Det är samma
-    sak som Words "Keep lines together". Formatering, inte text — en ångring tar
-    tillbaka den.
+    Märket är vårt eget (`pagination.mark_keep_together`) och läses av vår egen
+    paginering: hamnar en sidbrytning inne i stycket flyttas hela stycket till
+    nästa ark. Qts `setNonBreakableLines` stod här förut, med tanken att det bara
+    gällde sidbrytningen — men den flaggan stänger av **radbrytningen** också, så
+    ett långt stycke blev en enda rad som gick utanför pappret (mätt: 1120 px i
+    ett 646 px ark). Formatering, inte text — en ångring tar tillbaka den.
 
     Priset är känt: ett stycke som inte får plats på en sida flyttas helt, och
     då kan föregående sida sluta med tomrum. Det är författarens val, därför är
     det en knapp och inte något som sker av sig självt.
     """
     from PyQt6.QtGui import QTextCursor
+    from core import pagination
 
     fynd = widows_and_orphans(doc, page_settings, slot)
     if not fynd:
@@ -123,7 +126,7 @@ def policy_fixes(doc, page_settings: dict | None = None,
     ändrade = 0
     for block in _blocks_by_number(doc, {f["block"] for f in fynd}):
         fmt = block.blockFormat()
-        fmt.setNonBreakableLines(True)
+        pagination.mark_keep_together(fmt)
         markor = QTextCursor(doc)
         markor.setPosition(block.position())
         markor.mergeBlockFormat(fmt)
@@ -325,7 +328,10 @@ def _self_check() -> int:
     # Formateringen: de utpekade styckena hålls ihop.
     ändrade = policy_fixes(doc, slot=brott)
     kolla(ändrade >= 1, f"och de utpekade styckena hålls ihop ({ändrade})")
-    kolla(doc.begin().blockFormat().nonBreakableLines() is True,
+    kolla(doc.begin().blockFormat().nonBreakableLines() is False,
+          "och radbrytningen är kvar: flaggan stänger av den, så den används inte")
+    from core import pagination
+    kolla(pagination.keeps_together(doc.begin()),
           "mätt i blockformatet, inte bara i returvärdet")
 
     # PDF/X: finns gs används det, annars sägs det.

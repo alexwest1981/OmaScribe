@@ -92,11 +92,11 @@ def code_block_format(colors: dict, lang: str = "") -> QTextBlockFormat:
     fmt.setRightMargin(8)
     fmt.setTopMargin(8)
     fmt.setBottomMargin(8)
-    # Kod ska inte radbrytas — den ska kunna scrollas i sidled
-    try:
-        fmt.setNonBreakableLines(True)
-    except Exception:
-        pass
+    # Kod radbryts vid ordet före kanten, som all annan text: "det får inte ens vara
+    # under diskussion" (Alex 9/10). Förut stod här setNonBreakableLines(True) med
+    # tanken att koden skulle kunna scrollas i sidled — men den flaggan stänger av
+    # radbrytningen, och koden försvann ut över papprets kant (mätt: en rad blev
+    # 1120 px i ett 646 px ark). Långa rader bryts nu i stället.
     bg = colors.get("code_bg") or colors.get("sidebar_card")
     if bg:
         fmt.setBackground(QBrush(QColor(bg)))

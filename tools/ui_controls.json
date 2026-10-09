@@ -1,7 +1,4 @@
 [
- "QAbstractButton:qt_tableview_cornerbutton",
- "QAbstractButton:qt_tableview_cornerbutton",
- "QAbstractButton:qt_tableview_cornerbutton",
  "QAction:1. List",
  "QAction:1.0 Enkelt (1.0)",
  "QAction:1.15",
@@ -513,8 +510,6 @@
  "QToolButton:U̲",
  "QToolButton:X²",
  "QToolButton:X₂",
- "QToolButton:qt_menubar_ext_button",
- "QToolButton:qt_toolbar_ext_button",
  "QToolButton:¶ Normal",
  "QToolButton:Ångra",
  "QToolButton:Öppna filer",

@@ -38,13 +38,24 @@ CANVAS_PAGE_PX = PAGE_HEIGHT_PX - PAGE_MARGIN_TOP - PAGE_MARGIN_BOTTOM    # 984
 
 
 class PagedPaper(QWidget):
-    """Ark-kolumnen. Ett ark per sida, med editorn i det aktiva arket."""
+    """Ark-kolumnen. Ett ark per sida, med editorn i det aktiva arket.
+
+    Måtten nedan är *basmått*: de hör till BAS_PT (13 pt). Arket ritas i den
+    skala texten har, så att ett ark alltid rymmer en A4-sidas text. Förut stod
+    pappret still medan zoomen bara ändrade texten, och då rymde en zoomad sida
+    färre tecken än en sida — vilket syns som ett litet ark på en stor skärm:
+    "det känns inte som att det får plats med tillräckligt med tecken på en sida,
+    som om det vore ett a5 istället för ett a4" (Alex 9/10). Skalan sätts av
+    vyn (se EditorView.set_text_point_size), aldrig av arket själv.
+    """
 
     GAP_PX = 26                 # mellanrummet mellan två ark (ytan syns där)
     PAD_TOP_PX = 22             # luft ovanför första arket
     PAD_BOTTOM_PX = 40
     MARK_PX = 14                # hörnmarkeringarnas arm
     REFRESH_MS = 120            # innan sidorna räknas om efter en ändring
+    MIN_SCALE = 0.5
+    MAX_SCALE = 4.0
 
     page_changed = pyqtSignal(int)
 
@@ -53,6 +64,7 @@ class PagedPaper(QWidget):
         self.setObjectName("PagedPaper")
         self.theme_mgr = theme_mgr
         self.scroll_area = None                 # sätts av EditorView
+        self._scale = 1.0
 
         self.canvas = canvas
         canvas.setParent(self)
@@ -64,8 +76,8 @@ class PagedPaper(QWidget):
         self.pages = [0.0]
         self.active = 0
 
-        self.setFixedWidth(PAGE_WIDTH_PX)
-        self.setMinimumHeight(PAGE_HEIGHT_PX)
+        self.setFixedWidth(self.px(PAGE_WIDTH_PX))
+        self.setMinimumHeight(self.px(PAGE_HEIGHT_PX))
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
         self._timer = QTimer(self)
@@ -83,20 +95,39 @@ class PagedPaper(QWidget):
 
     # ------------------------------------------------------------------ mått
 
+    def scale(self) -> float:
+        """Arkets skala. 1.0 = basmåtten, alltså en A4 i verklig storlek."""
+        return self._scale
+
+    def px(self, v: float) -> int:
+        """Basmått i arkets skala — den enda vägen från basmått till pixlar."""
+        return int(round(float(v) * self._scale))
+
+    def set_scale(self, s: float) -> None:
+        """Sätter arkets skala och ritar om. Sidorna räknas om av refresh()."""
+        s = max(self.MIN_SCALE, min(self.MAX_SCALE, float(s)))
+        if abs(s - self._scale) < 0.001:
+            return
+        self._scale = s
+        self.setFixedWidth(self.px(PAGE_WIDTH_PX))
+        self.setMinimumHeight(self.px(PAGE_HEIGHT_PX))
+        self.refresh()
+
     def _slot_px(self) -> float:
-        return float(PAGE_HEIGHT_PX + self.GAP_PX)
+        return float(self.px(PAGE_HEIGHT_PX) + self.GAP_PX)
 
     def sheet_rect(self, i: int) -> QRectF:
         """Arket i widgetens koordinater."""
         return QRectF(0.0, self.PAD_TOP_PX + i * self._slot_px(),
-                      float(PAGE_WIDTH_PX), float(PAGE_HEIGHT_PX))
+                      float(self.px(PAGE_WIDTH_PX)), float(self.px(PAGE_HEIGHT_PX)))
 
     def content_rect(self, i: int) -> QRectF:
         """Arket innanför marginalerna — där texten bor."""
         ark = self.sheet_rect(i)
-        return QRectF(ark.x() + PAGE_MARGIN_X, ark.y() + PAGE_MARGIN_TOP,
-                      ark.width() - 2 * PAGE_MARGIN_X,
-                      ark.height() - PAGE_MARGIN_TOP - PAGE_MARGIN_BOTTOM)
+        kant = self.px(PAGE_MARGIN_X)
+        return QRectF(ark.x() + kant, ark.y() + self.px(PAGE_MARGIN_TOP),
+                      ark.width() - 2 * kant,
+                      ark.height() - self.px(PAGE_MARGIN_TOP) - self.px(PAGE_MARGIN_BOTTOM))
 
     def total_height(self) -> int:
         n = max(1, len(self.pages))
@@ -116,7 +147,7 @@ class PagedPaper(QWidget):
         doc = self.canvas.document()
         if doc is None:
             return
-        self.pages = page_offsets(doc, float(CANVAS_PAGE_PX))
+        self.pages = page_offsets(doc, float(self.px(CANVAS_PAGE_PX)))
         self.setFixedHeight(self.total_height())
 
         sida = min(max(0, self.page_of_doc_y(self._cursor_doc_y())), len(self.pages) - 1)
@@ -136,12 +167,12 @@ class PagedPaper(QWidget):
         """Hur mycket text arket rymmer. Radbunden paginering gör att ett ark
         ofta är några pixlar lägre: raden som inte fick plats hör till nästa."""
         if i + 1 < len(self.pages):
-            return min(float(CANVAS_PAGE_PX), self.pages[i + 1] - self.pages[i])
+            return min(float(self.px(CANVAS_PAGE_PX)), self.pages[i + 1] - self.pages[i])
         # Sista arket: så mycket text som finns kvar. Editorn måste vara exakt så
         # hög, annars når skrollfältet inte fram till arkets första rad.
         doc = self.canvas.document()
         kvar = float(doc.size().height()) - self.pages[i] if doc is not None else 1.0
-        return max(1.0, min(float(CANVAS_PAGE_PX), kvar))
+        return max(1.0, min(float(self.px(CANVAS_PAGE_PX)), kvar))
 
     def _place_canvas(self) -> None:
         """Lägger editorn i det aktiva arket och sätter dess läge i dokumentet."""

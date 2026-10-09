@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
 
 from core.config import ConfigManager
+from core.crash_log import install_handlers
 from core.i18n import i18n
 from core.font_manager import FontManager
 from core.ai_client import AIClient
@@ -18,6 +19,9 @@ from ui.theme_manager import ThemeManager
 from ui.main_window import MainWindow
 
 def main():
+    # Kraschvakten först: ett undantag i en slot skall hamna i crash.log och
+    # appen fortsätta, inte döda processen med manuset osparat (Alex 9/10).
+    install_handlers()
     app = QApplication(sys.argv)
     app.setApplicationName("Scribentia")
     app.setOrganizationName("Scribentia")

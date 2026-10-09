@@ -3796,6 +3796,46 @@ def main() -> int:
     for _i in range(2):
         app.processEvents()
 
+    print("\n62. Kraschvakten: felet skrivs och appen lever")
+    # Alex 9/10: appen kraschade på "ändra och ta bort formatering", och tracebacken
+    # gick till stderr som en app startad från skrivbordet inte har någonstans — bara
+    # en core dump med QMessageLogger::fatal gick att läsa. Mätt: med sys.excepthook
+    # installerad skrivs tracebacken till crash.log och appen överlever.
+    from core import crash_log as _cl62
+    from PyQt6.QtCore import QTimer as _QTimer62
+    fil62 = _cl62.crash_log_path()
+    if fil62.exists():
+        fil62.unlink()
+    gamla62 = sys.excepthook
+    _cl62.install_handlers()
+    try:
+        sys.excepthook(RuntimeError, RuntimeError("provfel 62"),
+                       sys.exc_info()[2] if sys.exc_info()[0] else None,
+                       )
+    finally:
+        sys.excepthook = gamla62
+    text62 = fil62.read_text(encoding="utf-8") if fil62.exists() else ""
+    check("provfel 62" in text62,
+          f"tracebacken hamnar i crash.log ({len(text62)} tecken)")
+
+    # Och undantaget i händelseloopen: appen skall leva efteråt.
+    levde62 = []
+
+    def farlig62():
+        raise RuntimeError("provfel i händelseloopen 62")
+
+    _cl62.install_handlers()
+    try:
+        _QTimer62.singleShot(0, farlig62)
+        for _i in range(6):
+            app.processEvents()
+        levde62.append(True)
+    finally:
+        sys.excepthook = gamla62
+    text62b = fil62.read_text(encoding="utf-8") if fil62.exists() else ""
+    check(bool(levde62) and "provfel i händelseloopen 62" in text62b,
+          "och ett fel i händelseloopen skrivs och stopper inte appen")
+
     print("\n" + "=" * 66)
     if failures:
         print(f"RESULTAT: {len(failures)} av {checks} kontroller föll")

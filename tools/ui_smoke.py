@@ -3722,11 +3722,23 @@ def main() -> int:
           f"och ett ark rymmer fortfarande en sidas text ({per_ark_a60:.0f} -> "
           f"{per_ark_b60:.0f} tecken/ark)")
 
-    # Autoläget: pappret skall fylla bredden, aldrig bli mindre än verklig storlek.
+    # Autoläget: pappret skall fylla fönstret, aldrig bli mindre än verklig storlek
+    # och aldrig skena i väg på en bred skärm.
     vidd60 = win.editor.scroll_area.viewport().width()
     check(win.editor.fit_scale() >= 1.0,
           f"fitskalan går aldrig under verklig storlek ({win.editor.fit_scale():.2f} "
           f"vid {vidd60} px bredd)")
+    # Alex 9/10 i fullskärm: "det ser ut som om jag är närsynt pensionär". Breddläget
+    # gav 2,5 gånger och 30 pt; taket är arkets höjd, och 1,35 är det yttersta.
+    check(win.editor.fit_scale(3840, 2000) <= 1.36,
+          f"och en bred fullskärm skenar inte i väg "
+          f"({win.editor.fit_scale(3840, 2000):.2f} vid 3840x2000)")
+    check(win.editor.fit_scale(1400, 1000) <= 1.01,
+          f"medan ett vanligt fönster stannar vid verklig storlek "
+          f"({win.editor.fit_scale(1400, 1000):.2f} vid 1400x1000)")
+    check(win.editor.fit_scale(3840, 2000) > 1.05,
+          f"och ett stort fönster fylls ändå "
+          f"({win.editor.fit_scale(3840, 2000):.2f} vid 3840x2000)")
 
     win.editor.set_text_point_size(bas60)
     win.editor.zoom_auto = True

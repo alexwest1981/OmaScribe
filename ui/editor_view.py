@@ -784,19 +784,30 @@ class EditorView(QWidget):
         self.apply_theme()                 # enda stället som skriver dukens grad
         self.page_frame.set_scale(pt / self.BASE_TEXT_PT)
 
-    def fit_scale(self, viewport_bredd: int = 0) -> float:
-        """Skalan som får en A4 att fylla bredden — aldrig under verklig storlek.
+    def fit_scale(self, viewport_bredd: int = 0, viewport_höjd: int = 0) -> float:
+        """Skalan som får en A4 att fylla fönstret — aldrig under verklig storlek.
 
         En A4 i verklig storlek är 750 px bred, och på en bred skärm blir den en
         liten lapp: "det känns inte som att det får plats med tillräckligt med
         tecken på en sida, som om det vore ett a5 istället för ett a4" (Alex
         9/10). Texten följer med, så sidan rymmer fortfarande en sidas text.
+
+        Taket är arkets **höjd**, inte fönstrets bredd: i fullskärm på en bred
+        skärm blev breddläget mätt 2,5 gånger och texten 30 pt — "det ser ut som
+        om jag är närsynt pensionär" (Alex 9/10). Ett ark skall rymmas i fönstret,
+        inte fylla en vägg. 1,35 är det yttersta; resten är Ctrl++.
         """
-        if not viewport_bredd and self.scroll_area is not None:
-            viewport_bredd = self.scroll_area.viewport().width()
+        källa = getattr(self.scroll_area, "viewport", None)
+        if källa is not None:
+            if not viewport_bredd:
+                viewport_bredd = källa().width()
+            if not viewport_höjd:
+                viewport_höjd = källa().height()
         if viewport_bredd <= 0:
             return 1.0
-        return max(1.0, min(2.5, (viewport_bredd - 40) / float(PAGE_WIDTH_PX)))
+        bredd_skala = (viewport_bredd - 40) / float(PAGE_WIDTH_PX)
+        höjd_skala = ((viewport_höjd - 60) / float(PAGE_HEIGHT_PX)) if viewport_höjd > 0 else 99.0
+        return max(1.0, min(1.35, bredd_skala, höjd_skala))
 
     def resizeEvent(self, event) -> None:
         """I autoläget ritas pappret om när fönstret ändrar bredd."""

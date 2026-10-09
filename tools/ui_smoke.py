@@ -3846,7 +3846,11 @@ def main() -> int:
     print(f"Exporter i: {out}")
     print("=" * 66)
     win.close()
-    return 1 if failures else 0
+    # PyQt6 avvecklar QApplication-wrappern vid tolkens avslut och läser då en
+    # redan frigjord wrapper i sitt register — intermittent SIGSEGV (mätt ~1 av
+    # 40 körningar) som gör grinden röd trots att alla kontroller är gröna.
+    # os._exit hoppar över hela den avvecklingsvägen.
+    sys.stdout.flush(); sys.stderr.flush(); os._exit(1 if failures else 0)
 
 
 if __name__ == "__main__":
